@@ -21,7 +21,7 @@ def register():
     site_user_id = request.json["user_id"]
 
     code = generate_code()
-
+    print("10")
     database.save_code(site_user_id, code)
 
     return jsonify({
