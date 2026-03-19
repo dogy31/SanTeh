@@ -1,0 +1,465 @@
+{% extends 'main/base.html' %}
+{% block extra_head %}
+<style>
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
+    .header h1 { font-size: 32px; color: #0b2b40; display: flex; align-items: center; gap: 10px; }
+    .badge { background: #2f7e9e20; color: #1b5e7a; padding: 5px 14px; border-radius: 40px; }
+    .btn-primary { background: #2f7e9e; color: white; border: none; padding: 12px 28px; border-radius: 40px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px #2f7e9e60; transition: 0.15s; }
+    .btn-primary:hover { background: #1f5f7a; }
+    .btn-secondary { background: transparent; border: 1.5px solid #2f7e9e; color: #1a5f7a; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; }
+    .btn-secondary:hover { background: #e7f0f5; }
+    .btn-warning { background: #f0b341; border: none; color: #1d3a47; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+    .filter-bar { background: white; padding: 18px 24px; border-radius: 60px; display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+    .filter-item { display: flex; align-items: center; gap: 8px; }
+    .filter-item label { font-weight: 500; color: #2c5770; font-size: 14px; }
+    .filter-item input, .filter-item select { padding: 8px 12px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; font-size: 14px; }
+    .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -10px #bac9d4; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 1300px; }
+    th { text-align: left; padding: 16px 20px; background: #f7fafd; color: #1a4b5f; font-weight: 600; font-size: 14px; border-bottom: 1px solid #cde0ec; }
+    td { padding: 18px 20px; border-bottom: 1px solid #e6eef5; color: #153e4f; font-size: 15px; }
+    tr.overdue { background-color: #ffefed; }
+    tr.overdue td:first-child { border-left: 4px solid #c03c2b; }
+    .status { display: inline-block; padding: 5px 14px; border-radius: 40px; font-size: 13px; font-weight: 500; }
+    .status.new { background: #e1edfb; color: #1b5f8c; }
+    .status.done { background: #dff0e0; color: #1d6f2c; }
+    .status.in-progress { background: #fff2d6; color: #a16500; }
+    .remaining { display: inline-block; padding: 5px 12px; border-radius: 40px; font-size: 13px; font-weight: 500; }
+    .remaining.green { background: #dff0e0; color: #1d6f2c; }
+    .remaining.yellow { background: #fff2d6; color: #a16500; }
+    .remaining.red { background: #ffefed; color: #c03c2b; }
+    .price { font-weight: 600; color: #0f3f52; }
+    .action-link { color: #2f7e9e; text-decoration: none; font-weight: 500; border: 1px solid #2f7e9e40; padding: 5px 12px; border-radius: 30px; font-size: 13px; cursor: pointer; background: none; }
+    .action-link:hover { background: #e7f0f5; }
+    .money-delivered { width: 20px; height: 20px; accent-color: #2f7e9e; cursor: pointer; }
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.3);
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+        background: white;
+        border-radius: 36px;
+        max-width: 700px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 36px 40px;
+        box-shadow: 0 30px 50px -20px #1b3e55;
+    }
+    .modal-content h2 { font-size: 28px; margin-bottom: 20px; color: #0b2b40; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-weight: 500; color: #1d4f65; margin-bottom: 4px; font-size: 14px; }
+    .field input, .field select, .field textarea {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #cbdae7;
+        border-radius: 20px;
+        font-size: 15px;
+        background: #f9fcff;
+    }
+    .field textarea { min-height: 80px; resize: vertical; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 25px; flex-wrap: wrap; }
+    .photo-gallery { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+    .photo-thumb { width: 80px; height: 80px; background: #d9e2e8; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #2f5568; border: 1px solid #b8cfdd; object-fit: cover; }
+    .photo-thumb img { width: 100%; height: 100%; border-radius: 16px; object-fit: cover; }
+    .photo-thumb { position: relative; }
+    .photo-thumb .remove { position: absolute; top: 4px; right: 4px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
+    .phone-mask-hint { font-size: 12px; color: #6f8fa0; margin-top: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 1400px; margin: 30px auto; padding: 0 20px;">
+    <div class="header">
+        <h1>📋 Панель администратора <span class="badge">{{ request.user.first_name }}</span></h1>
+        <div>
+            <button class="btn-primary" id="showCreateModal">➕ Новая заявка</button>
+            <a href="{% url 'logout' %}" class="btn-secondary" style="margin-left: 15px;">Выйти</a>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="filter-bar">
+        <div class="filter-item"><label>📅 Дата с:</label><input type="date" id="filterDateFrom"></div>
+        <div class="filter-item"><label>по:</label><input type="date" id="filterDateTo"></div>
+        <div class="filter-item"><label>💰 Цена от:</label><input type="number" id="filterPriceFrom" placeholder="0" style="width:90px"></div>
+        <div class="filter-item"><label>до:</label><input type="number" id="filterPriceTo" placeholder="50000" style="width:100px"></div>
+        <div class="filter-item"><label>🔧 Рабочий:</label><select id="filterWorker"><option value="">Все</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
+        <div class="filter-item"><label>Статус:</label><select id="filterStatus"><option value="">Все</option><option value="new">Новая</option><option value="in-progress">В работе</option><option value="done">Выполнена</option></select></div>
+        <button class="btn-primary" id="applyFilters" style="padding:8px 20px;">Применить</button>
+    </div>
+
+    <!-- Таблица заявок -->
+    <div class="table-wrapper">
+        <table id="requestsTable">
+            <thead>
+                <tr>
+                    <th>ID</th><th>Задача</th><th>Клиент</th><th>Адрес</th><th>Статус</th><th>Цена (₽)</th><th>Деньги сданы</th><th>Рабочий</th><th>Дата создания</th><th>Срок (дн)</th><th>Осталось (дн)</th><th></th>
+                </tr>
+            </thead>
+            <tbody id="requestsBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Модальное окно создания заявки (без демоданных) -->
+<div class="modal" id="createModal">
+    <div class="modal-content">
+        <h2>➕ Новая заявка</h2>
+        <div class="field"><label>Описание задачи</label><textarea id="createDesc" placeholder="Что нужно сделать?" required></textarea></div>
+        <div class="field"><label>Имя клиента</label><input type="text" id="createClientName" placeholder="Например: Иванов Иван" required></div>
+        <div class="field"><label>Телефон клиента</label><input type="tel" id="createClientPhone" class="phone-input" placeholder="+7 (___) ___-__-__" required></div>
+        <div class="field"><label>Email клиента</label><input type="email" id="createClientEmail" placeholder="client@example.ru"></div>
+        <div class="field"><label>Адрес клиента</label><input type="text" id="createClientAddress" placeholder="ул. Ленина, д.10, кв.5"></div>
+        <div class="field"><label>Назначить рабочего</label><select id="createWorker">{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Срок выполнения (дней)</label><input type="number" id="createDeadline" value="3" min="1"></div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('createModal')">Отмена</button>
+            <button class="btn-primary" id="saveCreateBtn">Создать</button>
+        </div>
+    </div>
+</div>
+
+<!-- Админ: модальное окно редактирования (полный доступ) -->
+<div class="modal" id="editModalAdmin">
+    <div class="modal-content">
+        <h2>✏️ Редактирование заявки #<span id="adminEditId"></span></h2>
+        <div class="field"><label>Описание задачи</label><textarea id="adminDesc"></textarea></div>
+        <div class="field"><label>Имя клиента</label><input type="text" id="adminClientName"></div>
+        <div class="field"><label>Телефон клиента</label><input type="tel" id="adminClientPhone" class="phone-input"></div>
+        <div class="field"><label>Email клиента</label><input type="email" id="adminClientEmail"></div>
+        <div class="field"><label>Адрес клиента</label><input type="text" id="adminClientAddress"></div>
+        <div class="field"><label>Назначить рабочего</label><select id="adminWorker"><option value="">—</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Срок выполнения (дней)</label><input type="number" id="adminDeadline" min="1"></div>
+        <div class="field"><label>Статус</label><select id="adminStatus"><option value="new">Новая</option><option value="in-progress">В работе</option><option value="done">Выполнена</option></select></div>
+        <div class="field"><label>Цена</label><input type="number" id="adminPrice"></div>
+        <div class="field"><label>Комментарий</label><textarea id="adminComment"></textarea></div>
+        <div class="field"><label>Фото</label>
+            <div class="photo-upload-area">
+                <input type="file" id="adminPhotoInput" accept="image/*" multiple>
+                <div class="photo-gallery" id="adminPhotoPreviews"></div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('editModalAdmin')">Отмена</button>
+            <button class="btn-primary" id="saveAdminEditBtn">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Просмотр фото в крупном размере -->
+<div class="modal" id="photoViewer">
+    <div class="modal-content" style="max-width:900px; padding:20px;">
+        <div style="text-align:right;"><button class="btn-secondary" onclick="closeModal('photoViewer')">Закрыть</button></div>
+        <img id="photoViewerImg" src="" style="width:100%; height:auto; border-radius:12px; margin-top:10px;">
+    </div>
+</div>
+
+<script>
+    const csrftoken = '{{ csrf_token }}';
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // Простая маска для телефона (ввод только цифр и форматирование)
+    function phoneMask(event) {
+        let input = event.target;
+        let x = input.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+        if (!x[2] && x[1] !== '') {
+            input.value = x[1] ? '+' + x[1] : '';
+        } else {
+            input.value = !x[3] ? '+' + x[1] + ' (' + x[2] + ')' :
+                         !x[4] ? '+' + x[1] + ' (' + x[2] + ') ' + x[3] :
+                         !x[5] ? '+' + x[1] + ' (' + x[2] + ') ' + x[3] + '-' + x[4] :
+                         '+' + x[1] + ' (' + x[2] + ') ' + x[3] + '-' + x[4] + '-' + x[5];
+        }
+    }
+
+    // Навешиваем маску на все поля с классом phone-input (в том числе динамически создаваемые)
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('phone-input')) {
+            phoneMask(e);
+        }
+    });
+
+    // Загрузка заявок с фильтрами
+    function loadRequests() {
+        const params = new URLSearchParams();
+        const dateFrom = document.getElementById('filterDateFrom').value;
+        const dateTo = document.getElementById('filterDateTo').value;
+        const priceFrom = document.getElementById('filterPriceFrom').value;
+        const priceTo = document.getElementById('filterPriceTo').value;
+        const workerId = document.getElementById('filterWorker').value;
+        const status = document.getElementById('filterStatus').value;
+
+        if (dateFrom) params.append('date_from', dateFrom);
+        if (dateTo) params.append('date_to', dateTo);
+        if (priceFrom) params.append('price_from', priceFrom);
+        if (priceTo) params.append('price_to', priceTo);
+        if (workerId) params.append('worker', workerId);
+        if (status) params.append('status', status);
+
+        fetch('/api/requests/?' + params.toString())
+            .then(response => response.json())
+            .then(data => renderRequests(data))
+            .catch(error => console.error('Ошибка загрузки:', error));
+    }
+
+    function renderRequests(requests) {
+        const tbody = document.getElementById('requestsBody');
+        tbody.innerHTML = '';
+        const today = new Date();
+
+        requests.forEach(r => {
+            const created = new Date(r.created_date);
+            const deadlineDate = new Date(created);
+            deadlineDate.setDate(deadlineDate.getDate() + r.deadline_days);
+            const isOverdue = r.status !== 'done' && today > deadlineDate;
+
+            const row = document.createElement('tr');
+            if (isOverdue) row.classList.add('overdue');
+
+            // Вычисляем оставшиеся дни от момента создания
+            const MS_PER_DAY = 1000 * 60 * 60 * 24;
+            let remaining = Math.ceil((deadlineDate - today) / MS_PER_DAY);
+            let remainingText = '';
+            let remainingClass = '';
+            if (r.status === 'done') {
+                remainingText = '—';
+                remainingClass = '';
+            } else if (isOverdue) {
+                remainingText = 'Просрочено';
+                remainingClass = 'red';
+            } else if (remaining <= 0) {
+                remainingText = '0';
+                remainingClass = 'red';
+            } else if (remaining === 1) {
+                remainingText = '1';
+                remainingClass = 'red';
+            } else if (remaining === 2) {
+                remainingText = '2';
+                remainingClass = 'yellow';
+            } else { // >2
+                remainingText = remaining;
+                remainingClass = 'green';
+            }
+
+            let statusClass = 'status new';
+            let statusText = 'Новая';
+            if (r.status === 'in-progress') {
+                statusClass = 'status in-progress';
+                statusText = 'В работе';
+            } else if (r.status === 'done') {
+                statusClass = 'status done';
+                statusText = 'Выполнена';
+            }
+
+            row.innerHTML = `
+                <td>#${r.id}</td>
+                <td>${r.description}</td>
+                <td>${r.client_name}<br><small>${r.client_phone}</small></td>
+                <td>${r.client_address || ''}</td>
+                <td><span class="${statusClass}">${statusText}</span></td>
+                <td>${r.price ? r.price + ' ₽' : '—'}</td>
+                <td><input type="checkbox" class="money-delivered" data-id="${r.id}" ${r.money_delivered ? 'checked' : ''} ${r.status !== 'done' ? 'disabled' : ''}></td>
+                <td>${r.worker_name}</td>
+                <td>${created.toLocaleDateString()}</td>
+                <td>${r.deadline_days}</td>
+                <td>${ r.status === 'done' ? '—' : `<span class="remaining ${remainingClass}">${remainingText}</span>` }</td>
+                <td><button class="action-link" onclick="editRequest(${r.id})">✏️ редактировать</button></td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        document.querySelectorAll('.money-delivered').forEach(cb => {
+            cb.addEventListener('change', function(e) {
+                fetch('/update-money-delivered/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                    body: JSON.stringify({ id: this.dataset.id, value: this.checked })
+                }).catch(error => console.error('Ошибка обновления:', error));
+            });
+        });
+    }
+
+    // Редактирование заявки (полный доступ для админа)
+    let adminPhotoFiles = [];
+    let adminExistingPhotos = [];
+    function renderAdminPhotoPreviews() {
+        const container = document.getElementById('adminPhotoPreviews');
+        if (!container) return;
+        container.innerHTML = '';
+
+        adminExistingPhotos.forEach((url, index) => {
+            const div = document.createElement('div');
+            div.className = 'photo-thumb';
+            div.innerHTML = `<img src="${url}" alt="photo" onclick="openPhotoViewer('${url}')">`;
+            container.appendChild(div);
+        });
+
+        adminPhotoFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'photo-thumb';
+                div.innerHTML = `<img src="${e.target.result}" alt="preview"><span class=\"remove\" onclick=\"removeAdminNewPhoto(${index})\">✖</span>`;
+                container.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    window.removeAdminNewPhoto = function(index) {
+        adminPhotoFiles.splice(index, 1);
+        renderAdminPhotoPreviews();
+    };
+
+    window.openPhotoViewer = function(url) {
+        const pv = document.getElementById('photoViewer');
+        document.getElementById('photoViewerImg').src = url;
+        pv.classList.add('active');
+    };
+
+    window.editRequest = function(id) {
+        fetch(`/edit-request/${id}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('adminEditId').textContent = data.id;
+                document.getElementById('adminDesc').value = data.description || '';
+                document.getElementById('adminClientName').value = data.client_name || '';
+                document.getElementById('adminClientPhone').value = data.client_phone || '';
+                document.getElementById('adminClientEmail').value = data.client_email || '';
+                document.getElementById('adminClientAddress').value = data.client_address || '';
+                document.getElementById('adminPrice').value = data.price || '';
+                document.getElementById('adminComment').value = data.comment || '';
+                document.getElementById('adminDeadline').value = data.deadline_days || '';
+                document.getElementById('adminStatus').value = data.status || '';
+                document.getElementById('adminWorker').value = data.worker_id || '';
+                adminExistingPhotos = data.photos || [];
+                adminPhotoFiles = [];
+                renderAdminPhotoPreviews();
+                document.getElementById('editModalAdmin').classList.add('active');
+            })
+            .catch(error => console.error('Ошибка загрузки данных заявки:', error));
+    };
+
+    document.getElementById('adminPhotoInput').addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        if (adminExistingPhotos.length + adminPhotoFiles.length + files.length > 10) {
+            alert('Можно загрузить не более 10 фото в админ-панели');
+            return;
+        }
+        adminPhotoFiles = adminPhotoFiles.concat(files);
+        renderAdminPhotoPreviews();
+        this.value = '';
+    });
+
+    document.getElementById('saveAdminEditBtn').addEventListener('click', function() {
+        const id = document.getElementById('adminEditId').textContent;
+        if (!id) return;
+        const formData = new FormData();
+        formData.append('description', document.getElementById('adminDesc').value);
+        formData.append('client_name', document.getElementById('adminClientName').value);
+        formData.append('client_phone', document.getElementById('adminClientPhone').value.replace(/\D/g, ''));
+        formData.append('client_email', document.getElementById('adminClientEmail').value);
+        formData.append('client_address', document.getElementById('adminClientAddress').value);
+        formData.append('price', document.getElementById('adminPrice').value);
+        formData.append('comment', document.getElementById('adminComment').value);
+        formData.append('deadline', document.getElementById('adminDeadline').value);
+        formData.append('status', document.getElementById('adminStatus').value);
+        formData.append('worker_id', document.getElementById('adminWorker').value);
+        adminPhotoFiles.forEach(f => formData.append('photos', f));
+
+        fetch(`/edit-request/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeModal('editModalAdmin');
+                loadRequests();
+                alert('Изменения сохранены');
+            } else {
+                alert('Ошибка сохранения');
+            }
+        })
+        .catch(err => console.error('Ошибка сохранения:', err));
+    });
+
+    // Функция возврата заявки в работу
+    window.reopenRequest = function(id) {
+        if (!confirm('Вернуть заявку в статус "В работе"? Рабочий сможет её редактировать.')) return;
+        fetch(`/reopen-request/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeModal('editModalAdmin');
+                loadRequests();
+                alert('Заявка возвращена в работу');
+            } else {
+                alert('Ошибка при возврате');
+            }
+        })
+        .catch(error => console.error('Ошибка возврата:', error));
+    };
+
+    // Создание заявки (с валидацией)
+    document.getElementById('saveCreateBtn').addEventListener('click', function() {
+        const phoneInput = document.getElementById('createClientPhone');
+        // Простая проверка: номер должен содержать 11 цифр (код +7 и 10 цифр)
+        const phoneDigits = phoneInput.value.replace(/\D/g, '');
+        if (phoneDigits.length !== 11) {
+            alert('Введите корректный номер телефона в формате +7 (XXX) XXX-XX-XX');
+            phoneInput.focus();
+            return;
+        }
+        const formData = new FormData();
+        formData.append('description', document.getElementById('createDesc').value);
+        formData.append('client_name', document.getElementById('createClientName').value);
+        formData.append('client_phone', phoneDigits); // отправляем только цифры
+        formData.append('client_email', document.getElementById('createClientEmail').value);
+        formData.append('client_address', document.getElementById('createClientAddress').value);
+        formData.append('worker_id', document.getElementById('createWorker').value);
+        formData.append('deadline', document.getElementById('createDeadline').value);
+
+        fetch('/create-request/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeModal('createModal');
+                loadRequests();
+                // Очистить поля? можно не обязательно
+            } else {
+                alert('Ошибка создания');
+            }
+        })
+        .catch(error => console.error('Ошибка создания:', error));
+    });
+
+    document.getElementById('showCreateModal').addEventListener('click', function() {
+        document.getElementById('createModal').classList.add('active');
+    });
+
+    document.getElementById('applyFilters').addEventListener('click', loadRequests);
+
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.classList.remove('active');
+        }
+    };
+
+    loadRequests();
+</script>
+{% endblock %}

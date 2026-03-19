@@ -1,0 +1,457 @@
+{% extends 'main/base.html' %}
+{% block extra_head %}
+<style>
+    .worker-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: white;
+        padding: 20px 28px;
+        border-radius: 50px;
+        box-shadow: 0 5px 12px #bacddb;
+        margin-bottom: 25px;
+    }
+    .worker-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .avatar {
+        background: #2f7e9e;
+        width: 52px;
+        height: 52px;
+        border-radius: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 24px;
+    }
+    .worker-name h2 {
+        font-size: 24px;
+        color: #0b2b40;
+    }
+    .stats span {
+        font-weight: 700;
+        font-size: 22px;
+        color: #1b6f8f;
+    }
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 24px;
+        margin-top: 20px;
+    }
+    .ticket-card {
+        background: white;
+        border-radius: 28px;
+        padding: 24px;
+        box-shadow: 0 15px 25px -10px #b7ccda;
+        border: 1px solid #d6e3ed;
+    }
+    .ticket-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+    .ticket-id {
+        background: #e0edf5;
+        padding: 4px 14px;
+        border-radius: 40px;
+        font-size: 14px;
+        color: #145a78;
+    }
+    .status-badge {
+        font-size: 13px;
+        padding: 4px 14px;
+        border-radius: 40px;
+    }
+    .status-badge.new { background: #e1edfb; color: #1b5f8c; }
+    .status-badge.in-progress { background: #fff2d6; color: #a16500; }
+    .status-badge.done { background: #dff0e0; color: #1d6f2c; }
+    .ticket-desc {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 12px 0;
+    }
+    .client-info {
+        color: #2f5568;
+        margin: 10px 0;
+        font-size: 15px;
+        border-left: 2px solid #c0dbea;
+        padding-left: 16px;
+    }
+    .price-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 16px 0;
+        font-weight: 500;
+    }
+    .actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 18px;
+    }
+    .btn-outline {
+        border: 1.5px solid #2f7e9e;
+        background: white;
+        padding: 10px 18px;
+        border-radius: 40px;
+        font-weight: 500;
+        color: #1d5f7a;
+        cursor: pointer;
+        font-size: 14px;
+        flex: 1;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .btn-solid {
+        background: #2f7e9e;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 40px;
+        font-weight: 500;
+        cursor: pointer;
+        font-size: 14px;
+        flex: 1;
+        box-shadow: 0 4px 8px #2f7e9e70;
+        text-align: center;
+    }
+    .btn-primary { background: #2f7e9e; color: white; border: none; padding: 12px 28px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+    .btn-secondary { background: transparent; border: 1.5px solid #2f7e9e; color: #1a5f7a; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.3);
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+        background: white;
+        border-radius: 36px;
+        max-width: 700px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 36px 40px;
+    }
+    .modal-content h2 { font-size: 28px; margin-bottom: 20px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-weight: 500; margin-bottom: 4px; }
+    .field input, .field select, .field textarea {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #cbdae7;
+        border-radius: 20px;
+        font-size: 15px;
+    }
+    .field input[readonly] {
+        background: #f0f5fa;
+        color: #2b546b;
+        cursor: default;
+        border-color: #d0dee9;
+    }
+    .photo-upload-area {
+        border: 2px dashed #acc7db;
+        border-radius: 24px;
+        padding: 20px;
+        text-align: center;
+        margin: 15px 0;
+        background: #f4fafd;
+    }
+    .photo-previews {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .preview-item {
+        width: 80px;
+        height: 80px;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid #b0c8d8;
+        position: relative;
+    }
+    .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+    .preview-item .remove {
+        position: absolute;
+        top: 2px; right: 2px;
+        background: rgba(255,255,255,0.7);
+        border-radius: 50%;
+        width: 20px; height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 25px; }
+    .required-star { color: #c03c2b; margin-left: 3px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 30px auto; padding: 0 20px;">
+    <div class="worker-header">
+        <div class="worker-info">
+            <div class="avatar">{{ request.user.first_name|first }}</div>
+            <div class="worker-name">
+                <h2>{{ request.user.first_name }}</h2>
+                <span>сантехник</span>
+            </div>
+        </div>
+        <div class="stats">
+            <span id="activeCount">0</span> активных
+        </div>
+        <a href="{% url 'logout' %}" class="btn-outline" style="text-decoration: none;">Выйти</a>
+    </div>
+
+    <h3 style="margin-bottom: 20px;">🔧 Мои заявки</h3>
+    <div class="card-grid" id="requestsGrid"></div>
+</div>
+
+<!-- Модальное окно редактирования (только сохранение, без закрытия) -->
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <h2>✏️ Редактирование заявки #<span id="editId"></span></h2>
+        <div class="field">
+            <label>Описание (только чтение)</label>
+            <input type="text" id="editDesc" readonly>
+        </div>
+        <div class="field">
+            <label>Имя клиента</label>
+            <input type="text" id="editClientName" readonly>
+        </div>
+        <div class="field">
+            <label>Телефон клиента</label>
+            <input type="tel" id="editClientPhone" readonly>
+        </div>
+        <div class="field">
+            <label>Email клиента</label>
+            <input type="email" id="editClientEmail" readonly>
+        </div>
+        <div class="field">
+            <label>Адрес клиента</label>
+            <input type="text" id="editClientAddress" readonly>
+        </div>
+        <div class="field">
+            <label>Стоимость работ <span class="required-star">*</span></label>
+            <input type="number" id="editPrice" required>
+        </div>
+        <div class="field">
+            <label>Комментарий</label>
+            <textarea id="editComment" rows="3"></textarea>
+        </div>
+        <div class="field">
+            <label>Фото (до 5 шт)</label>
+            <div class="photo-upload-area">
+                <input type="file" id="photoInput" accept="image/*" multiple>
+                <div class="photo-previews" id="photoPreviews"></div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('editModal')">Отмена</button>
+            <button class="btn-primary" id="saveEditBtn">Сохранить изменения</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const csrftoken = '{{ csrf_token }}';
+    const currentUserId = {{ request.user.id }};
+    let currentEditId = null;
+    let photoFiles = []; // массив файлов (File) для новых загрузок
+    let existingPhotos = []; // массив URL уже загруженных фото
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    // Загрузка заявок рабочего
+    function loadWorkerRequests() {
+        fetch(`/api/worker-requests/?worker_id=${currentUserId}`)
+            .then(response => response.json())
+            .then(data => renderRequests(data))
+            .catch(err => console.error('Ошибка загрузки заявок:', err));
+    }
+
+    function renderRequests(requests) {
+        const grid = document.getElementById('requestsGrid');
+        grid.innerHTML = '';
+        let activeCount = 0;
+        requests.forEach(r => {
+            if (r.status !== 'done') activeCount++;
+            const card = document.createElement('div');
+            card.className = 'ticket-card';
+            let statusClass = 'status-badge new';
+            let statusText = 'Новая';
+            if (r.status === 'in-progress') { statusClass = 'status-badge in-progress'; statusText = 'В работе'; }
+            else if (r.status === 'done') { statusClass = 'status-badge done'; statusText = 'Выполнена'; }
+
+            card.innerHTML = `
+                <div class="ticket-header">
+                    <span class="ticket-id">#${r.id}</span>
+                    <span class="${statusClass}">${statusText}</span>
+                </div>
+                <div class="ticket-desc">${r.description}</div>
+                <div class="client-info">
+                    <div>${r.client_name}</div>
+                    <div>📞 ${r.client_phone}</div>
+                    <div>📧 ${r.client_email || ''}</div>
+                    <div>📍 ${r.client_address || ''}</div>
+                </div>
+                <div class="price-info">
+                    <span>💰 Цена:</span>
+                    <span>${r.price ? r.price + ' ₽' : 'не указана'}</span>
+                </div>
+                <div class="actions">
+                    ${r.status !== 'done' ? 
+                        `<button class="btn-outline" onclick="editRequest(${r.id})">✏️ редактировать</button>
+                         <button class="btn-solid" onclick="closeRequest(${r.id})">✅ закрыть</button>` : 
+                        `<button class="btn-outline" onclick="editRequest(${r.id})">👁️ просмотр</button>`}
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+        document.getElementById('activeCount').textContent = activeCount;
+    }
+
+    // Открыть модалку редактирования
+    window.editRequest = function(id) {
+        currentEditId = id;
+        fetch(`/edit-request/${id}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('editId').textContent = data.id;
+                document.getElementById('editDesc').value = data.description || '';
+                document.getElementById('editClientName').value = data.client_name || '';
+                document.getElementById('editClientPhone').value = data.client_phone || '';
+                document.getElementById('editClientEmail').value = data.client_email || '';
+                document.getElementById('editClientAddress').value = data.client_address || '';
+                document.getElementById('editPrice').value = data.price || '';
+                document.getElementById('editComment').value = data.comment || '';
+
+                existingPhotos = data.photos || [];
+                photoFiles = [];
+                renderPhotoPreviews();
+
+                document.getElementById('editModal').classList.add('active');
+            })
+            .catch(err => console.error('Ошибка загрузки данных заявки:', err));
+    };
+
+    // Просмотр (только чтение) – для выполненных заявок
+    window.viewRequest = function(id) {
+        editRequest(id);
+        setTimeout(() => {
+            document.querySelectorAll('#editModal input, #editModal textarea, #editModal select').forEach(el => el.disabled = true);
+            document.getElementById('saveEditBtn').style.display = 'none';
+        }, 200);
+    };
+
+    // Закрытие заявки (без открытия модалки) – с обработкой ошибок от сервера
+    window.closeRequest = function(id) {
+        if (!confirm('Вы уверены, что хотите закрыть заявку?')) {
+            return;
+        }
+        fetch(`/close-request/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken }
+        })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200 && body.success) {
+                loadWorkerRequests();
+                alert('Заявка закрыта');
+            } else {
+                alert('Ошибка: ' + (body.error || 'Не удалось закрыть заявку'));
+            }
+        })
+        .catch(err => console.error('Ошибка закрытия:', err));
+    };
+
+    // Рендер превью фото
+    function renderPhotoPreviews() {
+        const container = document.getElementById('photoPreviews');
+        container.innerHTML = '';
+
+        existingPhotos.forEach((url, index) => {
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            div.innerHTML = `<img src="${url}" alt="photo">`;
+            container.appendChild(div);
+        });
+
+        photoFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.innerHTML = `<img src="${e.target.result}" alt="preview"><span class="remove" onclick="removeNewPhoto(${index})">✖</span>`;
+                container.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    window.removeNewPhoto = function(index) {
+        photoFiles.splice(index, 1);
+        renderPhotoPreviews();
+    };
+
+    document.getElementById('photoInput').addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        if (existingPhotos.length + photoFiles.length + files.length > 5) {
+            alert('Можно загрузить не более 5 фото');
+            return;
+        }
+        photoFiles = photoFiles.concat(files);
+        renderPhotoPreviews();
+        this.value = '';
+    });
+
+    // Сохранение изменений (без закрытия)
+    document.getElementById('saveEditBtn').addEventListener('click', function() {
+        if (!currentEditId) return;
+
+        const formData = new FormData();
+        formData.append('price', document.getElementById('editPrice').value);
+        formData.append('comment', document.getElementById('editComment').value);
+        photoFiles.forEach(file => {
+            formData.append('photos', file);
+        });
+
+        fetch(`/edit-request/${currentEditId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeModal('editModal');
+                loadWorkerRequests();
+            } else {
+                alert('Ошибка сохранения');
+            }
+        })
+        .catch(err => console.error('Ошибка сохранения:', err));
+    });
+
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.classList.remove('active');
+        }
+    };
+
+    loadWorkerRequests();
+</script>
+{% endblock %}
