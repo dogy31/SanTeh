@@ -19,10 +19,12 @@ try:
     import config as tg_config
     BOT_TOKEN = getattr(tg_config, 'BOT_TOKEN', None)
     MAX_TOKEN = getattr(tg_config, 'MAX_TOKEN', None)
+    SMS_API_KEY = getattr(tg_config, 'SMS_API_KEY', None)
 except Exception:
     tg_database = None
     BOT_TOKEN = None
     MAX_TOKEN = None
+    SMS_API_KEY = None
 import json
 from datetime import datetime, timedelta
 
@@ -246,6 +248,27 @@ def edit_request(request, pk):
     }
     return JsonResponse(data)
 
+def send_sms(phone, message):
+    if not SMS_API_KEY:
+        print(f"SMS not sent (no API key): {phone} - {message}")
+        return
+    url = "https://sms.ru/sms/send"
+    params = {
+        'api_id': SMS_API_KEY,
+        'to': phone,
+        'msg': message,
+        'json': 1
+    }
+    try:
+        response = requests.get(url, params=params)
+        result = response.json()
+        if result.get('status') == 'OK':
+            print(f"SMS sent to {phone}")
+        else:
+            print(f"SMS failed: {result}")
+    except Exception as e:
+        print(f"SMS error: {e}")
+
 # Закрытие заявки (рабочий)
 @login_required
 def close_request(request, pk):
@@ -264,6 +287,11 @@ def close_request(request, pk):
                 return JsonResponse({'error': f'Отсутствует чек для детали "{part.name}"'}, status=400)
         req.status = 'done'
         req.save()
+        # Отправка СМС клиенту
+        if req.client_phone:
+            completion_date = date.today().strftime('%d.%m.%Y')
+            message = f"Ваша заявка выполнена {completion_date}. Сумма: {req.price} руб. Гарантия 14 дней."
+            send_sms(req.client_phone, message)
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 

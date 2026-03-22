@@ -14,8 +14,6 @@ pip install -r requirements.txt
 
 python Messenger_bot\bot.py
 
-python Messenger_bot\api_server.py
-
 python manage.py runserver
 
 Данные от admin Django
