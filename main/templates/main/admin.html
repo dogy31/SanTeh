@@ -1,0 +1,673 @@
+{% extends 'main/base.html' %}
+{% block extra_head %}
+<style>
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
+    .header h1 { font-size: 32px; color: #0b2b40; display: flex; align-items: center; gap: 10px; }
+    .badge { background: #2f7e9e20; color: #1b5e7a; padding: 5px 14px; border-radius: 40px; }
+    .btn-primary { background: #2f7e9e; color: white; border: none; padding: 12px 28px; border-radius: 40px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px #2f7e9e60; transition: 0.15s; }
+    .btn-primary:hover { background: #1f5f7a; }
+    .btn-secondary { background: transparent; border: 1.5px solid #2f7e9e; color: #1a5f7a; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; }
+    .btn-secondary:hover { background: #e7f0f5; }
+    .btn-warning { background: #f0b341; border: none; color: #1d3a47; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+    .filter-bar { background: white; padding: 18px 24px; border-radius: 60px; display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+    .filter-item { display: flex; align-items: center; gap: 8px; }
+    .filter-item label { font-weight: 500; color: #2c5770; font-size: 14px; }
+    .filter-item input, .filter-item select { padding: 8px 12px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; font-size: 14px; }
+    .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -10px #bac9d4; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 14px 16px; border: 1px solid #e2e8f0; vertical-align: middle; }
+    th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; }
+    tbody tr:nth-child(even) { background-color: #f9fafb; }
+    tbody tr:hover { background-color: #f1f5f9; }
+    tr.overdue { background-color: #ffefed; }
+    .status { display: inline-block; padding: 5px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .status.new { background: #e1edfb; color: #1b5f8c; }
+    .status.done { background: #dff0e0; color: #1d6f2c; }
+    .status.in-progress { background: #fff2d6; color: #a16500; }
+    .price { font-weight: 600; color: #0f3f52; }
+    .action-link { color: #2f7e9e; text-decoration: none; font-weight: 500; border: 1px solid #2f7e9e40; padding: 5px 12px; border-radius: 30px; font-size: 12px; cursor: pointer; background: none; display: inline-block; margin-right: 5px; white-space: nowrap; }
+    .action-link:hover { background: #e7f0f5; }
+    .money-delivered { width: 20px; height: 20px; accent-color: #2f7e9e; cursor: pointer; }
+    .prepayment-display { width: 20px; height: 20px; pointer-events: none; }
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.3);
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+        background: white;
+        border-radius: 36px;
+        max-width: 900px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 36px 40px;
+        box-shadow: 0 30px 50px -20px #1b3e55;
+    }
+    .modal-content h2 { font-size: 28px; margin-bottom: 20px; color: #0b2b40; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-weight: 500; color: #1d4f65; margin-bottom: 4px; font-size: 14px; }
+    .field input, .field select, .field textarea { width: 100%; padding: 10px 14px; border: 1px solid #cbdae7; border-radius: 20px; font-size: 15px; background: #f9fcff; }
+    .field textarea { min-height: 80px; resize: vertical; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 25px; flex-wrap: wrap; }
+    .photo-gallery { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+    .photo-thumb { width: 80px; height: 80px; background: #d9e2e8; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #2f5568; border: 1px solid #b8cfdd; cursor: pointer; overflow: hidden; }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .parts-list { margin-top: 10px; }
+    .part-item { margin-bottom: 12px; padding: 8px; background: #f8fafc; border-radius: 16px; }
+    .part-item strong { font-weight: 600; }
+    .part-receipt { margin-top: 5px; }
+    #adminOverdueReasonField {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 1400px; margin: 30px auto; padding: 0 20px;">
+    <div class="header">
+        <h1>📋 Панель администратора <span class="badge">{{ request.user.first_name }}</span></h1>
+        <div>
+            <button class="btn-primary" id="showCreateModal">➕ Новая заявка</button>
+            <button class="btn-secondary" id="bindMessengersBtn" style="margin-left: 15px;">🔗 Мессенджеры</button>
+            <a href="{% url 'logout' %}" class="btn-secondary" style="margin-left: 15px;">Выйти</a>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="filter-bar">
+        <div class="filter-item"><label>📅 Дата с:</label><input type="date" id="filterDateFrom"></div>
+        <div class="filter-item"><label>по:</label><input type="date" id="filterDateTo"></div>
+        <div class="filter-item"><label>💰 Цена от:</label><input type="number" id="filterPriceFrom" placeholder="0" style="width:90px"></div>
+        <div class="filter-item"><label>до:</label><input type="number" id="filterPriceTo" placeholder="50000" style="width:100px"></div>
+        <div class="filter-item"><label>🔧 Рабочий:</label><select id="filterWorker"><option value="">Все</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
+        <div class="filter-item"><label>Статус:</label><select id="filterStatus"><option value="">Все</option><option value="new">Новая</option><option value="in-progress">В работе</option><option value="done">Выполнена</option></select></div>
+        <button class="btn-primary" id="applyFilters" style="padding:8px 20px;">Применить</button>
+    </div>
+
+    <!-- Таблица заявок -->
+    <div class="table-wrapper">
+        <table id="requestsTable">
+            <thead>
+                <tr>
+                    <th style="width:60px">ID</th>
+                    <th>Задача</th>
+                    <th>Имя клиента</th>
+                    <th style="width:120px">Телефон</th>
+                    <th>Адрес</th>
+                    <th style="width:120px">Вид техники</th>
+                    <th style="width:100px">Статус</th>
+                    <th style="width:90px">Цена (₽)</th>
+                    <th style="width:90px">Себестоимость (₽)</th>
+                    <th style="width:90px">Чистые (₽)</th>
+                    <th style="width:90px">ЗП рабочего (₽)</th>
+                    <th style="width:100px">Деньги сданы</th>
+                    <th style="width:100px">Предоплата</th>
+                    <th>Рабочий</th>
+                    <th style="width:110px">Дата создания</th>
+                    <th style="width:110px">Дедлайн</th>
+                    <th style="width:70px">Детали</th>
+                    <th style="width:100px"></th>
+                 </tr>
+            </thead>
+            <tbody id="requestsBody"></tbody>
+         </table>
+    </div>
+</div>
+
+<!-- Модальное окно создания заявки -->
+<div class="modal" id="createModal">
+    <div class="modal-content">
+        <h2>➕ Новая заявка</h2>
+        <div class="field"><label>Описание задачи</label><textarea id="createDesc" placeholder="Что нужно сделать?" required></textarea></div>
+        <div class="field"><label>Имя клиента</label><input type="text" id="createClientName" placeholder="Например: Иванов Иван" required></div>
+        <div class="field"><label>Телефон клиента</label><input type="tel" id="createClientPhone" class="phone-input" placeholder="+7 (___) ___-__-__" required></div>
+        <div class="field"><label>Email клиента</label><input type="email" id="createClientEmail" placeholder="client@example.ru"></div>
+        <div class="field"><label>Адрес клиента</label><input type="text" id="createClientAddress" placeholder="ул. Ленина, д.10, кв.5" required></div>
+        <div class="field"><label>Вид техники</label><input type="text" id="createEquipmentType" placeholder="Например: водонагреватель"></div>
+        <div class="field"><label>Назначить рабочего</label><select id="createWorker">{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Дата выполнения (дедлайн)</label><input type="date" id="createDeadlineDate" required></div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('createModal')">Отмена</button>
+            <button class="btn-primary" id="saveCreateBtn">Создать</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно просмотра деталей (договор + детали + предоплата) -->
+<div class="modal" id="detailsModal">
+    <div class="modal-content">
+        <h2>📄 Детали заявки #<span id="detailsId"></span></h2>
+        <div class="field"><label>Договор</label>
+            <div class="photo-gallery" id="detailsContract"></div>
+        </div>
+        <div class="field"><label>Детали и чеки</label>
+            <div id="detailsPartsList" class="parts-list"></div>
+        </div>
+        <div class="field"><label>Предоплата</label>
+            <div id="detailsPrepayment">—</div>
+        </div>
+        <div class="field"><label>Себестоимость (₽)</label>
+            <div id="detailsCostPrice">—</div>
+        </div>
+        <div class="field"><label>Чистые (₽)</label>
+            <div id="detailsNetProfit">—</div>
+        </div>
+        <div class="field"><label>ЗП рабочего (₽)</label>
+            <div id="detailsWorkerSalary">—</div>
+        </div>
+        <div class="field"><label>Причина просрочки</label>
+            <div id="detailsOverdueReason" style="background: #f9fafc; padding: 10px; border-radius: 12px;"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('detailsModal')">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования (админ) -->
+<div class="modal" id="editModalAdmin">
+    <div class="modal-content">
+        <h2>✏️ Редактирование заявки #<span id="adminEditId"></span></h2>
+        <div class="field"><label>Описание задачи</label><textarea id="adminDesc"></textarea></div>
+        <div class="field"><label>Имя клиента</label><input type="text" id="adminClientName"></div>
+        <div class="field"><label>Телефон клиента</label><input type="tel" id="adminClientPhone" class="phone-input"></div>
+        <div class="field"><label>Email клиента</label><input type="email" id="adminClientEmail"></div>
+        <div class="field"><label>Адрес клиента</label><input type="text" id="adminClientAddress"></div>
+        <div class="field"><label>Вид техники</label><input type="text" id="adminEquipmentType"></div>
+        <div class="field"><label>Назначить рабочего</label><select id="adminWorker"><option value="">—</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Дата выполнения (дедлайн)</label><input type="date" id="adminDeadlineDate"></div>
+        <div class="field"><label>Статус</label><select id="adminStatus"><option value="new">Новая</option><option value="in-progress">В работе</option><option value="done">Выполнена</option></select></div>
+        <div class="field"><label>Цена</label><input type="number" id="adminPrice"></div>
+        <div class="field"><label>Комментарий</label><textarea id="adminComment"></textarea></div>
+        <div class="field"><label>Предоплата</label>
+            <input type="text" id="adminPrepayment" readonly style="background:#f0f5fa;">
+        </div>
+        <div class="field"><label>Себестоимость (₽)</label>
+            <input type="text" id="adminCostPrice" readonly style="background:#f0f5fa;">
+        </div>
+        <div class="field"><label>Чистые (₽)</label>
+            <input type="text" id="adminNetProfit" readonly style="background:#f0f5fa;">
+        </div>
+        <div class="field"><label>ЗП рабочего (₽)</label>
+            <input type="text" id="adminWorkerSalary" readonly style="background:#f0f5fa;">
+        </div>
+        <div class="field"><label>Договор</label>
+            <div class="photo-gallery" id="adminContractGallery"></div>
+        </div>
+        <div class="field"><label>Детали (чеки)</label>
+            <div id="adminPartsList" class="parts-list"></div>
+        </div>
+        <div class="field" id="adminOverdueReasonField">
+            <label>Причина просрочки</label>
+            <textarea id="adminOverdueReason" readonly rows="3" style="background:#f0f5fa;"></textarea>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('editModalAdmin')">Отмена</button>
+            <button class="btn-primary" id="saveAdminEditBtn">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Просмотр одного фото в крупном размере -->
+<div class="modal" id="photoViewer">
+    <div class="modal-content" style="max-width:900px; padding:20px;">
+        <div style="text-align:right;"><button class="btn-secondary" onclick="closeModal('photoViewer')">Закрыть</button></div>
+        <img id="photoViewerImg" src="" style="width:100%; height:auto; border-radius:12px; margin-top:10px;">
+    </div>
+</div>
+
+<script>
+    const csrftoken = '{{ csrf_token }}';
+    const currentUserId = parseInt("{{ request.user.id }}") || 0;
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    // Маска для телефона
+    function phoneMask(event) {
+        let input = event.target;
+        let x = input.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+        if (!x[2] && x[1] !== '') {
+            input.value = x[1] ? '+' + x[1] : '';
+        } else {
+            input.value = !x[3] ? '+' + x[1] + ' (' + x[2] + ')' :
+                         !x[4] ? '+' + x[1] + ' (' + x[2] + ') ' + x[3] :
+                         !x[5] ? '+' + x[1] + ' (' + x[2] + ') ' + x[3] + '-' + x[4] :
+                         '+' + x[1] + ' (' + x[2] + ') ' + x[3] + '-' + x[4] + '-' + x[5];
+        }
+    }
+
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('phone-input')) {
+            phoneMask(e);
+        }
+    });
+
+    // Загрузка заявок с фильтрами
+    function loadRequests() {
+        const params = new URLSearchParams();
+        const dateFrom = document.getElementById('filterDateFrom').value;
+        const dateTo = document.getElementById('filterDateTo').value;
+        const priceFrom = document.getElementById('filterPriceFrom').value;
+        const priceTo = document.getElementById('filterPriceTo').value;
+        const workerId = document.getElementById('filterWorker').value;
+        const status = document.getElementById('filterStatus').value;
+
+        if (dateFrom) params.append('date_from', dateFrom);
+        if (dateTo) params.append('date_to', dateTo);
+        if (priceFrom) params.append('price_from', priceFrom);
+        if (priceTo) params.append('price_to', priceTo);
+        if (workerId) params.append('worker', workerId);
+        if (status) params.append('status', status);
+
+        fetch('/api/requests/?' + params.toString())
+            .then(response => response.json())
+            .then(data => renderRequests(data))
+            .catch(error => console.error('Ошибка загрузки:', error));
+    }
+
+    function renderRequests(requests) {
+        const tbody = document.getElementById('requestsBody');
+        tbody.innerHTML = '';
+        const today = new Date();
+
+        requests.forEach(r => {
+            const created = new Date(r.created_date);
+            const deadlineDate = r.deadline_date ? new Date(r.deadline_date) : null;
+            const isOverdue = r.status !== 'done' && deadlineDate && today > deadlineDate;
+
+            const row = document.createElement('tr');
+            if (isOverdue) row.classList.add('overdue');
+
+            let statusClass = 'status new';
+            let statusText = 'Новая';
+            if (r.status === 'in-progress') {
+                statusClass = 'status in-progress';
+                statusText = 'В работе';
+            } else if (r.status === 'done') {
+                statusClass = 'status done';
+                statusText = 'Выполнена';
+            }
+
+            row.innerHTML = `
+                  <td>#${r.id}</td>
+                  <td>${escapeHtml(r.description)}</td>
+                  <td>${escapeHtml(r.client_name)}</td>
+                  <td>${escapeHtml(r.client_phone)}</td>
+                  <td>${escapeHtml(r.client_address || '')}</td>
+                  <td>${escapeHtml(r.equipment_type || '')}</td>
+                  <td><span class="${statusClass}">${statusText}</span></td>
+                  <td class="price">${r.price ? r.price + ' ₽' : '—'}</td>
+                  <td class="price">${r.cost_price ? r.cost_price + ' ₽' : '—'}</td>
+                  <td class="price">${r.net_profit ? r.net_profit + ' ₽' : '—'}</td>
+                  <td class="price">${r.worker_salary ? r.worker_salary + ' ₽' : '—'}</td>
+                  <td><input type="checkbox" class="money-delivered" data-id="${r.id}" ${r.money_delivered ? 'checked' : ''} ${r.status !== 'done' ? 'disabled' : ''}></td>
+                  <td><input type="checkbox" class="prepayment-display" disabled ${r.prepayment_made ? 'checked' : ''}></td>
+                  <td>${escapeHtml(r.worker_name)}</td>
+                  <td>${created.toLocaleDateString()}</td>
+                  <td>${deadlineDate ? deadlineDate.toLocaleDateString() : '—'}</td>
+                  <td><button class="action-link" onclick="showDetails(${r.id})">👁️ детали</button></td>
+                  <td><button class="action-link" onclick="editRequest(${r.id})">✏️ редактировать</button></td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        document.querySelectorAll('.money-delivered').forEach(cb => {
+            cb.addEventListener('change', function(e) {
+                fetch('/update-money-delivered/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                    body: JSON.stringify({ id: this.dataset.id, value: this.checked })
+                }).catch(error => console.error('Ошибка обновления:', error));
+            });
+        });
+    }
+
+    // Показать детали (договор + детали + предоплата + себестоимость + чистые + ЗП)
+    window.showDetails = function(id) {
+        fetch(`/view-request/${id}/`)
+            .then(response => response.json())
+            .then(data => {
+                // Договор
+                const contractPhoto = data.photos.find(p => p.photo_type === 'contract');
+                const contractDiv = document.getElementById('detailsContract');
+                contractDiv.innerHTML = '';
+                if (contractPhoto) {
+                    const div = document.createElement('div');
+                    div.className = 'photo-thumb';
+                    div.innerHTML = `<img src="${contractPhoto.image}" alt="contract" onclick="openPhotoViewer('${contractPhoto.image}')">`;
+                    contractDiv.appendChild(div);
+                } else {
+                    contractDiv.innerHTML = '<p>Нет договора</p>';
+                }
+
+                // Детали
+                const partsDiv = document.getElementById('detailsPartsList');
+                partsDiv.innerHTML = '';
+                if (data.parts && data.parts.length) {
+                    data.parts.forEach(part => {
+                        const partDiv = document.createElement('div');
+                        partDiv.className = 'part-item';
+                        partDiv.innerHTML = `
+                            <strong>${escapeHtml(part.name)}</strong> — ${part.price ? part.price + ' ₽' : 'цена не указана'}<br>
+                            ${part.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;" onclick="openPhotoViewer('${part.receipt_photo_url}')"><img src="${part.receipt_photo_url}" alt="receipt"></div>` : '<span style="color:#c03c2b;">Чек не прикреплён</span>'}
+                        `;
+                        partsDiv.appendChild(partDiv);
+                    });
+                } else {
+                    partsDiv.innerHTML = '<p>Нет деталей</p>';
+                }
+
+                // Предоплата
+                document.getElementById('detailsPrepayment').innerHTML = data.prepayment_made ? 'Да' : 'Нет';
+                // Себестоимость
+                document.getElementById('detailsCostPrice').innerHTML = data.cost_price ? data.cost_price + ' ₽' : '—';
+                // Чистые
+                document.getElementById('detailsNetProfit').innerHTML = data.net_profit ? data.net_profit + ' ₽' : '—';
+                // ЗП
+                document.getElementById('detailsWorkerSalary').innerHTML = data.worker_salary ? data.worker_salary + ' ₽' : '—';
+                // Причина просрочки
+                const reasonDiv = document.getElementById('detailsOverdueReason');
+                reasonDiv.innerHTML = data.overdue_reason ? escapeHtml(data.overdue_reason) : 'не указана';
+
+                document.getElementById('detailsId').textContent = id;
+                document.getElementById('detailsModal').classList.add('active');
+            })
+            .catch(error => console.error('Ошибка загрузки деталей:', error));
+    };
+
+    // Редактирование заявки (админ)
+    window.editRequest = function(id) {
+        fetch(`/edit-request/${id}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('adminEditId').textContent = data.id;
+                document.getElementById('adminDesc').value = data.description || '';
+                document.getElementById('adminClientName').value = data.client_name || '';
+                document.getElementById('adminClientPhone').value = data.client_phone || '';
+                document.getElementById('adminClientEmail').value = data.client_email || '';
+                document.getElementById('adminClientAddress').value = data.client_address || '';
+                document.getElementById('adminEquipmentType').value = data.equipment_type || '';
+                document.getElementById('adminPrice').value = data.price || '';
+                document.getElementById('adminComment').value = data.comment || '';
+                document.getElementById('adminDeadlineDate').value = data.deadline_date || '';
+                document.getElementById('adminStatus').value = data.status || '';
+                document.getElementById('adminWorker').value = data.worker_id || '';
+                document.getElementById('adminOverdueReason').value = data.overdue_reason || '';
+                document.getElementById('adminPrepayment').value = data.prepayment_made ? 'Да' : 'Нет';
+
+                // Вычисленные поля (себестоимость, чистые, ЗП) – загружаем из view_request (но они не приходят в edit-request, поэтому запросим view-request отдельно)
+                fetch(`/view-request/${id}/`)
+                    .then(res => res.json())
+                    .then(viewData => {
+                        document.getElementById('adminCostPrice').value = viewData.cost_price ? viewData.cost_price + ' ₽' : '—';
+                        document.getElementById('adminNetProfit').value = viewData.net_profit ? viewData.net_profit + ' ₽' : '—';
+                        document.getElementById('adminWorkerSalary').value = viewData.worker_salary ? viewData.worker_salary + ' ₽' : '—';
+                    })
+                    .catch(err => console.error('Ошибка загрузки вычисленных данных:', err));
+
+                // Показываем поле причины просрочки только если заявка просрочена и не выполнена
+                const isOverdue = data.is_overdue && data.status !== 'done';
+                const overdueField = document.getElementById('adminOverdueReasonField');
+                if (isOverdue) {
+                    overdueField.style.display = 'block';
+                } else {
+                    overdueField.style.display = 'none';
+                }
+
+                // Договор
+                const contractPhoto = data.photos.find(p => p.photo_type === 'contract');
+                const contractGallery = document.getElementById('adminContractGallery');
+                contractGallery.innerHTML = '';
+                if (contractPhoto) {
+                    const div = document.createElement('div');
+                    div.className = 'photo-thumb';
+                    div.innerHTML = `<img src="${contractPhoto.image}" alt="contract" onclick="openPhotoViewer('${contractPhoto.image}')">`;
+                    contractGallery.appendChild(div);
+                } else {
+                    contractGallery.innerHTML = '<p>Нет договора</p>';
+                }
+
+                // Детали
+                const partsDiv = document.getElementById('adminPartsList');
+                partsDiv.innerHTML = '';
+                if (data.parts && data.parts.length) {
+                    data.parts.forEach(part => {
+                        const partDiv = document.createElement('div');
+                        partDiv.className = 'part-item';
+                        partDiv.innerHTML = `
+                            <strong>${escapeHtml(part.name)}</strong> — ${part.price ? part.price + ' ₽' : 'цена не указана'}<br>
+                            ${part.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;" onclick="openPhotoViewer('${part.receipt_photo_url}')"><img src="${part.receipt_photo_url}" alt="receipt"></div>` : '<span style="color:#c03c2b;">Чек не прикреплён</span>'}
+                        `;
+                        partsDiv.appendChild(partDiv);
+                    });
+                } else {
+                    partsDiv.innerHTML = '<p>Нет деталей</p>';
+                }
+
+                document.getElementById('editModalAdmin').classList.add('active');
+            })
+            .catch(error => console.error('Ошибка загрузки данных заявки:', error));
+    };
+
+    // Сохранение редактирования (админ)
+    document.getElementById('saveAdminEditBtn').addEventListener('click', function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Сохранение...';
+        const id = document.getElementById('adminEditId').textContent;
+        if (!id) return;
+        const formData = new FormData();
+        formData.append('description', document.getElementById('adminDesc').value);
+        formData.append('client_name', document.getElementById('adminClientName').value);
+        formData.append('client_phone', document.getElementById('adminClientPhone').value.replace(/\D/g, ''));
+        formData.append('client_email', document.getElementById('adminClientEmail').value);
+        formData.append('client_address', document.getElementById('adminClientAddress').value);
+        formData.append('equipment_type', document.getElementById('adminEquipmentType').value);
+        formData.append('price', document.getElementById('adminPrice').value);
+        formData.append('comment', document.getElementById('adminComment').value);
+        formData.append('deadline_date', document.getElementById('adminDeadlineDate').value);
+        formData.append('status', document.getElementById('adminStatus').value);
+        formData.append('worker_id', document.getElementById('adminWorker').value);
+        fetch(`/edit-request/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeModal('editModalAdmin');
+                loadRequests();
+                alert('Изменения сохранены');
+            } else {
+                alert('Ошибка сохранения');
+            }
+        })
+        .catch(err => console.error('Ошибка сохранения:', err))
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = 'Сохранить';
+        });
+    });
+
+    // Создание заявки
+    document.getElementById('saveCreateBtn').addEventListener('click', function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Сохранение...';
+        const phoneInput = document.getElementById('createClientPhone');
+        const phoneDigits = phoneInput.value.replace(/\D/g, '');
+        if (phoneDigits.length !== 11) {
+            alert('Введите корректный номер телефона в формате +7 (XXX) XXX-XX-XX');
+            btn.disabled = false;
+            btn.textContent = 'Создать';
+            phoneInput.focus();
+            return;
+        }
+        const formData = new FormData();
+        formData.append('description', document.getElementById('createDesc').value);
+        formData.append('client_name', document.getElementById('createClientName').value);
+        formData.append('client_phone', phoneDigits);
+        formData.append('client_email', document.getElementById('createClientEmail').value);
+        formData.append('client_address', document.getElementById('createClientAddress').value);
+        formData.append('equipment_type', document.getElementById('createEquipmentType').value);
+        formData.append('worker_id', document.getElementById('createWorker').value);
+        formData.append('deadline_date', document.getElementById('createDeadlineDate').value);
+
+        fetch('/create-request/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeModal('createModal');
+                loadRequests();
+            } else {
+                alert('Ошибка создания: ' + (data.error || 'неизвестная ошибка'));
+            }
+        })
+        .catch(error => console.error('Ошибка создания:', error))
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = 'Создать';
+        });
+    });
+
+    document.getElementById('showCreateModal').addEventListener('click', function() {
+        document.getElementById('createModal').classList.add('active');
+    });
+
+    document.getElementById('applyFilters').addEventListener('click', loadRequests);
+
+    window.openPhotoViewer = function(url) {
+        const pv = document.getElementById('photoViewer');
+        document.getElementById('photoViewerImg').src = url;
+        pv.classList.add('active');
+    };
+
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.classList.remove('active');
+        }
+    };
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    loadRequests();
+
+    // Привязка мессенджеров
+    document.getElementById('bindMessengersBtn').addEventListener('click', function() {
+        document.getElementById('bindModal').classList.add('active');
+    });
+
+    const tgCodeBtn = document.getElementById('generateTgCodeBtn');
+    if (tgCodeBtn) {
+        tgCodeBtn.addEventListener('click', function() {
+            fetch('/generate-tg-code/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+                body: JSON.stringify({user_id: currentUserId})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('tgCodeDisplay').textContent = 'Ошибка: ' + data.error;
+                    return;
+                }
+                document.getElementById('tgCodeDisplay').textContent = 'Код: ' + data.code;
+                document.getElementById('tgTokenHidden').value = data.token;
+            })
+            .catch(err => {
+                console.error('Ошибка генерации TG кода:', err);
+                document.getElementById('tgCodeDisplay').textContent = 'Ошибка сервера';
+            });
+        });
+    }
+
+    const maxCodeBtn = document.getElementById('generateMaxCodeBtn');
+    if (maxCodeBtn) {
+        maxCodeBtn.addEventListener('click', function() {
+            fetch('/generate-max-code/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+                body: JSON.stringify({user_id: currentUserId})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('maxCodeDisplay').textContent = 'Ошибка: ' + data.error;
+                    return;
+                }
+                document.getElementById('maxCodeDisplay').textContent = 'Код: ' + data.code;
+                document.getElementById('maxTokenHidden').value = data.token;
+            })
+            .catch(err => {
+                console.error('Ошибка генерации MAX кода:', err);
+                document.getElementById('maxCodeDisplay').textContent = 'Ошибка сервера';
+            });
+        });
+    }
+
+    document.getElementById('bindForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch('/bind-messengers/', {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrftoken},
+            body: formData
+        }).then(r=>r.json()).then(data=>{
+            if (data.success) {
+                alert('Мессенджеры привязаны!');
+                document.getElementById('bindModal').classList.remove('active');
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        });
+    });
+
+</script>
+
+<!-- Модальное окно для привязки мессенджеров -->
+<div id="bindModal" class="modal">
+    <div class="modal-content">
+        <h2>🔗 Привязка мессенджеров</h2>
+        <form id="bindForm">
+            <div class="field">
+                <label>Telegram</label>
+                <button type="button" id="generateTgCodeBtn" class="btn-primary" style="padding:10px 20px; margin-bottom:10px;">Сгенерировать код</button>
+                <div id="tgCodeDisplay" style="font-weight:700; color:#0b2b40;">Код: —</div>
+                <input type="hidden" id="tgTokenHidden" name="tg_token">
+            </div>
+            <div class="field">
+                <label>MAX</label>
+                <button type="button" id="generateMaxCodeBtn" class="btn-primary" style="padding:10px 20px; margin-bottom:10px;">Сгенерировать код</button>
+                <div id="maxCodeDisplay" style="font-weight:700; color:#0b2b40;">Код: —</div>
+                <input type="hidden" id="maxTokenHidden" name="max_token">
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="document.getElementById('bindModal').classList.remove('active')" class="btn-secondary">Отмена</button>
+                <button type="submit" class="btn-primary">Привязать</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

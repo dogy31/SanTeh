@@ -1,0 +1,899 @@
+{% extends 'main/base.html' %}
+{% block extra_head %}
+<style>
+    .worker-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: white;
+        padding: 20px 28px;
+        border-radius: 50px;
+        box-shadow: 0 5px 12px #bacddb;
+        margin-bottom: 25px;
+    }
+    .worker-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .avatar {
+        background: #2f7e9e;
+        width: 52px;
+        height: 52px;
+        border-radius: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 24px;
+    }
+    .worker-name h2 {
+        font-size: 24px;
+        color: #0b2b40;
+        margin: 0;
+    }
+    .worker-name span {
+        color: #4a6778;
+        font-size: 15px;
+    }
+    .stats span {
+        font-weight: 700;
+        font-size: 22px;
+        color: #1b6f8f;
+    }
+    .filter-bar {
+        background: white;
+        padding: 18px 24px;
+        border-radius: 60px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px 24px;
+        align-items: center;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    }
+    .filter-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .filter-item label {
+        font-weight: 500;
+        color: #2c5770;
+        font-size: 14px;
+    }
+    .filter-item input, .filter-item select {
+        padding: 8px 12px;
+        border: 1px solid #ccdce8;
+        border-radius: 30px;
+        background: #f8fafc;
+        font-size: 14px;
+    }
+    .table-wrapper {
+        background: white;
+        border-radius: 28px;
+        padding: 20px 0;
+        box-shadow: 0 20px 35px -10px #bac9d4;
+        overflow-x: auto;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+    th, td {
+        padding: 14px 16px;
+        border: 1px solid #e2e8f0;
+        vertical-align: middle;
+    }
+    th {
+        background: #f8fafc;
+        color: #1a4b5f;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    tbody tr:nth-child(even) {
+        background-color: #f9fafb;
+    }
+    tbody tr:hover {
+        background-color: #f1f5f9;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 40px;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    .status-badge.new { background: #e1edfb; color: #1b5f8c; }
+    .status-badge.in-progress { background: #fff2d6; color: #a16500; }
+    .status-badge.done { background: #dff0e0; color: #1d6f2c; }
+    .actions {
+        white-space: nowrap;
+    }
+    .btn-outline, .btn-solid {
+        padding: 6px 14px;
+        border-radius: 40px;
+        font-weight: 500;
+        font-size: 12px;
+        cursor: pointer;
+        text-align: center;
+        display: inline-block;
+        margin-right: 8px;
+        min-width: 90px;
+        transition: 0.15s;
+    }
+    .btn-outline {
+        border: 1.5px solid #2f7e9e;
+        background: white;
+        color: #1d5f7a;
+    }
+    .btn-outline:hover {
+        background: #e7f0f5;
+    }
+    .btn-solid {
+        background: #2f7e9e;
+        color: white;
+        border: none;
+        box-shadow: 0 2px 4px #2f7e9e70;
+    }
+    .btn-solid:hover {
+        background: #1f5f7a;
+    }
+    .btn-secondary {
+        background: transparent;
+        border: 1.5px solid #2f7e9e;
+        color: #1a5f7a;
+        padding: 10px 24px;
+        border-radius: 40px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .btn-primary {
+        background: #2f7e9e;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 40px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.3);
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+        background: white;
+        border-radius: 36px;
+        max-width: 900px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 36px 40px;
+    }
+    .modal-content h2 { font-size: 28px; margin-bottom: 20px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-weight: 500; margin-bottom: 4px; }
+    .field input, .field select, .field textarea {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #cbdae7;
+        border-radius: 20px;
+        font-size: 15px;
+    }
+    .field input[readonly] {
+        background: #f0f5fa;
+        color: #2b546b;
+        cursor: default;
+        border-color: #d0dee9;
+    }
+    .photo-upload-area {
+        border: 2px dashed #acc7db;
+        border-radius: 24px;
+        padding: 20px;
+        text-align: center;
+        margin: 15px 0;
+        background: #f4fafd;
+    }
+    .photo-previews {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .preview-item {
+        width: 80px;
+        height: 80px;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid #b0c8d8;
+        position: relative;
+    }
+    .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+    .preview-item .remove {
+        position: absolute;
+        top: 2px; right: 2px;
+        background: rgba(255,255,255,0.7);
+        border-radius: 50%;
+        width: 20px; height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 25px; }
+    .required-star { color: #c03c2b; margin-left: 3px; }
+    .parts-section {
+        margin-top: 20px;
+        border-top: 1px solid #cbdae7;
+        padding-top: 20px;
+    }
+    .part-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 16px;
+        align-items: flex-end;
+        background: #f9fcff;
+        padding: 12px;
+        border-radius: 20px;
+        flex-wrap: wrap;
+    }
+    .part-row .part-name {
+        flex: 2;
+    }
+    .part-row .part-price {
+        flex: 1;
+    }
+    .part-row .part-receipt {
+        flex: 2;
+    }
+    .part-row .part-receipt input {
+        padding: 6px;
+    }
+    .part-row .remove-part {
+        background: #c03c2b;
+        color: white;
+        border: none;
+        border-radius: 40px;
+        padding: 6px 12px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    .add-part-btn {
+        background: #2f7e9e;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 40px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    #overdueReasonSection {
+        margin-top: 20px;
+        border-top: 1px solid #cbdae7;
+        padding-top: 20px;
+    }
+    .prepayment-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+    .prepayment-checkbox label {
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 30px auto; padding: 0 20px;">
+    <div class="worker-header">
+        <div class="worker-info">
+            <div class="avatar">{{ request.user.first_name|first }}</div>
+            <div class="worker-name">
+                <h2>{{ request.user.first_name|default:request.user.username }}</h2>
+                <span>{{ request.user.email }}</span>
+            </div>
+        </div>
+        <div class="stats">
+            <span id="activeCount">0</span> активных
+        </div>
+        <button id="bindMessengersBtn" class="btn-primary">Привязать мессенджеры</button>
+        <a href="{% url 'logout' %}" class="btn-outline" style="text-decoration: none;">Выйти</a>
+    </div>
+
+    <h3 style="margin-bottom: 20px;">🔧 Мои заявки</h3>
+
+    <!-- Фильтры -->
+    <div class="filter-bar">
+        <div class="filter-item"><label>📅 Дата с:</label><input type="date" id="filterDateFrom"></div>
+        <div class="filter-item"><label>по:</label><input type="date" id="filterDateTo"></div>
+        <div class="filter-item"><label>💰 Цена от:</label><input type="number" id="filterPriceFrom" placeholder="0" style="width:90px"></div>
+        <div class="filter-item"><label>до:</label><input type="number" id="filterPriceTo" placeholder="50000" style="width:100px"></div>
+        <div class="filter-item"><label>Статус:</label>
+            <select id="filterStatus">
+                <option value="">Все</option>
+                <option value="new">Новая</option>
+                <option value="in-progress">В работе</option>
+                <option value="done">Выполнена</option>
+            </select>
+        </div>
+        <button class="btn-primary" id="applyFilters">Применить</button>
+        <button class="btn-secondary" id="resetFilters">Сбросить</button>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="requestsTable">
+            <thead>
+                <tr>
+                    <th style="width:60px">ID</th>
+                    <th>Задача</th>
+                    <th>Имя клиента</th>
+                    <th style="width:120px">Телефон</th>
+                    <th>Адрес</th>
+                    <th style="width:120px">Вид техники</th>
+                    <th style="width:100px">Статус</th>
+                    <th style="width:90px">Цена (₽)</th>
+                    <th style="width:140px">Действия</th>
+                   </tr>
+            </thead>
+            <tbody id="requestsBody"></tbody>
+         </table>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования -->
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <h2>✏️ Редактирование заявки #<span id="editId"></span></h2>
+        <div class="field">
+            <label>Описание (только чтение)</label>
+            <input type="text" id="editDesc" readonly>
+        </div>
+        <div class="field">
+            <label>Имя клиента</label>
+            <input type="text" id="editClientName" readonly>
+        </div>
+        <div class="field">
+            <label>Телефон клиента</label>
+            <input type="tel" id="editClientPhone" readonly>
+        </div>
+        <div class="field">
+            <label>Email клиента</label>
+            <input type="email" id="editClientEmail" readonly>
+        </div>
+        <div class="field">
+            <label>Адрес клиента</label>
+            <input type="text" id="editClientAddress" readonly>
+        </div>
+        <div class="field">
+            <label>Вид техники</label>
+            <input type="text" id="editEquipmentType" readonly>
+        </div>
+        <div class="prepayment-checkbox">
+            <input type="checkbox" id="prepaymentCheckbox">
+            <label>Внесена предоплата</label>
+        </div>
+        <div class="field">
+            <label>Стоимость работ <span class="required-star">*</span></label>
+            <input type="number" id="editPrice" required>
+        </div>
+        <div class="field">
+            <label>Комментарий</label>
+            <textarea id="editComment" rows="3"></textarea>
+        </div>
+        <div class="field">
+            <label>Договор</label>
+            <div class="photo-upload-area">
+                <input type="file" id="contractInput" accept="image/*">
+                <div class="photo-previews" id="contractPreviews"></div>
+            </div>
+        </div>
+
+        <!-- Секция деталей -->
+        <div class="parts-section">
+            <label>Детали (чеки для каждой детали обязательны для закрытия)</label>
+            <div id="partsContainer"></div>
+            <button type="button" class="add-part-btn" id="addPartBtn">➕ Добавить деталь</button>
+        </div>
+
+        <!-- Блок для причины просрочки (показывается только для просроченных заявок) -->
+        <div id="overdueReasonSection" style="display: none;">
+            <div class="field">
+                <label>Причина просрочки (обязательно для просроченных заявок)</label>
+                <textarea id="overdueReason" rows="3" placeholder="Укажите причину, почему заявка не выполнена в срок..."></textarea>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('editModal')">Отмена</button>
+            <button class="btn-primary" id="saveEditBtn">Сохранить изменения</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const csrftoken = '{{ csrf_token }}';
+    const currentUserId = parseInt("{{ request.user.id }}") || 0;
+    let currentEditId = null;
+    let contractFile = null;
+    let existingContractPhoto = null;
+    let parts = [];
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    // Загрузка заявок с фильтрами
+    function loadWorkerRequests() {
+        const params = new URLSearchParams();
+        params.append('worker_id', currentUserId);
+        const dateFrom = document.getElementById('filterDateFrom').value;
+        const dateTo = document.getElementById('filterDateTo').value;
+        const priceFrom = document.getElementById('filterPriceFrom').value;
+        const priceTo = document.getElementById('filterPriceTo').value;
+        const status = document.getElementById('filterStatus').value;
+
+        if (dateFrom) params.append('date_from', dateFrom);
+        if (dateTo) params.append('date_to', dateTo);
+        if (priceFrom) params.append('price_from', priceFrom);
+        if (priceTo) params.append('price_to', priceTo);
+        if (status) params.append('status', status);
+
+        fetch('/api/worker-requests/?' + params.toString())
+            .then(response => response.json())
+            .then(data => renderRequests(data))
+            .catch(err => console.error('Ошибка загрузки заявок:', err));
+    }
+
+    function renderRequests(requests) {
+        const tbody = document.getElementById('requestsBody');
+        tbody.innerHTML = '';
+        let activeCount = 0;
+
+        requests.forEach(r => {
+            if (r.status !== 'done') activeCount++;
+
+            let statusClass = 'status-badge new';
+            let statusText = 'Новая';
+            if (r.status === 'in-progress') {
+                statusClass = 'status-badge in-progress';
+                statusText = 'В работе';
+            } else if (r.status === 'done') {
+                statusClass = 'status-badge done';
+                statusText = 'Выполнена';
+            }
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                 <td>#${r.id}</td>
+                 <td>${escapeHtml(r.description)}</td>
+                 <td>${escapeHtml(r.client_name)}</td>
+                 <td>${escapeHtml(r.client_phone)}</td>
+                 <td>${escapeHtml(r.client_address || '')}</td>
+                 <td>${escapeHtml(r.equipment_type || '')}</td>
+                 <td><span class="${statusClass}">${statusText}</span></td>
+                 <td>${r.price ? r.price + ' ₽' : '—'}</td>
+                <td class="actions">
+                    ${r.status !== 'done' ? 
+                        `<button class="btn-outline" onclick="editRequest(${r.id})">✏️ редактировать</button>
+                         <button class="btn-solid" onclick="closeRequest(${r.id}, this)">✅ закрыть</button>` : 
+                        `<button class="btn-outline" onclick="editRequest(${r.id})">👁️ просмотр</button>`}
+                 </td>
+            `;
+            tbody.appendChild(row);
+        });
+        document.getElementById('activeCount').textContent = activeCount;
+    }
+
+    window.editRequest = function(id) {
+        currentEditId = id;
+        fetch(`/edit-request/${id}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('editId').textContent = data.id;
+                document.getElementById('editDesc').value = data.description || '';
+                document.getElementById('editClientName').value = data.client_name || '';
+                document.getElementById('editClientPhone').value = data.client_phone || '';
+                document.getElementById('editClientEmail').value = data.client_email || '';
+                document.getElementById('editClientAddress').value = data.client_address || '';
+                document.getElementById('editEquipmentType').value = data.equipment_type || '';
+                document.getElementById('editPrice').value = data.price || '';
+                document.getElementById('editComment').value = data.comment || '';
+
+                // Договор
+                const contractPhoto = data.photos.find(p => p.photo_type === 'contract');
+                existingContractPhoto = contractPhoto ? contractPhoto.image : null;
+                contractFile = null;
+                renderContractPreview();
+
+                // Детали
+                parts = [];
+                if (data.parts && data.parts.length) {
+                    data.parts.forEach(p => {
+                        parts.push({
+                            name: p.name,
+                            price: p.price,
+                            file: null,
+                            existingId: p.id,
+                            existingPhotoUrl: p.receipt_photo_url
+                        });
+                    });
+                } else {
+                    parts.push({ name: '', price: '', file: null, existingId: null, existingPhotoUrl: null });
+                }
+                renderParts();
+
+                // Предоплата
+                const prepayCheck = document.getElementById('prepaymentCheckbox');
+                prepayCheck.checked = data.prepayment_made;
+                if (data.status !== 'new') {
+                    prepayCheck.disabled = true;
+                } else {
+                    prepayCheck.disabled = false;
+                }
+
+                // Блок причины просрочки – показываем только если заявка просрочена и не выполнена
+                const isOverdue = data.is_overdue && data.status !== 'done';
+                const overdueSection = document.getElementById('overdueReasonSection');
+                const overdueTextarea = document.getElementById('overdueReason');
+                if (isOverdue) {
+                    overdueSection.style.display = 'block';
+                    overdueTextarea.value = data.overdue_reason || '';
+                } else {
+                    overdueSection.style.display = 'none';
+                }
+
+                document.getElementById('editModal').classList.add('active');
+            })
+            .catch(err => console.error('Ошибка загрузки данных заявки:', err));
+    };
+
+    window.viewRequest = function(id) {
+        editRequest(id);
+        setTimeout(() => {
+            document.querySelectorAll('#editModal input, #editModal textarea, #editModal select, #editModal button').forEach(el => el.disabled = true);
+            document.getElementById('saveEditBtn').style.display = 'none';
+            document.getElementById('addPartBtn').style.display = 'none';
+            document.querySelectorAll('.remove-part').forEach(btn => btn.style.display = 'none');
+            document.getElementById('prepaymentCheckbox').disabled = true;
+        }, 200);
+    };
+
+    window.closeRequest = function(id, btn) {
+        if (!confirm('Вы уверены, что хотите закрыть заявку?')) return;
+        btn.disabled = true;
+        btn.textContent = 'Закрытие...';
+        fetch(`/close-request/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken }
+        })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200 && body.success) {
+                loadWorkerRequests();
+                alert('Заявка закрыта');
+            } else {
+                alert('Ошибка: ' + (body.error || 'Не удалось закрыть заявку'));
+            }
+        })
+        .catch(err => console.error('Ошибка закрытия:', err))
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = '✅ закрыть';
+        });
+    };
+
+    // Превью договора
+    function renderContractPreview() {
+        const container = document.getElementById('contractPreviews');
+        container.innerHTML = '';
+        if (existingContractPhoto) {
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            div.innerHTML = `<img src="${existingContractPhoto}" alt="contract"><span class="remove" onclick="removeExistingContract()">✖</span>`;
+            container.appendChild(div);
+        }
+        if (contractFile) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.innerHTML = `<img src="${e.target.result}" alt="contract"><span class="remove" onclick="removeNewContract()">✖</span>`;
+                container.appendChild(div);
+            };
+            reader.readAsDataURL(contractFile);
+        }
+    }
+
+    window.removeExistingContract = function() {
+        existingContractPhoto = null;
+        renderContractPreview();
+    };
+    window.removeNewContract = function() {
+        contractFile = null;
+        renderContractPreview();
+    };
+    document.getElementById('contractInput').addEventListener('change', function(e) {
+        if (e.target.files.length) {
+            contractFile = e.target.files[0];
+            renderContractPreview();
+        }
+        this.value = '';
+    });
+
+    // Детали
+    function renderParts() {
+        const container = document.getElementById('partsContainer');
+        container.innerHTML = '';
+        parts.forEach((part, idx) => {
+            const div = document.createElement('div');
+            div.className = 'part-row';
+            div.setAttribute('data-idx', idx);
+            div.innerHTML = `
+                <div class="part-name">
+                    <label>Название детали</label>
+                    <input type="text" value="${escapeHtml(part.name)}" placeholder="Например: кран, труба..." class="part-name-input">
+                </div>
+                <div class="part-price">
+                    <label>Цена (₽)</label>
+                    <input type="number" value="${part.price || ''}" placeholder="0" class="part-price-input">
+                </div>
+                <div class="part-receipt">
+                    <label>Чек за деталь</label>
+                    <input type="file" class="part-receipt-input" accept="image/*">
+                    <div class="photo-previews part-receipt-preview"></div>
+                </div>
+                <button type="button" class="remove-part" data-idx="${idx}">✖</button>
+            `;
+            container.appendChild(div);
+
+            const previewDiv = div.querySelector('.part-receipt-preview');
+            if (part.existingPhotoUrl) {
+                const imgDiv = document.createElement('div');
+                imgDiv.className = 'preview-item';
+                imgDiv.innerHTML = `<img src="${part.existingPhotoUrl}" alt="receipt"><span class="remove" onclick="removeExistingPartPhoto(${idx})">✖</span>`;
+                previewDiv.appendChild(imgDiv);
+            }
+            if (part.file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imgDiv = document.createElement('div');
+                    imgDiv.className = 'preview-item';
+                    imgDiv.innerHTML = `<img src="${e.target.result}" alt="receipt"><span class="remove" onclick="removeNewPartPhoto(${idx})">✖</span>`;
+                    previewDiv.appendChild(imgDiv);
+                };
+                reader.readAsDataURL(part.file);
+            }
+
+            const nameInput = div.querySelector('.part-name-input');
+            const priceInput = div.querySelector('.part-price-input');
+            const fileInput = div.querySelector('.part-receipt-input');
+            nameInput.addEventListener('input', (e) => { parts[idx].name = e.target.value; });
+            priceInput.addEventListener('input', (e) => { parts[idx].price = e.target.value; });
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    parts[idx].file = e.target.files[0];
+                    parts[idx].existingPhotoUrl = null;
+                    renderParts();
+                }
+                fileInput.value = '';
+            });
+        });
+
+        document.querySelectorAll('.remove-part').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const idx = parseInt(this.getAttribute('data-idx'));
+                if (!isNaN(idx)) {
+                    parts.splice(idx, 1);
+                    renderParts();
+                }
+            });
+        });
+    }
+
+    window.removeExistingPartPhoto = function(idx) {
+        parts[idx].existingPhotoUrl = null;
+        renderParts();
+    };
+    window.removeNewPartPhoto = function(idx) {
+        parts[idx].file = null;
+        renderParts();
+    };
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    document.getElementById('addPartBtn').addEventListener('click', function() {
+        parts.push({ name: '', price: '', file: null, existingId: null, existingPhotoUrl: null });
+        renderParts();
+    });
+
+    // Сохранение изменений с блокировкой кнопки
+    document.getElementById('saveEditBtn').addEventListener('click', function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Сохранение...';
+        if (!currentEditId) {
+            btn.disabled = false;
+            btn.textContent = 'Сохранить изменения';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('price', document.getElementById('editPrice').value);
+        formData.append('comment', document.getElementById('editComment').value);
+        formData.append('overdue_reason', document.getElementById('overdueReason').value);
+        formData.append('prepayment_made', document.getElementById('prepaymentCheckbox').checked);
+        formData.append('client_address', document.getElementById('editClientAddress').value); // Добавлено!
+        if (contractFile) {
+            formData.append('contract_photos', contractFile);
+        } else if (existingContractPhoto === null) {
+            formData.append('delete_contract', 'true');
+        }
+
+        const partsWithoutFiles = parts.map((part, idx) => ({
+            name: part.name,
+            price: part.price,
+            existingId: part.existingId,
+        }));
+        formData.append('parts_data', JSON.stringify(partsWithoutFiles));
+        parts.forEach((part, idx) => {
+            if (part.file) {
+                formData.append(`part_photo_${idx}`, part.file);
+            }
+        });
+
+        fetch(`/edit-request/${currentEditId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeModal('editModal');
+                loadWorkerRequests();
+            } else {
+                alert('Ошибка сохранения: ' + (data.error || 'неизвестная ошибка'));
+            }
+        })
+        .catch(err => console.error('Ошибка сохранения:', err))
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = 'Сохранить изменения';
+        });
+    });
+
+    document.getElementById('applyFilters').addEventListener('click', loadWorkerRequests);
+    document.getElementById('resetFilters').addEventListener('click', function() {
+        document.getElementById('filterDateFrom').value = '';
+        document.getElementById('filterDateTo').value = '';
+        document.getElementById('filterPriceFrom').value = '';
+        document.getElementById('filterPriceTo').value = '';
+        document.getElementById('filterStatus').value = '';
+        loadWorkerRequests();
+    });
+
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.classList.remove('active');
+        }
+    };
+
+    loadWorkerRequests();
+
+    // Привязка мессенджеров
+    document.getElementById('bindMessengersBtn').addEventListener('click', function() {
+        document.getElementById('bindModal').classList.add('active');
+    });
+
+    const tgCodeBtn = document.getElementById('generateTgCodeBtn');
+    if (tgCodeBtn) {
+        tgCodeBtn.addEventListener('click', function() {
+            fetch('/generate-tg-code/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+                body: JSON.stringify({user_id: currentUserId})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('tgCodeDisplay').textContent = 'Ошибка: ' + data.error;
+                    return;
+                }
+                document.getElementById('tgCodeDisplay').textContent = 'Код: ' + data.code;
+                document.getElementById('tgTokenHidden').value = data.token;
+            })
+            .catch(err => {
+                console.error('Ошибка генерации TG кода:', err);
+                document.getElementById('tgCodeDisplay').textContent = 'Ошибка сервера';
+            });
+        });
+    }
+
+    const maxCodeBtn = document.getElementById('generateMaxCodeBtn');
+    if (maxCodeBtn) {
+        maxCodeBtn.addEventListener('click', function() {
+            fetch('/generate-max-code/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+                body: JSON.stringify({user_id: currentUserId})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('maxCodeDisplay').textContent = 'Ошибка: ' + data.error;
+                    return;
+                }
+                document.getElementById('maxCodeDisplay').textContent = 'Код: ' + data.code;
+                document.getElementById('maxTokenHidden').value = data.token;
+            })
+            .catch(err => {
+                console.error('Ошибка генерации MAX кода:', err);
+                document.getElementById('maxCodeDisplay').textContent = 'Ошибка сервера';
+            });
+        });
+    }
+
+    document.getElementById('bindForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch('/bind-messengers/', {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrftoken},
+            body: formData
+        }).then(r=>r.json()).then(data=>{
+            if (data.success) {
+                alert('Мессенджеры привязаны!');
+                document.getElementById('bindModal').classList.remove('active');
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        });
+    });
+
+</script>
+
+<!-- Модальное окно для привязки мессенджеров -->
+<div id="bindModal" class="modal">
+    <div class="modal-content">
+        <h2>🔗 Привязка мессенджеров</h2>
+        <form id="bindForm">
+            <div class="field">
+                <label>Telegram</label>
+                <button type="button" id="generateTgCodeBtn" class="btn-solid" style="padding:10px 20px; margin-bottom:10px;">Сгенерировать код</button>
+                <div id="tgCodeDisplay" style="font-weight:700; color:#0b2b40; font-size:16px;">Код: —</div>
+                <input type="hidden" id="tgTokenHidden" name="tg_token">
+            </div>
+            <div class="field" {% if not max_enabled %}style="display: none;"{% endif %}>
+                <label>MAX</label>
+                <button type="button" id="generateMaxCodeBtn" class="btn-solid" style="padding:10px 20px; margin-bottom:10px;">Сгенерировать код</button>
+                <div id="maxCodeDisplay" style="font-weight:700; color:#0b2b40; font-size:16px;">Код: —</div>
+                <input type="hidden" id="maxTokenHidden" name="max_token">
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="document.getElementById('bindModal').classList.remove('active')" class="btn-outline">Отмена</button>
+                <button type="submit" class="btn-solid">Привязать</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
