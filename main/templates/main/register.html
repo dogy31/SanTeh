@@ -65,6 +65,7 @@
     </div>
 </div>
 <script>
+    const csrftoken = '{{ csrf_token }}';
     document.getElementById('telegramCheck').addEventListener('change', function(){
         document.getElementById('telegramSection').style.display = this.checked ? 'block' : 'none';
     });
@@ -75,7 +76,7 @@
     document.getElementById('getTgCodeBtn').addEventListener('click', function(){
         fetch('/generate-tg-code/', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
             body: JSON.stringify({})
         }).then(r=>r.json()).then(data=>{
             document.getElementById('generatedTgCode').textContent = 'Код: ' + data.code;
@@ -86,21 +87,12 @@
     document.getElementById('getMaxCodeBtn').addEventListener('click', function(){
         fetch('/generate-max-code/', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
             body: JSON.stringify({})
         }).then(r=>r.json()).then(data=>{
             document.getElementById('generatedMaxCode').textContent = 'Код: ' + data.code;
             document.getElementById('maxTokenInput').value = data.token;
         });
-    });
-</script>
-            if (data.code && data.token) {
-                document.getElementById('generatedCode').textContent = 'Код: ' + data.code;
-                document.getElementById('tgTokenInput').value = data.token;
-            } else if (data.error) {
-                alert('Ошибка: ' + data.error);
-            }
-        }).catch(err=>{ alert('Ошибка запроса: ' + err); });
     });
     // Маска для телефона (простая)
     function phoneMask(event) {

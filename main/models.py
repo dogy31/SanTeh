@@ -35,7 +35,8 @@ class Request(models.Model):
     comment = models.TextField('Комментарий рабочего', blank=True)
     money_delivered = models.BooleanField('Деньги сданы', default=False)
     overdue_reason = models.TextField('Причина просрочки', blank=True, default='')
-    prepayment_made = models.BooleanField('Предоплата внесена', default=False)
+    prepayment_amount = models.DecimalField('Сумма предоплаты', max_digits=10, decimal_places=2, null=True, blank=True, default=0)
+    worker_percent = models.PositiveSmallIntegerField('Процент рабочего от чистой прибыли', default=50)
 
     def __str__(self):
         return f"Заявка #{self.id} - {self.client_name}"

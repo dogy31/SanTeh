@@ -10,7 +10,7 @@ source venv/bin/activate
 
 pip install -r requirements.txt
 
-Потом в 3 разных терминалах пишешь 
+Потом в 2 разных терминалах пишешь 
 
 python Messenger_bot\bot.py
 
@@ -19,3 +19,5 @@ python manage.py runserver
 Данные от admin Django
 l: admin
 p: admin123
+
+http://127.0.0.1:8000

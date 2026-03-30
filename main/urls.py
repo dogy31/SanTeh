@@ -18,4 +18,5 @@ urlpatterns = [
     path('generate-tg-code/', views.generate_tg_code, name='generate_tg_code'),
     path('generate-max-code/', views.generate_max_code, name='generate_max_code'),
     path('bind-messengers/', views.bind_messengers, name='bind_messengers'),
+    path('update-worker-percent/<int:pk>/', views.update_worker_percent, name='update_worker_percent'),
 ]

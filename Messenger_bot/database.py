@@ -56,7 +56,7 @@ def link_max(code, max_id):
 
 def get_telegram(site_user_id):
     cursor.execute(
-        "SELECT telegram_id FROM users WHERE site_user_id=?",
+        "SELECT telegram_id FROM users WHERE site_user_id=? AND telegram_id IS NOT NULL ORDER BY id DESC LIMIT 1",
         (site_user_id,)
     )
     return cursor.fetchone()
@@ -64,7 +64,7 @@ def get_telegram(site_user_id):
 
 def get_max(site_user_id):
     cursor.execute(
-        "SELECT max_id FROM users WHERE site_user_id=?",
+        "SELECT max_id FROM users WHERE site_user_id=? AND max_id IS NOT NULL ORDER BY id DESC LIMIT 1",
         (site_user_id,)
     )
     return cursor.fetchone()

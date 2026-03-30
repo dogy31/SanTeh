@@ -8,8 +8,8 @@ from .models import Profile, Request, Photo, Part
 import os, sys
 import requests
 from datetime import datetime, date
+import decimal
 
-# add tg_bot folder to path so we can reuse its sqlite helper
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 tg_bot_path = os.path.join(project_root, 'Messenger_bot')
 if tg_bot_path not in sys.path:
@@ -27,8 +27,8 @@ except Exception:
     SMS_API_KEY = None
 import json
 from datetime import datetime, timedelta
+import decimal
 
-# Регистрация
 def register(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -38,9 +38,8 @@ def register(request):
         role = 'worker' 
         tg_token = request.POST.get('tg_token')
         max_token = request.POST.get('max_token')
-        messengers = request.POST.getlist('messengers')  # список выбранных мессенджеров
+        messengers = request.POST.getlist('messengers')
 
-        # Валидация обязательных полей
         if not name or not phone or not password or not password2:
             return render(request, 'main/register.html', {'error': 'Заполните все обязательные поля'})
         
@@ -73,7 +72,6 @@ def register(request):
         return redirect('login')
     return render(request, 'main/register.html', {'max_enabled': bool(MAX_TOKEN)})
 
-# Вход
 def login_view(request):
     if request.method == 'POST':
         phone = request.POST.get('phone')
@@ -90,12 +88,10 @@ def login_view(request):
             return render(request, 'main/login.html', {'error': 'Неверные данные'})
     return render(request, 'main/login.html')
 
-# Выход
 def logout_view(request):
     logout(request)
     return redirect('login')
 
-# Админ-панель
 @login_required
 def admin_dashboard(request):
     if request.user.profile.role != 'admin':
@@ -103,14 +99,12 @@ def admin_dashboard(request):
     workers = User.objects.filter(profile__role='worker')
     return render(request, 'main/admin.html', {'workers': workers, 'max_enabled': bool(MAX_TOKEN)})
 
-# Рабочая панель
 @login_required
 def worker_dashboard(request):
     if request.user.profile.role != 'worker':
         return redirect('admin_dashboard')
     return render(request, 'main/worker.html', {'max_enabled': bool(MAX_TOKEN)})
 
-# Создание заявки (админ)
 @login_required
 def create_request(request):
     if request.method == 'POST':
@@ -119,6 +113,12 @@ def create_request(request):
         client_address = data.get('client_address', '').strip()
         if not client_address:
             return JsonResponse({'error': 'Адрес обязателен для заполнения'}, status=400)
+        try:
+            worker_percent = int(data.get('worker_percent', 50))
+        except (ValueError, TypeError):
+            worker_percent = 50
+        if worker_percent < 0 or worker_percent > 100:
+            worker_percent = 50
         req = Request.objects.create(
             description=data['description'],
             client_name=data['client_name'],
@@ -127,9 +127,10 @@ def create_request(request):
             client_address=client_address,
             equipment_type=data.get('equipment_type', ''),
             assigned_to_id=worker_id if worker_id else None,
-            deadline_date=data.get('deadline_date')
+            deadline_date=data.get('deadline_date'),
+            worker_percent=worker_percent
         )
-        # Отправка уведомления в Telegram и MAX
+        # Отправка уведомления
         try:
             if worker_id:
                 worker = User.objects.filter(pk=worker_id).first()
@@ -154,7 +155,6 @@ def create_request(request):
                             url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
                             requests.post(url, json={'chat_id': profile.tg_code, 'text': text}, timeout=3)
                         if profile.max_code and MAX_TOKEN:
-                            # Предполагаем аналогичный API для MAX
                             url = f'https://api.max.org/bot{MAX_TOKEN}/sendMessage'
                             requests.post(url, json={'chat_id': profile.max_code, 'text': text}, timeout=3)
                         else:
@@ -166,16 +166,13 @@ def create_request(request):
         return JsonResponse({'success': True, 'id': req.id})
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-# Редактирование заявки (рабочий / админ)
 @login_required
 def edit_request(request, pk):
     req = get_object_or_404(Request, pk=pk)
-    # Проверка прав: только назначенный рабочий или админ
     if request.user.profile.role != 'admin' and req.assigned_to != request.user:
         return JsonResponse({'error': 'permission denied'}, status=403)
 
     if request.method == 'POST':
-        # Обновляем основные поля
         req.client_name = request.POST.get('client_name', req.client_name)
         req.client_email = request.POST.get('client_email', '')
         req.client_address = request.POST.get('client_address', '')
@@ -185,26 +182,49 @@ def edit_request(request, pk):
             req.price = price
         req.comment = request.POST.get('comment', '')
         req.overdue_reason = request.POST.get('overdue_reason', '')
-        # Обновление предоплаты и статуса
-        prepayment = request.POST.get('prepayment_made') == 'true'
-        if prepayment and req.status == 'new':
-            req.status = 'in-progress'
-        req.prepayment_made = prepayment
+
+        # Обновление дедлайна
+        deadline_date = request.POST.get('deadline_date')
+        req.deadline_date = deadline_date if deadline_date else None
+
+        # Обновление предоплаты
+        prepayment_amount = request.POST.get('prepayment_amount')
+        if prepayment_amount:
+            try:
+                prepayment_amount = decimal.Decimal(prepayment_amount)
+                req.prepayment_amount = prepayment_amount
+                if req.status == 'new' and prepayment_amount > 0:
+                    req.status = 'in-progress'
+            except:
+                req.prepayment_amount = 0
+        else:
+            req.prepayment_amount = 0
+
         req.save()
 
         # Обработка договора
-        if 'contract_photos' in request.FILES:
+        contract_files = request.FILES.getlist('contract_photos')
+        if contract_files:
+            if len(contract_files) > 5:
+                return JsonResponse({'error': 'Максимум 5 фотографий договора'}, status=400)
             req.photos.filter(photo_type='contract').delete()
-            contract_file = request.FILES['contract_photos']
-            Photo.objects.create(request=req, image=contract_file, photo_type='contract')
-        elif request.POST.get('delete_contract') == 'true':
-            req.photos.filter(photo_type='contract').delete()
+            for contract_file in contract_files:
+                Photo.objects.create(request=req, image=contract_file, photo_type='contract')
+        else:
+            existing_contract_ids = request.POST.get('existing_contract_ids')
+            if existing_contract_ids is not None:
+                try:
+                    ids_to_keep = json.loads(existing_contract_ids)
+                    req.photos.filter(photo_type='contract').exclude(id__in=ids_to_keep).delete()
+                except Exception:
+                    pass
+            elif request.POST.get('delete_contract') == 'true':
+                req.photos.filter(photo_type='contract').delete()
 
         # Обработка деталей
         parts_data_json = request.POST.get('parts_data')
         if parts_data_json:
             parts_data = json.loads(parts_data_json)
-            # Удаляем старые детали
             req.parts.all().delete()
             for i, part in enumerate(parts_data):
                 part_obj = Part(
@@ -238,13 +258,15 @@ def edit_request(request, pk):
         'equipment_type': req.equipment_type,
         'price': str(req.price) if req.price else None,
         'comment': req.comment,
-        'photos': [{'image': p.image.url, 'photo_type': p.photo_type} for p in req.photos.all()],
+        'photos': [{'id': p.id, 'image': p.image.url, 'photo_type': p.photo_type} for p in req.photos.all()],
         'status': req.status,
         'parts': parts_data,
         'overdue_reason': req.overdue_reason,
         'is_overdue': date.today() > req.deadline_date if req.deadline_date else False,
         'worker_id': req.assigned_to.id if req.assigned_to else '',
-        'prepayment_made': req.prepayment_made,
+        'prepayment_amount': str(req.prepayment_amount) if req.prepayment_amount else None,
+        'worker_percent': req.worker_percent,
+        'deadline_date': req.deadline_date.isoformat() if req.deadline_date else '',  # добавлено
     }
     return JsonResponse(data)
 
@@ -269,25 +291,20 @@ def send_sms(phone, message):
     except Exception as e:
         print(f"SMS error: {e}")
 
-# Закрытие заявки (рабочий)
 @login_required
 def close_request(request, pk):
     if request.method == 'POST':
         req = get_object_or_404(Request, pk=pk)
-        # Проверяем наличие цены
         if not req.price:
             return JsonResponse({'error': 'Цена не указана'}, status=400)
-        # Проверяем наличие договора (фото с типом 'contract')
         if not req.photos.filter(photo_type='contract').exists():
             return JsonResponse({'error': 'Не прикреплен договор'}, status=400)
-        # Проверка: у всех деталей должен быть чек
         parts = req.parts.all()
         for part in parts:
             if not part.receipt_photo:
                 return JsonResponse({'error': f'Отсутствует чек для детали "{part.name}"'}, status=400)
         req.status = 'done'
         req.save()
-        # Отправка СМС клиенту
         if req.client_phone:
             completion_date = date.today().strftime('%d.%m.%Y')
             message = f"Ваша заявка выполнена {completion_date}. Сумма: {req.price} руб. Гарантия 14 дней."
@@ -295,17 +312,15 @@ def close_request(request, pk):
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-# Просмотр заявки (админ)
 @login_required
 def view_request(request, pk):
     req = get_object_or_404(Request, pk=pk)
-    # Вычисляем себестоимость, чистую прибыль и зарплату рабочего
     cost_price = sum(float(part.price) for part in req.parts.all() if part.price)
     net_profit = None
     worker_salary = None
     if req.price:
         net_profit = float(req.price) - cost_price
-        worker_salary = net_profit * 0.5 if net_profit else 0
+        worker_salary = net_profit * (req.worker_percent / 100) if net_profit else 0
     data = {
         'id': req.id,
         'description': req.description,
@@ -320,17 +335,17 @@ def view_request(request, pk):
         'net_profit': round(net_profit, 2) if net_profit is not None else None,
         'worker_salary': round(worker_salary, 2) if worker_salary is not None else None,
         'money_delivered': req.money_delivered,
-        'prepayment_made': req.prepayment_made,
+        'prepayment_amount': str(req.prepayment_amount) if req.prepayment_amount else None,
         'created_date': req.created_date.strftime('%d.%m.%Y %H:%M'),
         'comment': req.comment,
         'worker': req.assigned_to.first_name if req.assigned_to else '',
         'photos': [{'image': p.image.url, 'photo_type': p.photo_type} for p in req.photos.all()],
         'parts': [{'id': p.id, 'name': p.name, 'price': str(p.price) if p.price else None, 'receipt_photo_url': p.receipt_photo.url if p.receipt_photo else None} for p in req.parts.all()],
         'overdue_reason': req.overdue_reason,
+        'worker_percent': req.worker_percent,
     }
     return JsonResponse(data)
 
-# Обновление чекбокса "деньги сданы"
 @csrf_exempt
 def update_money_delivered(request):
     if request.method == 'POST':
@@ -353,7 +368,7 @@ def get_requests(request):
     price_from = request.GET.get('price_from')
     price_to = request.GET.get('price_to')
     worker_id = request.GET.get('worker')
-    status = request.GET.get('status')
+    status_list = request.GET.getlist('status')
 
     if date_from:
         requests = requests.filter(created_date__gte=date_from)
@@ -365,18 +380,15 @@ def get_requests(request):
         requests = requests.filter(price__lte=price_to)
     if worker_id:
         requests = requests.filter(assigned_to_id=worker_id)
-    if status:
-        requests = requests.filter(status=status)
+    status_list = [s for s in status_list if s]
+    if status_list:
+        requests = requests.filter(status__in=status_list)
 
     data = []
     for r in requests:
-        # Вычисляем себестоимость, чистую прибыль, зарплату
         cost_price = sum(float(part.price) for part in r.parts.all() if part.price)
-        net_profit = None
-        worker_salary = None
-        if r.price:
-            net_profit = float(r.price) - cost_price
-            worker_salary = net_profit * 0.5 if net_profit else 0
+        net_profit = float(r.price) - cost_price if r.price else 0
+        worker_salary = net_profit * (r.worker_percent / 100) if net_profit else 0
         data.append({
             'id': r.id,
             'description': r.description,
@@ -389,8 +401,9 @@ def get_requests(request):
             'cost_price': round(cost_price, 2),
             'net_profit': round(net_profit, 2) if net_profit is not None else None,
             'worker_salary': round(worker_salary, 2) if worker_salary is not None else None,
+            'worker_percent': r.worker_percent,
             'money_delivered': r.money_delivered,
-            'prepayment_made': r.prepayment_made,
+            'prepayment_amount': str(r.prepayment_amount) if r.prepayment_amount else None,
             'worker_name': r.assigned_to.first_name if r.assigned_to else '',
             'created_date': r.created_date.isoformat(),
             'deadline_date': r.deadline_date.isoformat() if r.deadline_date else None,
@@ -406,7 +419,7 @@ def get_worker_requests(request):
     date_to = request.GET.get('date_to')
     price_from = request.GET.get('price_from')
     price_to = request.GET.get('price_to')
-    status = request.GET.get('status')
+    status_list = request.GET.getlist('status')
 
     if date_from:
         requests = requests.filter(created_date__gte=date_from)
@@ -416,11 +429,17 @@ def get_worker_requests(request):
         requests = requests.filter(price__gte=price_from)
     if price_to:
         requests = requests.filter(price__lte=price_to)
-    if status:
-        requests = requests.filter(status=status)
+    status_list = [s for s in status_list if s]
+    if status_list:
+        requests = requests.filter(status__in=status_list)
 
     data = []
     for r in requests:
+        # Расчёт себестоимости, чистой прибыли и зарплаты рабочего
+        cost_price = sum(float(part.price) for part in r.parts.all() if part.price)
+        net_profit = float(r.price) - cost_price if r.price else 0
+        worker_salary = net_profit * (r.worker_percent / 100) if net_profit else 0
+
         data.append({
             'id': r.id,
             'description': r.description,
@@ -432,10 +451,15 @@ def get_worker_requests(request):
             'status': r.status,
             'price': str(r.price) if r.price else None,
             'money_delivered': r.money_delivered,
-            'prepayment_made': r.prepayment_made,
+            'prepayment_amount': str(r.prepayment_amount) if r.prepayment_amount else None,
             'worker_name': r.assigned_to.first_name if r.assigned_to else '',
             'created_date': r.created_date.isoformat(),
             'photos': [{'image': p.image.url, 'photo_type': p.photo_type} for p in r.photos.all()],
+            # Новые поля
+            'cost_price': round(cost_price, 2),
+            'net_profit': round(net_profit, 2) if net_profit else None,
+            'worker_salary': round(worker_salary, 2) if worker_salary else None,
+            'worker_percent': r.worker_percent,
         })
     return JsonResponse(data, safe=False)
 
@@ -452,9 +476,9 @@ def reopen_request(request, pk):
 def generate_tg_code(request):
     if request.method == 'POST':
         try:
-            import random, uuid, json
+            import random, uuid
             user_id = None
-            if request.content_type == 'application/json':
+            if request.content_type and request.content_type.startswith('application/json'):
                 try:
                     payload = json.loads(request.body.decode('utf-8') or '{}')
                     user_id = payload.get('user_id')
@@ -474,16 +498,15 @@ def generate_tg_code(request):
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-
 @csrf_exempt
 def generate_max_code(request):
     if request.method == 'POST':
         if not MAX_TOKEN:
             return JsonResponse({'error': 'MAX мессенджер не настроен'}, status=400)
         try:
-            import random, uuid, json
+            import random, uuid
             user_id = None
-            if request.content_type == 'application/json':
+            if request.content_type and request.content_type.startswith('application/json'):
                 try:
                     payload = json.loads(request.body.decode('utf-8') or '{}')
                     user_id = payload.get('user_id')
@@ -503,21 +526,42 @@ def generate_max_code(request):
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-
 @csrf_exempt
 def bind_messengers(request):
     if request.method == 'POST' and request.user.is_authenticated:
         tg_token = request.POST.get('tg_token')
         max_token = request.POST.get('max_token')
         profile = request.user.profile
+        saved = False
         if tg_database and tg_token:
             tg_link = tg_database.get_telegram(tg_token)
             if tg_link and tg_link[0]:
                 profile.tg_code = str(tg_link[0])
+                saved = True
         if tg_database and max_token:
             max_link = tg_database.get_max(max_token)
             if max_link and max_link[0]:
                 profile.max_code = str(max_link[0])
-        profile.save()
-        return JsonResponse({'success': True})
+                saved = True
+        if saved:
+            profile.save()
+            return JsonResponse({'success': True})
+        return JsonResponse({'error': 'Код не найден или не подтверждён в боте'}, status=400)
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@csrf_exempt
+def update_worker_percent(request, pk):
+    if request.method == 'POST' and request.user.is_authenticated and request.user.profile.role == 'admin':
+        req = get_object_or_404(Request, pk=pk)
+        try:
+            data = json.loads(request.body)
+            percent = int(data.get('percent', 50))
+            if 0 <= percent <= 100:
+                req.worker_percent = percent
+                req.save()
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'error': 'Процент должен быть от 0 до 100'}, status=400)
+        except Exception:
+            return JsonResponse({'error': 'Неверные данные'}, status=400)
+    return JsonResponse({'error': 'Нет прав'}, status=403)
