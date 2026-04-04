@@ -11,6 +11,21 @@ from datetime import datetime, date
 import decimal
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+
+def normalize_phone(phone):
+    if not phone:
+        return ''
+    digits = ''.join(ch for ch in phone if ch.isdigit())
+    if not digits:
+        return ''
+    if digits.startswith('8'):
+        digits = '7' + digits[1:]
+    elif digits.startswith('9'):
+        digits = '7' + digits
+    if len(digits) > 11:
+        digits = digits[:11]
+    return digits
 tg_bot_path = os.path.join(project_root, 'Messenger_bot')
 if tg_bot_path not in sys.path:
     sys.path.append(tg_bot_path)
@@ -32,7 +47,7 @@ import decimal
 def register(request):
     if request.method == 'POST':
         name = request.POST.get('name')
-        phone = request.POST.get('phone')
+        phone = normalize_phone(request.POST.get('phone'))
         password = request.POST.get('password')
         password2 = request.POST.get('password2')
         role = 'worker' 
@@ -42,6 +57,8 @@ def register(request):
 
         if not name or not phone or not password or not password2:
             return render(request, 'main/register.html', {'error': 'Заполните все обязательные поля'})
+        if len(phone) != 11:
+            return render(request, 'main/register.html', {'error': 'Введите корректный номер телефона'})
         
         if password != password2:
             return render(request, 'main/register.html', {'error': 'Пароли не совпадают'})
@@ -74,7 +91,7 @@ def register(request):
 
 def login_view(request):
     if request.method == 'POST':
-        phone = request.POST.get('phone')
+        phone = normalize_phone(request.POST.get('phone'))
         password = request.POST.get('password')
         user = authenticate(request, username=phone, password=password)
         if user:
@@ -119,10 +136,11 @@ def create_request(request):
             worker_percent = 50
         if worker_percent < 0 or worker_percent > 100:
             worker_percent = 50
+        client_phone = normalize_phone(data.get('client_phone', ''))
         req = Request.objects.create(
             description=data['description'],
             client_name=data['client_name'],
-            client_phone=data['client_phone'],
+            client_phone=client_phone,
             client_email=data.get('client_email', ''),
             client_address=client_address,
             equipment_type=data.get('equipment_type', ''),
@@ -174,6 +192,7 @@ def edit_request(request, pk):
 
     if request.method == 'POST':
         req.client_name = request.POST.get('client_name', req.client_name)
+        req.client_phone = normalize_phone(request.POST.get('client_phone', req.client_phone))
         req.client_email = request.POST.get('client_email', '')
         req.client_address = request.POST.get('client_address', '')
         req.equipment_type = request.POST.get('equipment_type', req.equipment_type)
