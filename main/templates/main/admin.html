@@ -9,7 +9,7 @@
     .btn-secondary { background: transparent; border: 1.5px solid #2f7e9e; color: #1a5f7a; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; }
     .btn-secondary:hover { background: #e7f0f5; }
     .filter-bar { background: white; padding: 18px 24px; border-radius: 60px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
-    .filter-item { display: flex; align-items: center; gap: 8px; flex: 1 1 20px; min-width: 180px; }
+    .filter-item { display: flex; align-items: center; gap: 8px; flex: 1 1 20px;}
     .filter-item label { font-weight: 500; color: #2c5770; font-size: 14px; }
     .filter-item input, .filter-item select { padding: 8px 12px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; font-size: 14px; }
     .status-dropdown { position: relative; }
@@ -125,19 +125,19 @@
     <div class="header">
         <h1>📋 Панель администратора <span class="badge">{{ request.user.first_name }}</span></h1>
         <div>
-            <button class="btn-primary" id="showCreateModal">➕ Новая заявка</button>
-            <button class="btn-secondary" id="bindMessengersBtn" style="margin-left: 15px;">🔗 Мессенджеры</button>
+            <button class="btn-primary" id="showCreateModal">Новая заявка</button>
+            <button class="btn-secondary" id="bindMessengersBtn" style="margin-left: 15px;">Мессенджеры</button>
             <a href="{% url 'logout' %}" class="btn-secondary" style="margin-left: 15px;">Выйти</a>
         </div>
     </div>
 
     <!-- Фильтры -->
     <div class="filter-bar">
-        <div class="filter-item"><label>📅 Дата с:</label><input type="date" id="filterDateFrom"></div>
+        <div class="filter-item"><label>Дата c:</label><input type="date" id="filterDateFrom"></div>
         <div class="filter-item"><label>по:</label><input type="date" id="filterDateTo"></div>
-        <div class="filter-item"><label>💰 Цена от:</label><input type="number" id="filterPriceFrom" placeholder="0" style="width:90px"></div>
+        <div class="filter-item"><label>Цена от:</label><input type="number" id="filterPriceFrom" placeho   lder="0" style="width:90px"></div>
         <div class="filter-item"><label>до:</label><input type="number" id="filterPriceTo" placeholder="50000" style="width:100px"></div>
-        <div class="filter-item"><label>🔧 Рабочий:</label><select id="filterWorker"><option value="">Все</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
+        <div class="filter-item"><label>Рабочий:</label><select id="filterWorker"><option value="">Все</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
         <div class="filter-item"><label>Статус:</label>
             <div class="status-dropdown">
                 <button type="button" class="status-dropdown__button" id="filterStatusToggle">Все</button>
@@ -363,8 +363,8 @@
                 <td>${escapeHtml(r.worker_name)}</td>
                 <td>${created.toLocaleDateString()}</td>
                 <td>${deadlineDate ? deadlineDate.toLocaleDateString() : '—'}</td>
-                <td><button class="action-link" onclick="showDetails(${r.id})">👁️ детали</button></td>
-                <td><button class="action-link" onclick="editRequest(${r.id})">✏️ редактировать</button></td>
+                <td><button class="action-link" onclick="showDetails(${r.id})">Детали</button></td>
+                <td><button class="action-link" onclick="editRequest(${r.id})">Редактировать</button></td>
             `;
             tbody.appendChild(row);
         });
@@ -524,6 +524,7 @@
         formData.append('equipment_type', document.getElementById('adminEquipmentType').value);
         formData.append('price', document.getElementById('adminPrice').value);
         formData.append('comment', document.getElementById('adminComment').value);
+        formData.append('prepayment_amount', document.getElementById('adminPrepayment').value);
         formData.append('deadline_date', document.getElementById('adminDeadlineDate').value);
         formData.append('status', document.getElementById('adminStatus').value);
         formData.append('worker_id', document.getElementById('adminWorker').value);
@@ -555,6 +556,13 @@
             phoneInput.focus();
             return;
         }
+        const deadlineDate = document.getElementById('createDeadlineDate').value;
+        if (!deadlineDate) {
+            alert('Заполните дату выполнения заявки');
+            btn.disabled = false; btn.textContent = 'Создать';
+            document.getElementById('createDeadlineDate').focus();
+            return;
+        }
         const formData = new FormData();
         formData.append('description', document.getElementById('createDesc').value);
         formData.append('client_name', document.getElementById('createClientName').value);
@@ -564,7 +572,7 @@
         formData.append('equipment_type', document.getElementById('createEquipmentType').value);
         formData.append('worker_id', workerId);
         formData.append('worker_percent', document.getElementById('createWorkerPercent').value || '50');
-        formData.append('deadline_date', document.getElementById('createDeadlineDate').value);
+        formData.append('deadline_date', deadlineDate);
         fetch('/create-request/', {
             method: 'POST',
             headers: { 'X-CSRFToken': csrftoken },

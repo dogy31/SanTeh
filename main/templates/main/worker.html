@@ -8,7 +8,7 @@
     .worker-name span { color: #4a6778; font-size: 15px; }
     .stats span { font-weight: 700; font-size: 22px; color: #1b6f8f; }
     .filter-bar { background: white; padding: 18px 24px; border-radius: 60px; display: flex; flex-wrap: wrap; gap: 8px 4px; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
-    .filter-item { display: flex; align-items: center; gap: 8px; flex: 1 1 220px; min-width: 160px; }
+    .filter-item { display: flex; align-items: center; gap: 8px; flex: 1 1 20px;}
     .filter-item label { font-weight: 500; color: #2c5770; font-size: 14px; }
     .filter-item input, .filter-item select { padding: 8px 12px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; font-size: 14px; }
     .status-dropdown { position: relative; }
@@ -176,11 +176,11 @@
         <button id="bindMessengersBtn" class="btn-primary">Привязать мессенджеры</button>
         <a href="{% url 'logout' %}" class="btn-outline" style="text-decoration: none;">Выйти</a>
     </div>
-    <h3 style="margin-bottom: 20px;">🔧 Мои заявки</h3>
+    <h3 style="margin-bottom: 20px;">Мои заявки</h3>
     <div class="filter-bar">
-        <div class="filter-item"><label>📅 Дата с:</label><input type="date" id="filterDateFrom"></div>
+        <div class="filter-item"><label>Дата с:</label><input type="date" id="filterDateFrom"></div>
         <div class="filter-item"><label>по:</label><input type="date" id="filterDateTo"></div>
-        <div class="filter-item"><label>💰 Цена от:</label><input type="number" id="filterPriceFrom" placeholder="0" style="width:90px"></div>
+        <div class="filter-item"><label>Цена от:</label><input type="number" id="filterPriceFrom" placeholder="0" style="width:90px"></div>
         <div class="filter-item"><label>до:</label><input type="number" id="filterPriceTo" placeholder="50000" style="width:100px"></div>
         <div class="filter-item"><label>Статус:</label>
             <div class="status-dropdown">
@@ -233,7 +233,7 @@
         <div class="field"><label>Стоимость работ <span class="required-star">*</span></label><input type="number" id="editPrice" required></div>
         <div class="field"><label>Комментарий</label><textarea id="editComment" rows="3"></textarea></div>
         <div class="field"><label>Договор (1–5 фото)</label><div class="photo-upload-area"><input type="file" id="contractInput" accept="image/*" multiple><div class="photo-previews" id="contractPreviews"></div></div></div>
-        <div class="parts-section"><label>Детали (чеки для каждой детали обязательны для закрытия)</label><div id="partsContainer"></div><button type="button" class="add-part-btn" id="addPartBtn">➕ Добавить деталь</button></div>
+        <div class="parts-section"><label>Детали (чеки для каждой детали обязательны для закрытия)</label><div id="partsContainer"></div><button type="button" class="add-part-btn" id="addPartBtn">Добавить деталь</button></div>
         <div id="overdueReasonSection" style="display: none;"><div class="field"><label>Причина просрочки (обязательно для просроченных заявок)</label><textarea id="overdueReason" rows="3" placeholder="Укажите причину, почему заявка не выполнена в срок..."></textarea></div></div>
         <div class="modal-actions"><button class="btn-secondary" onclick="closeModal('editModal')">Отмена</button><button class="btn-primary" id="saveEditBtn">Сохранить изменения</button></div>
     </div>
@@ -316,9 +316,9 @@
                 <td>${r.worker_percent}%</td>
                 <td class="actions">
                     ${r.status !== 'done' ? 
-                        `<button class="btn-outline" onclick="editRequest(${r.id})">✏️ редактировать</button>
-                         <button class="btn-solid" onclick="closeRequest(${r.id}, this)">✅ закрыть</button>` : 
-                        `<button class="btn-outline" onclick="editRequest(${r.id})">👁️ просмотр</button>`}
+                        `<button class="btn-outline" onclick="editRequest(${r.id})">Редактировать</button>
+                         <button class="btn-solid" onclick="closeRequest(${r.id}, this)">Закрыть✅</button>` : 
+                        `<button class="btn-outline" onclick="editRequest(${r.id})">Просмотр</button>`}
                 </td>
             `;
             tbody.appendChild(row);
