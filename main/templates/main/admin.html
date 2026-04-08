@@ -6,12 +6,22 @@
     .badge { background: #2f7e9e20; color: #1b5e7a; padding: 5px 14px; border-radius: 40px; }
     .btn-primary { background: #2f7e9e; color: white; border: none; padding: 12px 28px; border-radius: 40px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px #2f7e9e60; transition: 0.15s; }
     .btn-primary:hover { background: #1f5f7a; }
+    .view-toggle { margin-left: auto; display: flex; gap: 8px; }
+    .view-btn { padding: 8px 16px; border-radius: 40px; font-weight: 500; font-size: 14px; cursor: pointer; text-align: center; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; }
+    .view-btn.active { background: #2f7e9e; color: white; border: none; box-shadow: 0 2px 4px #2f7e9e70; }
+    .view-btn:not(.active) { border: 1.5px solid #2f7e9e; background: white; color: #1d5f7a; }
+    .view-btn:not(.active):hover { background: #e7f0f5; }
     .btn-secondary { background: transparent; border: 1.5px solid #2f7e9e; color: #1a5f7a; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; }
     .btn-secondary:hover { background: #e7f0f5; }
     .filter-bar { background: white; padding: 18px 24px; border-radius: 60px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
     .filter-item { display: flex; align-items: center; gap: 8px; flex: 1 1 20px;}
     .filter-item label { font-weight: 500; color: #2c5770; font-size: 14px; }
     .filter-item input, .filter-item select { padding: 8px 12px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; font-size: 14px; }
+    .filter-panel { position: relative; }
+    .mobile-filter-toggle { display: none; margin-bottom: 20px; }
+    .filter-modal { display: block; position: static; background: transparent; }
+    .filter-modal .filter-modal-content { background: transparent; box-shadow: none; border-radius: 0; padding: 0; }
+    .mobile-filter-close { display: none; margin-bottom: 18px; }
     .status-dropdown { position: relative; }
     .status-dropdown__button { padding: 8px 12px; min-width: 130px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; color: #1a4b5f; cursor: pointer; text-align: left; display: inline-flex; align-items: center; gap: 6px; }
     .status-dropdown__options { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20; background: white; border: 1px solid #ccdce8; box-shadow: 0 10px 24px rgba(0,0,0,0.08); border-radius: 18px; padding: 14px; display: none; }
@@ -28,11 +38,42 @@
     .status { display: inline-block; padding: 5px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; white-space: nowrap; }
     .status.new { background: #e1edfb; color: #1b5f8c; }
     .status.done { background: #dff0e0; color: #1d6f2c; }
+    .status.cancelled { background: #ffeaea; color: #c03c2b; }
     .status.in-progress { background: #fff2d6; color: #a16500; }
     .price { font-weight: 600; color: #0f3f52; }
     .action-link { color: #2f7e9e; text-decoration: none; font-weight: 500; border: 1px solid #2f7e9e40; padding: 5px 12px; border-radius: 30px; font-size: 12px; cursor: pointer; background: none; display: inline-block; margin-right: 5px; white-space: nowrap; }
     .action-link:hover { background: #e7f0f5; }
+    .cancel-btn { color: #c03c2b; border-color: #c03c2b40; }
+    .cancel-btn:hover { background: #ffeaea; }
     .money-delivered { width: 20px; height: 20px; accent-color: #2f7e9e; cursor: pointer; }
+    .blocks-view { margin-top: 20px; }
+    .blocks-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+    .request-block { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; cursor: pointer; transition: transform 0.2s; }
+    .request-block:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+    .request-block.new { border-left: 4px solid #2f7e9e; }
+    .request-block.in-progress { border-left: 4px solid #a16500; }
+    .request-block.done { border-left: 4px solid #1d6f2c; }
+    .request-block.cancelled { border-left: 4px solid #c03c2b; }
+    .block-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+    .block-id { font-size: 18px; font-weight: 700; color: #0b2b40; }
+    .block-status { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 500; }
+    .block-status.new { background: #e1edfb; color: #1b5f8c; }
+    .block-status.in-progress { background: #fff2d6; color: #a16500; }
+    .block-status.done { background: #dff0e0; color: #1d6f2c; }
+    .block-status.cancelled { background: #ffeaea; color: #c03c2b; }
+    .block-info { margin-bottom: 15px; }
+    .block-info p { margin: 5px 0; font-size: 14px; color: #2c5770; }
+    .block-alert { background: #fff2d6; color: #a16500; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 10px; }
+    .block-old { background: #ffeaea; color: #c03c2b; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 10px; }
+    .block-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .block-actions button { font-size: 12px; padding: 6px 12px; }
+    .block-expanded { background: #f8fafc; }
+    .block-details { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; }
+    .block-details p { margin: 5px 0; }
+    @media (max-width: 768px) {
+        .blocks-container { grid-template-columns: 1fr; }
+        .request-block { padding: 15px; }
+    }
     .modal {
         display: none;
         position: fixed;
@@ -100,6 +141,36 @@
         .filter-bar button {
             width: 100%;
         }
+        .mobile-filter-toggle {
+            display: inline-flex;
+            width: 100%;
+        }
+        .filter-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+        .filter-modal.active {
+            display: flex;
+        }
+        .filter-modal .filter-modal-content {
+            background: white;
+            border-radius: 28px;
+            width: 100%;
+            max-width: 720px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+        }
+        .mobile-filter-close {
+            display: inline-flex;
+        }
         .header {
             flex-direction: column;
             align-items: stretch;
@@ -116,6 +187,22 @@
         .header > div a {
             width: 100%;
         }
+        .header > div .btn-primary#bindMessengersBtn {
+            width: auto;
+            padding: 8px 12px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header > div .btn-primary#bindMessengersBtn:before {
+            content: '💬';
+            margin-right: 4px;
+        }
+        .header > div .btn-primary#showCreateModal {
+            font-size: 18px;
+            padding: 16px 32px;
+        }
     }
 </style>
 {% endblock %}
@@ -126,33 +213,50 @@
         <h1>📋 Панель администратора <span class="badge">{{ request.user.first_name }}</span></h1>
         <div>
             <button class="btn-primary" id="showCreateModal">Новая заявка</button>
+            <button class="btn-secondary" id="showWorkersModal">Мастера</button>
             <button class="btn-secondary" id="bindMessengersBtn" style="margin-left: 15px;">Мессенджеры</button>
             <a href="{% url 'logout' %}" class="btn-secondary" style="margin-left: 15px;">Выйти</a>
         </div>
     </div>
 
     <!-- Фильтры -->
-    <div class="filter-bar">
-        <div class="filter-item"><label>Дата c:</label><input type="date" id="filterDateFrom"></div>
-        <div class="filter-item"><label>по:</label><input type="date" id="filterDateTo"></div>
-        <div class="filter-item"><label>Цена от:</label><input type="number" id="filterPriceFrom" placeho   lder="0" style="width:90px"></div>
-        <div class="filter-item"><label>до:</label><input type="number" id="filterPriceTo" placeholder="50000" style="width:100px"></div>
-        <div class="filter-item"><label>Рабочий:</label><select id="filterWorker"><option value="">Все</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
-        <div class="filter-item"><label>Статус:</label>
-            <div class="status-dropdown">
-                <button type="button" class="status-dropdown__button" id="filterStatusToggle">Все</button>
-                <div class="status-dropdown__options" id="filterStatusOptions">
-                    <label><input type="checkbox" class="status-checkbox" value="new">Новая</label>
-                    <label><input type="checkbox" class="status-checkbox" value="in-progress">В работе</label>
-                    <label><input type="checkbox" class="status-checkbox" value="done">Выполнена</label>
+    <button class="btn-secondary mobile-filter-toggle" id="openFilterPanel" type="button">Фильтры</button>
+    <div class="filter-modal" id="filterModal">
+        <div class="modal-content filter-modal-content">
+            <button class="btn-secondary mobile-filter-close" id="closeFilterPanel" type="button">Закрыть</button>
+            <div class="filter-bar">
+                <div class="filter-item"><label>Поиск:</label><input type="text" id="filterSearch" placeholder="Номер, адрес или имя клиента" style="width:200px"></div>
+                <div class="filter-item"><label>Дата c:</label><input type="date" id="filterDateFrom"></div>
+                <div class="filter-item"><label>по:</label><input type="date" id="filterDateTo"></div>
+                <div class="filter-item"><label>Цена от:</label><input type="number" id="filterPriceFrom" placeholder="0" style="width:90px"></div>
+                <div class="filter-item"><label>до:</label><input type="number" id="filterPriceTo" placeholder="50000" style="width:100px"></div>
+                <div class="filter-item"><label>Мастер:</label><select id="filterWorker"><option value="">Все</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
+                <div class="filter-item"><label>Статус:</label>
+                    <div class="status-dropdown">
+                        <button type="button" class="status-dropdown__button" id="filterStatusToggle">Все</button>
+                        <div class="status-dropdown__options" id="filterStatusOptions">
+                            <label><input type="checkbox" class="status-checkbox" value="new">Новая</label>
+                            <label><input type="checkbox" class="status-checkbox" value="in-progress">В работе</label>
+                            <label><input type="checkbox" class="status-checkbox" value="done">Выполнена</label>
+                            <label><input type="checkbox" class="status-checkbox" value="cancelled">Отменена</label>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-primary" id="applyFilters" style="padding:8px 20px;">Применить</button>
+                <div class="view-toggle" style="margin-left: auto; display: flex; gap: 8px;">
+                    <button class="btn-outline view-btn active" id="tableViewBtn" data-view="table">
+                        <i class="fas fa-table"></i> Таблица
+                    </button>
+                    <button class="btn-outline view-btn" id="blocksViewBtn" data-view="blocks">
+                        <i class="fas fa-th"></i> Блоки
+                    </button>
                 </div>
             </div>
         </div>
-        <button class="btn-primary" id="applyFilters" style="padding:8px 20px;">Применить</button>
     </div>
 
     <!-- Таблица заявок -->
-    <div class="table-wrapper">
+    <div class="table-wrapper" id="tableView">
         <table id="requestsTable">
             <thead>
                 <tr>
@@ -166,8 +270,9 @@
                     <th style="width:90px">Цена (₽)</th>
                     <th style="width:90px">Себестоимость (₽)</th>
                     <th style="width:90px">Чистые (₽)</th>
-                    <th style="width:90px">ЗП рабочего (₽)</th>
+                    <th style="width:90px">ЗП мастера (₽)</th>
                     <th style="width:90px">Процент (%)</th>
+                    <th style="width:90px">Остается у admin (₽)</th>
                     <th style="width:100px">Деньги сданы</th>
                     <th style="width:120px">Предоплата (₽)</th>
                     <th>Рабочий</th>
@@ -179,6 +284,11 @@
             </thead>
             <tbody id="requestsBody"></tbody>
         </table>
+    </div>
+
+    <!-- Вид блоков -->
+    <div class="blocks-view" id="blocksView" style="display: none;">
+        <div class="blocks-container" id="blocksContainer"></div>
     </div>
 </div>
 
@@ -217,8 +327,8 @@
         <div class="field"><label>Предоплата (₽)</label><div id="detailsPrepayment">—</div></div>
         <div class="field"><label>Себестоимость (₽)</label><div id="detailsCostPrice">—</div></div>
         <div class="field"><label>Чистые (₽)</label><div id="detailsNetProfit">—</div></div>
-        <div class="field"><label>ЗП рабочего (₽)</label><div id="detailsWorkerSalary">—</div></div>
-        <div class="field"><label>Процент рабочего (%)</label><div id="detailsWorkerPercent">—</div></div>
+        <div class="field"><label>ЗП мастера (₽)</label><div id="detailsWorkerSalary">—</div></div>
+        <div class="field"><label>Процент мастера (%)</label><div id="detailsWorkerPercent">—</div></div>
         <div class="field"><label>Причина просрочки</label><div id="detailsOverdueReason" style="background: #f9fafc; padding: 10px; border-radius: 12px;"></div></div>
         <div class="modal-actions"><button class="btn-secondary" onclick="closeModal('detailsModal')">Закрыть</button></div>
     </div>
@@ -242,12 +352,13 @@
         <div class="field"><label>Предоплата (₽)</label><input type="text" id="adminPrepayment" readonly style="background:#f0f5fa;"></div>
         <div class="field"><label>Себестоимость (₽)</label><input type="text" id="adminCostPrice" readonly style="background:#f0f5fa;"></div>
         <div class="field"><label>Чистые (₽)</label><input type="text" id="adminNetProfit" readonly style="background:#f0f5fa;"></div>
-        <div class="field"><label>ЗП рабочего (₽)</label><input type="text" id="adminWorkerSalary" readonly style="background:#f0f5fa;"></div>
+        <div class="field"><label>ЗП Мастера (₽)</label><input type="text" id="adminWorkerSalary" readonly style="background:#f0f5fa;"></div>
         <div class="field"><label>Договор</label><div class="photo-gallery" id="adminContractGallery"></div></div>
         <div class="field"><label>Детали (чеки)</label><div id="adminPartsList" class="parts-list"></div></div>
         <div class="field" id="adminOverdueReasonField"><label>Причина просрочки</label><textarea id="adminOverdueReason" readonly rows="3" style="background:#f0f5fa;"></textarea></div>
         <div class="modal-actions">
             <button class="btn-secondary" onclick="closeModal('editModalAdmin')">Отмена</button>
+            <button class="btn-danger" id="cancelRequestBtn" style="background: #c03c2b; color: white; border: none; padding: 10px 20px; border-radius: 40px; cursor: pointer;">Отменить заявку</button>
             <button class="btn-primary" id="saveAdminEditBtn">Сохранить</button>
         </div>
     </div>
@@ -264,8 +375,27 @@
 <script>
     const csrftoken = '{{ csrf_token }}';
     const currentUserId = parseInt("{{ request.user.id }}") || 0;
+    let viewMode = 'table'; // 'table' or 'blocks'
 
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function formatDateInputValue(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function setDefaultDeadlineOffset(days) {
+        const deadlineInput = document.getElementById('createDeadlineDate');
+        if (!deadlineInput) return;
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + days);
+        deadlineInput.value = formatDateInputValue(targetDate);
+    }
+
+    function openFilterPanel() { document.getElementById('filterModal').classList.add('active'); }
+    function closeFilterPanelWindow() { document.getElementById('filterModal').classList.remove('active'); }
 
     function cleanPhoneDigits(value) {
         let digits = value.replace(/\D/g, '');
@@ -303,7 +433,7 @@
         options.querySelectorAll('.status-checkbox').forEach(input => {
             input.addEventListener('change', function() {
                 const checked = Array.from(options.querySelectorAll('.status-checkbox:checked')).map(i => i.value);
-                toggle.textContent = checked.length === 0 || checked.length === 3 ? 'Все' : checked.map(v => v === 'new' ? 'Новая' : v === 'in-progress' ? 'В работе' : 'Выполнена').join(', ');
+                toggle.textContent = checked.length === 0 || checked.length === 4 ? 'Все' : checked.map(v => v === 'new' ? 'Новая' : v === 'in-progress' ? 'В работе' : v === 'done' ? 'Выполнена' : v === 'cancelled' ? 'Отменена' : '').join(', ');
             });
         });
     }
@@ -319,11 +449,13 @@
         const priceFrom = document.getElementById('filterPriceFrom').value;
         const priceTo = document.getElementById('filterPriceTo').value;
         const workerId = document.getElementById('filterWorker').value;
+        const search = document.getElementById('filterSearch').value.trim();
         if (dateFrom) params.append('date_from', dateFrom);
         if (dateTo) params.append('date_to', dateTo);
         if (priceFrom) params.append('price_from', priceFrom);
         if (priceTo) params.append('price_to', priceTo);
         if (workerId) params.append('worker', workerId);
+        if (search) params.append('search', search);
         const selectedStatuses = Array.from(document.querySelectorAll('#filterStatusOptions .status-checkbox:checked')).map(o => o.value);
         selectedStatuses.forEach(statusValue => params.append('status', statusValue));
         fetch('/api/requests/?' + params.toString())
@@ -333,6 +465,14 @@
     }
 
     function renderRequests(requests) {
+        if (viewMode === 'table') {
+            renderTable(requests);
+        } else {
+            renderBlocks(requests);
+        }
+    }
+
+    function renderTable(requests) {
         const tbody = document.getElementById('requestsBody');
         tbody.innerHTML = '';
         const today = new Date();
@@ -345,6 +485,7 @@
             let statusClass = 'status new', statusText = 'Новая';
             if (r.status === 'in-progress') { statusClass = 'status in-progress'; statusText = 'В работе'; }
             else if (r.status === 'done') { statusClass = 'status done'; statusText = 'Выполнена'; }
+            else if (r.status === 'cancelled') { statusClass = 'status cancelled'; statusText = 'Отменена'; }
             row.innerHTML = `
                 <td>#${r.id}</td>
                 <td>${escapeHtml(r.description)}</td>
@@ -358,6 +499,7 @@
                 <td class="price">${r.net_profit ? r.net_profit + ' ₽' : '—'}</td>
                 <td class="price">${r.worker_salary ? r.worker_salary + ' ₽' : '—'}</td>
                 <td class="percent-cell" data-id="${r.id}" data-percent="${r.worker_percent}" title="Нажмите, чтобы изменить процент рабочего" style="cursor:pointer; color:#2f7e9e; text-decoration:underline;">${r.worker_percent ? r.worker_percent + '%' : '—'}</td>
+                <td class="price">${r.admin_profit ? r.admin_profit + ' ₽' : '—'}</td>
                 <td><input type="checkbox" class="money-delivered" data-id="${r.id}" ${r.money_delivered ? 'checked' : ''} ${r.status !== 'done' ? 'disabled' : ''}></td>
                 <td>${r.prepayment_amount ? r.prepayment_amount + ' ₽' : '—'}</td>
                 <td>${escapeHtml(r.worker_name)}</td>
@@ -365,6 +507,7 @@
                 <td>${deadlineDate ? deadlineDate.toLocaleDateString() : '—'}</td>
                 <td><button class="action-link" onclick="showDetails(${r.id})">Детали</button></td>
                 <td><button class="action-link" onclick="editRequest(${r.id})">Редактировать</button></td>
+                ${r.status !== 'done' && r.status !== 'cancelled' ? `<td><button class="action-link cancel-btn" onclick="cancelRequest(${r.id}, this)">Отменить</button></td>` : '<td></td>'}
             `;
             tbody.appendChild(row);
         });
@@ -376,6 +519,54 @@
                     body: JSON.stringify({ id: this.dataset.id, value: this.checked })
                 }).catch(error => console.error('Ошибка обновления:', error));
             });
+        });
+    }
+
+    function renderBlocks(requests) {
+        const container = document.getElementById('blocksContainer');
+        container.innerHTML = '';
+        const today = new Date();
+        requests.forEach(r => {
+            const created = new Date(r.created_date);
+            const daysSinceCreated = Math.floor((today - created) / (1000 * 60 * 60 * 24));
+            let statusClass = 'block-status new', statusText = 'Новая';
+            if (r.status === 'in-progress') { statusClass = 'block-status in-progress'; statusText = 'В работе'; }
+            else if (r.status === 'done') { statusClass = 'block-status done'; statusText = 'Выполнена'; }
+            else if (r.status === 'cancelled') { statusClass = 'block-status cancelled'; statusText = 'Отменена'; }
+            const block = document.createElement('div');
+            block.className = `request-block ${r.status}`;
+            block.innerHTML = `
+                <div class="block-header">
+                    <div class="block-id">#${r.id}</div>
+                    <div class="${statusClass}">${statusText}</div>
+                </div>
+                <div class="block-info">
+                    <p><strong>Адрес:</strong> ${escapeHtml(r.client_address || '—')}</p>
+                    <p><strong>Телефон:</strong> ${escapeHtml(r.client_phone)}</p>
+                    <p><strong>Описание:</strong> ${escapeHtml(r.description.substring(0, 100))}${r.description.length > 100 ? '...' : ''}</p>
+                </div>
+                ${r.status === 'new' ? '<div class="block-alert">⚠️ Необходимо перезвонить клиенту в течении 30 минут</div>' : ''}
+                ${daysSinceCreated >= 2 && r.status !== 'done' ? `<div class="block-old">⏰ Уже ${daysSinceCreated} дней в работе</div>` : ''}
+                <div class="block-actions">
+                    <button class="btn-outline" onclick="event.stopPropagation(); showDetails(${r.id})">Детали</button>
+                    <button class="btn-outline" onclick="event.stopPropagation(); editRequest(${r.id})">Редактировать</button>
+                    ${r.status !== 'done' && r.status !== 'cancelled' ? `<button class="btn-danger" onclick="event.stopPropagation(); cancelRequest(${r.id}, this)">Отменить</button>` : ''}
+                </div>
+                <div class="block-details">
+                    <p><strong>Имя клиента:</strong> ${escapeHtml(r.client_name)}</p>
+                    <p><strong>Вид техники:</strong> ${escapeHtml(r.equipment_type || '—')}</p>
+                    <p><strong>Цена:</strong> ${r.price ? r.price + ' ₽' : '—'}</p>
+                    <p><strong>Рабочий:</strong> ${escapeHtml(r.worker_name)}</p>
+                    <p><strong>Дата создания:</strong> ${created.toLocaleDateString()}</p>
+                    ${r.deadline_date ? `<p><strong>Дедлайн:</strong> ${new Date(r.deadline_date).toLocaleDateString()}</p>` : ''}
+                </div>
+            `;
+            block.addEventListener('click', function() {
+                const details = this.querySelector('.block-details');
+                details.style.display = details.style.display === 'block' ? 'none' : 'block';
+                this.classList.toggle('block-expanded');
+            });
+            container.appendChild(block);
         });
     }
 
@@ -539,6 +730,39 @@
         .finally(() => { btn.disabled = false; btn.textContent = 'Сохранить'; });
     });
 
+    document.getElementById('cancelRequestBtn').addEventListener('click', function() {
+        const id = document.getElementById('adminEditId').textContent;
+        if (!id || !confirm('Вы уверены, что хотите отменить эту заявку?')) return;
+        fetch(`/cancel-request/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeModal('editModalAdmin');
+                loadRequests();
+                alert('Заявка отменена');
+            } else {
+                alert('Ошибка отмены: ' + (data.error || 'неизвестная ошибка'));
+            }
+        })
+        .catch(err => console.error('Ошибка отмены:', err));
+    });
+
+    window.cancelRequest = function(id, btn) {
+        if (!confirm('Вы уверены, что хотите отменить заявку?')) return;
+        btn.disabled = true; btn.textContent = 'Отмена...';
+        fetch(`/cancel-request/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200 && body.success) { loadRequests(); alert('Заявка отменена'); }
+            else alert('Ошибка: ' + (body.error || 'Не удалось отменить заявку'));
+        })
+        .catch(err => console.error('Ошибка отмены:', err))
+        .finally(() => { btn.disabled = false; btn.textContent = 'Отменить'; });
+    };
+
     document.getElementById('saveCreateBtn').addEventListener('click', function() {
         const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
         const workerSelect = document.getElementById('createWorker');
@@ -588,9 +812,30 @@
     });
 
     document.getElementById('showCreateModal').addEventListener('click', function() {
+        setDefaultDeadlineOffset(5);
         document.getElementById('createModal').classList.add('active');
     });
-    document.getElementById('applyFilters').addEventListener('click', loadRequests);
+    document.getElementById('openFilterPanel').addEventListener('click', openFilterPanel);
+    document.getElementById('closeFilterPanel').addEventListener('click', closeFilterPanelWindow);
+    document.getElementById('applyFilters').addEventListener('click', function() {
+        loadRequests();
+        closeFilterPanelWindow();
+    });
+    document.getElementById('filterSearch').addEventListener('input', function() {
+        loadRequests();
+    });
+    // View toggle functionality
+    document.getElementById('tableViewBtn').addEventListener('click', () => switchView('table'));
+    document.getElementById('blocksViewBtn').addEventListener('click', () => switchView('blocks'));
+
+    function switchView(mode) {
+        viewMode = mode;
+        document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(mode === 'table' ? 'tableViewBtn' : 'blocksViewBtn').classList.add('active');
+        document.getElementById('tableView').style.display = mode === 'table' ? 'block' : 'none';
+        document.getElementById('blocksView').style.display = mode === 'blocks' ? 'block' : 'none';
+        loadRequests(); // Reload data when switching views
+    }
     window.openPhotoViewer = function(url) {
         document.getElementById('photoViewerImg').src = url;
         document.getElementById('photoViewer').classList.add('active');
@@ -598,6 +843,32 @@
     window.onclick = function(event) { if (event.target.classList.contains('modal')) event.target.classList.remove('active'); };
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
     loadRequests();
+
+    function loadWorkers() {
+        fetch('/api/workers/')
+            .then(response => response.json())
+            .then(data => renderWorkers(data))
+            .catch(error => console.error('Ошибка загрузки рабочих:', error));
+    }
+
+    function renderWorkers(workers) {
+        const tbody = document.getElementById('workersBody');
+        tbody.innerHTML = '';
+        workers.forEach(w => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${escapeHtml(w.first_name)}</td>
+                <td>${escapeHtml(w.phone || '')}</td>
+                <td>${escapeHtml(w.email || '')}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    document.getElementById('showWorkersModal').addEventListener('click', function() {
+        loadWorkers();
+        document.getElementById('workersModal').classList.add('active');
+    });
 
     // Привязка мессенджеров
     document.addEventListener('DOMContentLoaded', function() {
@@ -628,6 +899,28 @@
         }
     });
 </script>
+
+<!-- Модальное окно списка рабочих -->
+<div class="modal" id="workersModal">
+    <div class="modal-content">
+        <h2>👷 Список рабочих</h2>
+        <div class="table-wrapper" style="margin: 20px 0;">
+            <table id="workersTable">
+                <thead>
+                    <tr>
+                        <th>Имя</th>
+                        <th>Телефон</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+                <tbody id="workersBody"></tbody>
+            </table>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('workersModal')">Закрыть</button>
+        </div>
+    </div>
+</div>
 
 <!-- Модальное окно для привязки мессенджеров -->
 <div id="bindModal" class="modal">

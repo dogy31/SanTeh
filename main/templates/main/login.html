@@ -17,6 +17,7 @@
             {% if error %}<div style="color: #c03c2b; text-align: center; margin-top: 12px;">{{ error }}</div>{% endif %}
         </form>
         <div style="text-align: center; margin-top: 24px; color: #4a6778;">
+            <a href="{% url 'forgot_password' %}" style="color: #1d5f7a;">Забыли пароль?</a><br>
             Нет аккаунта? <a href="{% url 'register' %}" style="color: #1d5f7a;">Зарегистрироваться</a>
         </div>
     </div>

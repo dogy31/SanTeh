@@ -20,6 +20,7 @@ class Request(models.Model):
         ('new', 'Новая'),
         ('in-progress', 'В работе'),
         ('done', 'Выполнена'),
+        ('cancelled', 'Отменена'),
     )
     description = models.TextField('Описание задачи')
     client_name = models.CharField('Имя клиента', max_length=100)
