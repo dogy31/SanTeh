@@ -16,10 +16,11 @@
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
     .btn-secondary { background: #f5f9fd; border: 1px solid transparent; color: #1a5f7a; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; box-shadow: none; }
     .btn-secondary:hover { background: #e7f0f5; }
+    #showWorkersModal, #bindMessengersBtn { border: 2px solid #2f7e9e; }
     .btn-danger { background: #c03c2b; color: white; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; }
     .btn-danger:hover { background: #a02f24; }
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
-    .view-toggle-row { display: flex; justify-content: flex-start; gap: 10px; align-items: center; margin-top: 10px; }
+    .view-toggle-row { display: flex; justify-content: flex-start; gap: 10px; align-items: center; margin: 10px; }
     .filter-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; margin-top: 12px; }
     .filter-bar { background: white; padding: 18px 24px; border-radius: 60px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); width: 100%; }
     .filter-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -111,8 +112,6 @@
     .modal-content {
         background: white;
         border-radius: 36px;
-        max-width: 900px;
-        width: 90%;
         max-height: 90vh;
         overflow-y: auto;
         padding: 36px 40px;
@@ -276,6 +275,7 @@
                     </div>
                 </div>
                 <button class="btn-primary" id="applyFilters" style="padding:8px 20px;">Применить</button>
+                <button class="btn-secondary" id="resetFilters" style="padding:8px 20px;">Сбросить</button>
             </div>
             </div>
     </div>
@@ -827,7 +827,11 @@
         fetch(`/cancel-request/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } })
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
-            if (status === 200 && body.success) { loadRequests(); alert('Заявка отменена'); }
+            if (status === 200 && body.success) {
+                showBrowserNotification('🚫 Заявка отменена', `Заявка #${id} успешно отменена`);
+                loadRequests();
+                alert('Заявка отменена');
+            }
             else alert('Ошибка: ' + (body.error || 'Не удалось отменить заявку'));
         })
         .catch(err => console.error('Ошибка отмены:', err))
@@ -875,7 +879,11 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) { closeModal('createModal'); loadRequests(); }
+            if (data.success) {
+                showBrowserNotification('✅ Заявка создана', `Заявка #${data.id} успешно создана и назначена мастеру`);
+                closeModal('createModal');
+                loadRequests();
+            }
             else alert('Ошибка создания: ' + (data.error || 'неизвестная ошибка'));
         })
         .catch(error => console.error('Ошибка создания:', error))
@@ -889,6 +897,18 @@
     document.getElementById('openFilterPanel').addEventListener('click', openFilterPanel);
     document.getElementById('closeFilterPanel').addEventListener('click', closeFilterPanelWindow);
     document.getElementById('applyFilters').addEventListener('click', function() {
+        loadRequests();
+        closeFilterPanelWindow();
+    });
+    document.getElementById('resetFilters').addEventListener('click', function() {
+        document.getElementById('filterDateFrom').value = '';
+        document.getElementById('filterDateTo').value = '';
+        document.getElementById('filterPriceFrom').value = '';
+        document.getElementById('filterPriceTo').value = '';
+        document.getElementById('filterWorker').value = '';
+        document.getElementById('filterSearch').value = '';
+        document.querySelectorAll('#filterStatusOptions .status-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('filterStatusToggle').textContent = 'Все';
         loadRequests();
         closeFilterPanelWindow();
     });
@@ -923,16 +943,18 @@
     }
 
     function renderWorkers(workers) {
-        const tbody = document.getElementById('workersBody');
-        tbody.innerHTML = '';
+        const container = document.getElementById('workersList');
+        container.innerHTML = '';
         workers.forEach(w => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${escapeHtml(w.first_name)}</td>
-                <td>${escapeHtml(w.phone || '')}</td>
-                <td>${escapeHtml(w.email || '')}</td>
+            const workerBlock = document.createElement('div');
+            workerBlock.style.cssText = 'background: #f8fafc; border-radius: 16px; padding: 16px; border-left: 4px solid #2f7e9e;';
+            workerBlock.innerHTML = `
+                <div style="font-size: 16px; font-weight: 600; color: #0b2b40; margin-bottom: 8px;">${escapeHtml(w.first_name || 'Мастер')}</div>
+                <div style="font-size: 14px; color: #4a6778;">
+                    <div style="margin-bottom: 6px;">📞 ${escapeHtml(w.phone || '—')}</div>
+                </div>
             `;
-            tbody.appendChild(row);
+            container.appendChild(workerBlock);
         });
     }
 
@@ -969,24 +991,36 @@
             });
         }
     });
+
+    // Запрос разрешения на браузер push-уведомления
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+    
+    // Функция для показа браузер push-уведомления
+    function showBrowserNotification(title, text) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            try {
+                new Notification(title, {
+                    body: text,
+                    icon: '/static/logo.png',
+                    badge: '/static/logo.png',
+                    tag: 'santech-notification',
+                    requireInteraction: true
+                });
+            } catch(e) {
+                console.error('Ошибка создания уведомления:', e);
+            }
+        }
+    }
+    window.showBrowserNotification = showBrowserNotification;
 </script>
 
 <!-- Модальное окно списка рабочих -->
 <div class="modal" id="workersModal">
     <div class="modal-content">
-        <h2>👷 Список рабочих</h2>
-        <div class="table-wrapper" style="margin: 20px 0;">
-            <table id="workersTable">
-                <thead>
-                    <tr>
-                        <th>Имя</th>
-                        <th>Телефон</th>
-                        <th>Email</th>
-                    </tr>
-                </thead>
-                <tbody id="workersBody"></tbody>
-            </table>
-        </div>
+        <h2>👷 Список мастеров</h2>
+        <div id="workersList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin: 20px 0;"></div>
         <div class="modal-actions">
             <button class="btn-secondary" onclick="closeModal('workersModal')">Закрыть</button>
         </div>

@@ -63,3 +63,24 @@ class Part(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.price}₽"
+
+class Notification(models.Model):
+    NOTIFICATION_TYPE_CHOICES = (
+        ('new_request', 'Новая заявка'),
+        ('reassign', 'Переназначение заявки'),
+        ('cancel', 'Отмена заявки'),
+        ('complete', 'Заявка выполнена'),
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField('Тип уведомления', max_length=20, choices=NOTIFICATION_TYPE_CHOICES)
+    request = models.ForeignKey(Request, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
+    title = models.CharField('Заголовок', max_length=200)
+    text = models.TextField('Текст уведомления')
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    is_read = models.BooleanField('Прочитано', default=False)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.title} - {self.user.username}"

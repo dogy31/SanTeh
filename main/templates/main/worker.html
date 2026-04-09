@@ -46,9 +46,10 @@
     .btn-secondary { background: #f5f9fd; border: 1px solid transparent; color: #1a5f7a; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; box-shadow: none; }
     .btn-secondary:hover { background: #e7f0f5; }
     .btn-primary { background: #2f7e9e; color: white; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+    #bindMessengersBtn { border: 2px solid #2f7e9e; background: white; color: #2f7e9e; }
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
     .view-toggle-row { display: flex; justify-content: flex-start; gap: 10px; align-items: center; margin-top: 10px; }
-    .filter-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; margin-top: 12px; }
+    .filter-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; margin: 12px; }
     .view-toggle { margin-left: auto; display: flex; gap: 8px; }
     .view-btn { padding: 8px 16px; border-radius: 40px; font-weight: 500; font-size: 14px; cursor: pointer; text-align: center; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; }
     .view-btn.active { background: #2f7e9e; color: white; border: none; box-shadow: 0 2px 4px #2f7e9e70; }
@@ -72,7 +73,7 @@
     .block-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); align-items: center; justify-content: center; z-index: 1000; }
     .modal.active { display: flex; }
-    .modal-content { background: white; border-radius: 36px; max-width: 900px; width: 90%; max-height: 90vh; overflow-y: auto; padding: 36px 40px; }
+    .modal-content { background: white; border-radius: 36px; max-height: 90vh; overflow-y: auto; padding: 36px 40px; }
     .modal-content h2 { font-size: 28px; margin-bottom: 20px; }
     .field { margin-bottom: 16px; }
     .field label { display: block; font-weight: 500; margin-bottom: 4px; }
@@ -510,7 +511,7 @@
                         `<button class="btn-outline" onclick="editRequest(${r.id})">Редактировать</button>
                          <button class="btn-solid" onclick="closeRequest(${r.id}, this)">Закрыть✅</button>
                          <button class="btn-danger" onclick="cancelWorkerRequest(${r.id}, this)">Отменить</button>` : 
-                        `<button class="btn-outline" onclick="editRequest(${r.id})">Просмотр</button>`}
+                        `<button class="btn-outline" onclick="viewRequest(${r.id})">Просмотр</button>`}
                 </td>
             `;
             tbody.appendChild(row);
@@ -573,7 +574,7 @@
                         `<button class="btn-outline" onclick="editRequest(${r.id})">Редактировать</button>
                          <button class="btn-solid" onclick="closeRequest(${r.id}, this)">Закрыть✅</button>
                          <button class="btn-danger" onclick="cancelWorkerRequest(${r.id}, this)">Отменить</button>` : 
-                        `<button class="btn-outline" onclick="editRequest(${r.id})">Просмотр</button>`}
+                        `<button class="btn-outline" onclick="viewRequest(${r.id})">Просмотр</button>`}
                 </div>
             `;
             block.addEventListener('click', function() {
@@ -633,10 +634,14 @@
     window.viewRequest = function(id) {
         editRequest(id);
         setTimeout(() => {
-            document.querySelectorAll('#editModal input, #editModal textarea, #editModal select, #editModal button').forEach(el => el.disabled = true);
+            document.querySelectorAll('#editModal input, #editModal textarea, #editModal select').forEach(el => el.disabled = true);
             document.getElementById('saveEditBtn').style.display = 'none';
+            document.getElementById('cancelWorkerRequestBtn').style.display = 'none';
             document.getElementById('addPartBtn').style.display = 'none';
             document.querySelectorAll('.remove-part').forEach(btn => btn.style.display = 'none');
+            document.querySelectorAll('.remove').forEach(btn => btn.style.display = 'none');
+            document.getElementById('contractInput').disabled = true;
+            document.querySelectorAll('.part-receipt-input').forEach(input => input.disabled = true);
         }, 200);
     };
 
@@ -781,7 +786,14 @@
                 formData.append('parts_data', JSON.stringify(partsWithoutFiles));
                 parts.forEach((part, idx) => { if (part.file) formData.append(`part_photo_${idx}`, part.file); });
                 return fetch(`/edit-request/${currentEditId}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken }, body: formData })
-                    .then(response => response.json());
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(data => {
+                                throw new Error(data.error || `Ошибка сервера: ${response.status}`);
+                            });
+                        }
+                        return response.json();
+                    });
             });
     }
 
@@ -791,18 +803,21 @@
         saveWorkerEdit()
             .then(data => {
                 if (data.success) {
+                    showBrowserNotification('✅ Изменения сохранены', 'Ваши изменения были успешно сохранены');
                     closeModal('editModal');
                     loadWorkerRequests();
                 } else {
+                    console.error('Ошибка сохранения:', data);
                     alert('Ошибка сохранения: ' + (data.error || 'неизвестная ошибка'));
                 }
             })
             .catch(err => {
+                console.error('Ошибка сохранения:', err);
                 if (err.message === 'Нельзя редактировать закрытые заявки') {
                     alert(err.message);
                     closeModal('editModal');
                 } else {
-                    console.error('Ошибка сохранения:', err);
+                    alert('Ошибка: ' + err.message);
                 }
             })
             .finally(() => { btn.disabled = false; btn.textContent = 'Сохранить изменения'; });
@@ -819,6 +834,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    showBrowserNotification('🚫 Заявка отменена', `Заявка #${currentEditId} была отменена`);
                     closeModal('editModal');
                     loadWorkerRequests();
                     alert('Изменения сохранены и заявка отменена');
@@ -851,6 +867,29 @@
     });
     window.onclick = function(event) { if (event.target.classList.contains('modal')) event.target.classList.remove('active'); };
     loadWorkerRequests();
+
+    // Запрос разрешения на браузер push-уведомления
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+    
+    // Функция для показа браузер push-уведомления
+    function showBrowserNotification(title, text) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            try {
+                new Notification(title, {
+                    body: text,
+                    icon: '/static/logo.png',
+                    badge: '/static/logo.png',
+                    tag: 'santech-notification',
+                    requireInteraction: true
+                });
+            } catch(e) {
+                console.error('Ошибка создания уведомления:', e);
+            }
+        }
+    }
+    window.showBrowserNotification = showBrowserNotification;
 
     // Привязка мессенджеров
     document.addEventListener('DOMContentLoaded', function() {

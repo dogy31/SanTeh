@@ -64,9 +64,11 @@ def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_
         allowed_formats = ['JPEG', 'PNG', 'WEBP', 'JPG', 'jpeg', 'png', 'webp', 'jpg']
         file_extension = image_file.name.split('.')[-1].lower() if '.' in image_file.name else ''
         
+        print(f"DEBUG: Opening image {image_file.name}")
         # Открываем изображение для проверки
         image = Image.open(image_file)
         
+        print(f"DEBUG: Image format: {image.format}")
         # Проверяем формат через PIL
         if image.format not in ['JPEG', 'PNG', 'WEBP']:
             return None, "Неподдерживаемый формат изображения. Разрешены: JPEG, PNG, WebP"
@@ -78,6 +80,7 @@ def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_
         image_file.seek(0)
         image = Image.open(image_file)
         
+        print(f"DEBUG: Resizing image if needed. Current size: {image.width}x{image.height}")
         # Конвертируем в RGB если необходимо (для прозрачных PNG)
         if image.mode in ('RGBA', 'LA', 'P'):
             # Создаем белый фон
@@ -97,6 +100,7 @@ def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_
             new_height = int(image.height * ratio)
             image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
         
+        print(f"DEBUG: Saving image as JPEG")
         # Оптимизируем и сохраняем в памяти
         output = io.BytesIO()
         
@@ -104,6 +108,7 @@ def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_
         image.save(output, format='JPEG', quality=quality, optimize=True)
         output.seek(0)
         
+        print(f"DEBUG: Creating InMemoryUploadedFile")
         # Создаем новый InMemoryUploadedFile
         from django.core.files.uploadedfile import InMemoryUploadedFile
         optimized_file = InMemoryUploadedFile(
@@ -115,10 +120,13 @@ def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_
             None
         )
         
+        print(f"DEBUG: Image optimization completed successfully")
         return optimized_file, None
         
     except Exception as e:
-        return None, f"Ошибка обработки изображения: {str(e)}"
+        error_msg = f"Ошибка обработки изображения: {str(e)}"
+        print(f"DEBUG: {error_msg}")
+        return None, error_msg
 
 def register(request):
     if request.method == 'POST':
@@ -273,29 +281,31 @@ def create_request(request):
             worker_percent=worker_percent
         )
         # Отправка уведомления
-        try:
-            if worker_id:
-                worker = User.objects.filter(pk=worker_id).first()
-                if worker and hasattr(worker, 'profile'):
-                    profile = worker.profile
-                    now = datetime.now()
-                    text = f"""
+        if worker_id:
+            worker = User.objects.filter(pk=worker_id).first()
+            if worker:
+                now = datetime.now()
+                text = f"""
 ━━━━━━━━━━━━━
-НОВАЯ ЗАЯВКА #{req.id}
-от {now.strftime('%d.%m.%Y %H:%M')}
+🚀 НОВАЯ ЗАЯВКА #{req.id}
 ━━━━━━━━━━━━━
-ОПИСАНИЕ РАБОТ:
-{req.description}
+Дата: {now.strftime('%d.%m.%Y %H:%M')}
 ━━━━━━━━━━━━━
-КЛИЕНТ: {req.client_name}
-ТЕЛЕФОН: {req.client_phone}
-АДРЕС: {req.client_address or '—'}
+Описание: {req.description}
 ━━━━━━━━━━━━━
-❗❗❗ВАЖНО: перезвоните клиенту в течении 30 минут и не опаздывайте к согласованому времени❗❗❗
+Клиент: {req.client_name}
+Телефон: {req.client_phone}
+Адрес: {req.client_address or '—'}
+━━━━━━━━━━━━━
+⚠️ ВАЖНО: Позвоните клиенту в течение 30 минут!
 """
-                    send_worker_notification(profile, text)
-        except Exception:
-            pass
+                send_notification(
+                    user=worker,
+                    notification_type='new_request',
+                    title=f'Новая заявка #{req.id}',
+                    text=text,
+                    request_obj=req
+                )
         return JsonResponse({'success': True, 'id': req.id})
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -365,54 +375,73 @@ def edit_request(request, pk):
             if previous_worker_id != new_worker_id:
                 if previous_worker_id:
                     old_worker = User.objects.filter(pk=previous_worker_id).first()
-                    if old_worker and hasattr(old_worker, 'profile'):
+                    if old_worker:
                         cancel_text = f"""
 ━━━━━━━━━━━━━
-   ❌ ЗАЯВКА #{req.id} ОТМЕНЕНА
+❌ ЗАЯВКА #{req.id} — ПЕРЕНАЗНАЧЕНА
 ━━━━━━━━━━━━━
-Заявка была переназначена другому рабочему.
+Заявка передана другому мастеру.
 """
-                        send_worker_notification(old_worker.profile, cancel_text)
+                        send_notification(
+                            user=old_worker,
+                            notification_type='reassign',
+                            title=f'Заявка #{req.id} переназначена',
+                            text=cancel_text,
+                            request_obj=req
+                        )
                 if new_worker_id:
                     new_worker = User.objects.filter(pk=new_worker_id).first()
-                    if new_worker and hasattr(new_worker, 'profile'):
+                    if new_worker:
                         now = datetime.now()
                         assignment_text = f"""
 ━━━━━━━━━━━━━
-ПЕРЕНАЗНАЧЕНА ЗАЯВКА #{req.id}
-от {now.strftime('%d.%m.%Y %H:%M')}
+🔄 ПЕРЕНАЗНАЧЕНА ЗАЯВКА #{req.id}
 ━━━━━━━━━━━━━
-ОПИСАНИЕ РАБОТ:
-{req.description}
+Дата: {now.strftime('%d.%m.%Y %H:%M')}
 ━━━━━━━━━━━━━
-КЛИЕНТ: {req.client_name}
-ТЕЛЕФОН: {req.client_phone}
-АДРЕС: {req.client_address or '—'}
+Описание: {req.description}
 ━━━━━━━━━━━━━
-❗❗❗ВАЖНО: перезвоните клиенту в течении 30 минут и не опаздывайте к согласованому времени❗❗❗
+Клиент: {req.client_name}
+Телефон: {req.client_phone}
+Адрес: {req.client_address or '—'}
+━━━━━━━━━━━━━
+⚠️ ВАЖНО: Позвоните клиенту в течение 30 минут!
 """
-                        send_worker_notification(new_worker.profile, assignment_text)
+                        send_notification(
+                            user=new_worker,
+                            notification_type='reassign',
+                            title=f'Заявка #{req.id} назначена вам',
+                            text=assignment_text,
+                            request_obj=req
+                        )
 
         # Обработка договора
         contract_files = request.FILES.getlist('contract_photos')
+        print(f"DEBUG: contract_files count = {len(contract_files)}")
         if contract_files:
             if len(contract_files) > 5:
                 return JsonResponse({'error': 'Максимум 5 фотографий договора'}, status=400)
             req.photos.filter(photo_type='contract').delete()
-            for contract_file in contract_files:
+            for idx, contract_file in enumerate(contract_files):
+                print(f"DEBUG: Processing contract file {idx+1}: {contract_file.name}, size: {contract_file.size}")
                 # Валидируем и оптимизируем изображение
                 optimized_image, error_msg = validate_and_optimize_image(contract_file)
                 if error_msg:
+                    print(f"DEBUG: Error with contract file {idx+1}: {error_msg}")
                     return JsonResponse({'error': f'Ошибка с изображением договора: {error_msg}'}, status=400)
                 if optimized_image:
+                    print(f"DEBUG: Saving optimized contract image {idx+1}")
                     Photo.objects.create(request=req, image=optimized_image, photo_type='contract')
+                else:
+                    print(f"DEBUG: Optimized image is None for contract file {idx+1}")
         else:
             existing_contract_ids = request.POST.get('existing_contract_ids')
             if existing_contract_ids is not None:
                 try:
                     ids_to_keep = json.loads(existing_contract_ids)
                     req.photos.filter(photo_type='contract').exclude(id__in=ids_to_keep).delete()
-                except Exception:
+                except Exception as e:
+                    print(f"DEBUG: Error processing existing_contract_ids: {e}")
                     pass
             elif request.POST.get('delete_contract') == 'true':
                 req.photos.filter(photo_type='contract').delete()
@@ -516,8 +545,32 @@ def send_worker_notification(profile, text):
         site_user_id = str(profile.user.id) if profile.user and profile.user.id else None
         if site_user_id:
             requests.post('http://127.0.0.1:5000/create_ticket', json={'user_id': site_user_id, 'text': text}, timeout=3)
-    except Exception:
-        print('Не удалось отправить уведомление')
+    except Exception as e:
+        print(f'Не удалось отправить уведомление: {e}')
+
+def send_notification(user, notification_type, title, text, request_obj=None):
+    """
+    Отправляет уведомление на все каналы: БД, Telegram/MAX, браузер push
+    notification_type: 'new_request', 'reassign', 'cancel', 'complete'
+    """
+    try:
+        # Сохраняем в БД для истории
+        if user and hasattr(user, 'profile'):
+            Notification.objects.create(
+                user=user,
+                notification_type=notification_type,
+                request=request_obj,
+                title=title,
+                text=text
+            )
+        
+        # Отправляем в Telegram/MAX через api_server
+        if user and hasattr(user, 'profile'):
+            send_worker_notification(user.profile, text)
+        
+        print(f'Уведомление отправлено пользователю {user.username if user else "unknown"}')
+    except Exception as e:
+        print(f'Ошибка при отправке уведомления: {e}')
 
 @login_required
 def close_request(request, pk):
@@ -732,6 +785,28 @@ def cancel_request(request, pk):
         return JsonResponse({'error': 'Цена не указана'}, status=400)
     req.status = 'cancelled'
     req.save()
+    
+    # Отправка уведомления мастеру об отмене
+    if req.assigned_to:
+        cancel_text = f"""
+━━━━━━━━━━━━━
+🚫 ЗАЯВКА #{req.id} ОТМЕНЕНА
+━━━━━━━━━━━━━
+Статус: Отменено
+━━━━━━━━━━━━━
+Клиент: {req.client_name}
+Телефон: {req.client_phone}
+Сумма: {req.price}₽
+━━━━━━━━━━━━━
+"""
+        send_notification(
+            user=req.assigned_to,
+            notification_type='cancel',
+            title=f'Заявка #{req.id} отменена',
+            text=cancel_text,
+            request_obj=req
+        )
+    
     if req.client_phone:
         message = f"Ваша заявка отменена. Диагностика {req.price} руб. Гарантия на отмену не распространяется. При несоответсвии данных свяжитесь {+79059883225}"
         send_sms(req.client_phone, message)
