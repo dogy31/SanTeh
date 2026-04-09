@@ -7,10 +7,11 @@
     .worker-name h2 { font-size: 24px; color: #0b2b40; margin: 0; }
     .worker-name span { color: #4a6778; font-size: 15px; }
     .stats span { font-weight: 700; font-size: 22px; color: #1b6f8f; }
-    .filter-bar { background: white; padding: 18px 24px; border-radius: 60px; display: flex; flex-wrap: wrap; gap: 8px 4px; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
-    .filter-item { display: flex; align-items: center; gap: 8px; flex: 1 1 20px;}
-    .filter-item label { font-weight: 500; color: #2c5770; font-size: 14px; }
-    .filter-item input, .filter-item select { padding: 8px 12px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; font-size: 14px; }
+    .filter-bar { background: white; padding: 18px 24px; border-radius: 60px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); width: 100%; }
+    .filter-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .filter-item label { font-weight: 500; color: #2c5770; font-size: 14px; white-space: nowrap; }
+    .filter-item input, .filter-item select { padding: 8px 12px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; font-size: 14px; width: 100%; }
+    .filter-bar button { min-width: 150px; }
     .filter-panel { position: relative; }
     .mobile-filter-toggle { display: none; margin-bottom: 20px; }
     .filter-modal { display: block; position: static; background: transparent; }
@@ -42,14 +43,18 @@
     .btn-solid:hover { background: #1f5f7a; }
     .btn-danger { background: #c03c2b; color: white; border: none; padding: 6px 14px; border-radius: 40px; font-weight: 500; font-size: 12px; cursor: pointer; text-align: center; display: inline-block; margin-right: 8px; min-width: 90px; transition: 0.15s; }
     .btn-danger:hover { background: #a02f24; }
-    .btn-secondary { background: transparent; border: 1.5px solid #2f7e9e; color: #1a5f7a; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+    .btn-secondary { background: #f5f9fd; border: 1px solid transparent; color: #1a5f7a; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; box-shadow: none; }
+    .btn-secondary:hover { background: #e7f0f5; }
     .btn-primary { background: #2f7e9e; color: white; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+    .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
+    .view-toggle-row { display: flex; justify-content: flex-start; gap: 10px; align-items: center; margin-top: 10px; }
+    .filter-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; margin-top: 12px; }
     .view-toggle { margin-left: auto; display: flex; gap: 8px; }
     .view-btn { padding: 8px 16px; border-radius: 40px; font-weight: 500; font-size: 14px; cursor: pointer; text-align: center; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; }
     .view-btn.active { background: #2f7e9e; color: white; border: none; box-shadow: 0 2px 4px #2f7e9e70; }
     .view-btn:not(.active) { border: 1.5px solid #2f7e9e; background: white; color: #1d5f7a; }
     .view-btn:not(.active):hover { background: #e7f0f5; }
-    .blocks-wrapper { background: white; border-radius: 28px; padding: 20px; box-shadow: 0 20px 35px -10px #bac9d4; }
+    .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
     .requests-blocks { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
     .request-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; transition: 0.2s; }
     .request-block:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.1); transform: translateY(-2px); }
@@ -273,19 +278,23 @@
         </div>
         <div class="stats"><span id="activeCount">0</span> активных</div>
         <button id="bindMessengersBtn" class="btn-primary">Привязать мессенджеры</button>
-        <a href="{% url 'logout' %}" class="btn-outline" style="text-decoration: none;">Выйти</a>
+        <a href="{% url 'logout' %}" class="btn-danger" style="text-decoration: none;">Выйти</a>
     </div>
     <h3 style="margin-bottom: 20px;">Мои заявки</h3>
-    <!-- Кнопка переключения вида -->
-    <div style="margin-bottom: 20px; text-align: right;">
-        <button class="btn-secondary" id="toggleViewBtn">Показать блоки</button>
+
+    <!-- Поиск -->
+    <div class="search-and-view">
+        <div class="search-container" style="max-width: 480px;">
+            <label style="font-weight: 500; color: #2c5770; font-size: 14px; margin-right: 10px;">Поиск:</label>
+            <input type="text" id="filterSearch" placeholder="Номер, адрес, имя клиента или задача" style="width: 100%; padding: 10px 14px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; font-size: 14px;">
+        </div>
     </div>
+
     <button class="btn-secondary mobile-filter-toggle" id="openFilterPanel" type="button">Фильтры</button>
     <div class="filter-modal" id="filterModal">
         <div class="modal-content filter-modal-content">
             <button class="btn-secondary mobile-filter-close" id="closeFilterPanel" type="button">Закрыть</button>
             <div class="filter-bar">
-                <div class="filter-item"><label>Поиск:</label><input type="text" id="filterSearch" placeholder="Номер, адрес или имя клиента" style="width:200px"></div>
                 <div class="filter-item"><label>Дата с:</label><input type="date" id="filterDateFrom"></div>
                 <div class="filter-item"><label>по:</label><input type="date" id="filterDateTo"></div>
                 <div class="filter-item"><label>Цена от:</label><input type="number" id="filterPriceFrom" placeholder="0" style="width:90px"></div>
@@ -303,16 +312,17 @@
                 </div>
                 <button class="btn-primary" id="applyFilters">Применить</button>
                 <button class="btn-secondary" id="resetFilters">Сбросить</button>
-                <div class="view-toggle" style="margin-left: auto; display: flex; gap: 8px;">
-                    <button class="btn-outline view-btn active" id="tableViewBtn" data-view="table">
-                        <i class="fas fa-table"></i> Таблица
-                    </button>
-                    <button class="btn-outline view-btn" id="blocksViewBtn" data-view="blocks">
-                        <i class="fas fa-th"></i> Блоки
-                    </button>
-                </div>
             </div>
-        </div>
+            </div>
+    </div>
+
+    <div class="view-toggle view-toggle-row">
+        <button class="btn-outline view-btn active" id="tableViewBtn" data-view="table">
+            <i class="fas fa-table"></i> Таблица
+        </button>
+        <button class="btn-outline view-btn" id="blocksViewBtn" data-view="blocks">
+            <i class="fas fa-th"></i> Блоки
+        </button>
     </div>
     <div class="table-wrapper">
         <table id="requestsTable">
@@ -525,7 +535,7 @@
             else if (r.status === 'done') { statusClass = 'block-status done'; statusText = 'Выполнена'; }
             else if (r.status === 'cancelled') { statusClass = 'block-status cancelled'; statusText = 'Отменена'; }
             const block = document.createElement('div');
-            block.className = 'request-block';
+            block.className = `request-block ${r.status}`;
             block.innerHTML = `
                 <div class="block-header">
                     <div class="block-id">#${r.id}</div>
@@ -557,6 +567,7 @@
                         <div class="block-value">${r.worker_salary ? r.worker_salary + ' ₽' : 'Не указана'} (${r.worker_percent}%)</div>
                     </div>
                 </div>
+                ${r.status === 'new' ? '<div class="block-alert">⚠️ Перезвоните клиенту в течении 30 минут</div>' : ''}
                 <div class="block-actions">
                     ${r.status !== 'done' && r.status !== 'cancelled' ? 
                         `<button class="btn-outline" onclick="editRequest(${r.id})">Редактировать</button>
@@ -565,6 +576,9 @@
                         `<button class="btn-outline" onclick="editRequest(${r.id})">Просмотр</button>`}
                 </div>
             `;
+            block.addEventListener('click', function() {
+                // Для worker блока клик не раскрывает детали, только кнопки работают
+            });
             container.appendChild(block);
         });
         document.getElementById('activeCount').textContent = activeCount;
@@ -579,6 +593,12 @@
         fetch(`/edit-request/${id}/`)
             .then(response => response.json())
             .then(data => {
+                // Prevent editing closed requests
+                if (data.status === 'done' || data.status === 'cancelled') {
+                    viewRequest(id);
+                    return;
+                }
+                
                 document.getElementById('editId').textContent = data.id;
                 document.getElementById('editDesc').value = data.description || '';
                 document.getElementById('editClientName').value = data.client_name || '';
@@ -733,52 +753,84 @@
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
     document.getElementById('addPartBtn').addEventListener('click', function() { parts.push({ name: '', price: '', file: null, existingId: null, existingPhotoUrl: null }); renderParts(); });
 
+    function saveWorkerEdit() {
+        if (!currentEditId) return Promise.reject(new Error('ID заявки не указан'));
+        return fetch(`/edit-request/${currentEditId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'done' || data.status === 'cancelled') {
+                    throw new Error('Нельзя редактировать закрытые заявки');
+                }
+                const formData = new FormData();
+                formData.append('price', document.getElementById('editPrice').value);
+                formData.append('comment', document.getElementById('editComment').value);
+                formData.append('overdue_reason', document.getElementById('overdueReason').value);
+                formData.append('prepayment_amount', document.getElementById('prepaymentAmount').value);
+                formData.append('client_address', document.getElementById('editClientAddress').value);
+                if (contractFiles.length) {
+                    contractFiles.forEach(file => formData.append('contract_photos', file));
+                } else {
+                    if (existingContractPhotos.length) {
+                        const idsToKeep = existingContractPhotos.map(photo => photo.id);
+                        formData.append('existing_contract_ids', JSON.stringify(idsToKeep));
+                    } else {
+                        formData.append('delete_contract', 'true');
+                    }
+                }
+                const partsWithoutFiles = parts.map((part, idx) => ({ name: part.name, price: part.price, existingId: part.existingId }));
+                formData.append('parts_data', JSON.stringify(partsWithoutFiles));
+                parts.forEach((part, idx) => { if (part.file) formData.append(`part_photo_${idx}`, part.file); });
+                return fetch(`/edit-request/${currentEditId}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken }, body: formData })
+                    .then(response => response.json());
+            });
+    }
+
     document.getElementById('saveEditBtn').addEventListener('click', function() {
         const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
         if (!currentEditId) { btn.disabled = false; btn.textContent = 'Сохранить изменения'; return; }
-        const formData = new FormData();
-        formData.append('price', document.getElementById('editPrice').value);
-        formData.append('comment', document.getElementById('editComment').value);
-        formData.append('overdue_reason', document.getElementById('overdueReason').value);
-        formData.append('prepayment_amount', document.getElementById('prepaymentAmount').value);
-        formData.append('client_address', document.getElementById('editClientAddress').value);
-        if (contractFiles.length) {
-            contractFiles.forEach(file => formData.append('contract_photos', file));
-        } else {
-            if (existingContractPhotos.length) {
-                const idsToKeep = existingContractPhotos.map(photo => photo.id);
-                formData.append('existing_contract_ids', JSON.stringify(idsToKeep));
-            } else {
-                formData.append('delete_contract', 'true');
-            }
-        }
-        const partsWithoutFiles = parts.map((part, idx) => ({ name: part.name, price: part.price, existingId: part.existingId }));
-        formData.append('parts_data', JSON.stringify(partsWithoutFiles));
-        parts.forEach((part, idx) => { if (part.file) formData.append(`part_photo_${idx}`, part.file); });
-        fetch(`/edit-request/${currentEditId}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken }, body: formData })
-        .then(response => response.json())
-        .then(data => { if (data.success) { closeModal('editModal'); loadWorkerRequests(); } else alert('Ошибка сохранения: ' + (data.error || 'неизвестная ошибка')); })
-        .catch(err => console.error('Ошибка сохранения:', err))
-        .finally(() => { btn.disabled = false; btn.textContent = 'Сохранить изменения'; });
+        saveWorkerEdit()
+            .then(data => {
+                if (data.success) {
+                    closeModal('editModal');
+                    loadWorkerRequests();
+                } else {
+                    alert('Ошибка сохранения: ' + (data.error || 'неизвестная ошибка'));
+                }
+            })
+            .catch(err => {
+                if (err.message === 'Нельзя редактировать закрытые заявки') {
+                    alert(err.message);
+                    closeModal('editModal');
+                } else {
+                    console.error('Ошибка сохранения:', err);
+                }
+            })
+            .finally(() => { btn.disabled = false; btn.textContent = 'Сохранить изменения'; });
     });
 
     document.getElementById('cancelWorkerRequestBtn').addEventListener('click', function() {
         if (!currentEditId || !confirm('Вы уверены, что хотите отменить эту заявку?')) return;
-        fetch(`/cancel-request/${currentEditId}/`, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': csrftoken }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                closeModal('editModal');
-                loadWorkerRequests();
-                alert('Заявка отменена');
-            } else {
-                alert('Ошибка отмены: ' + (data.error || 'неизвестная ошибка'));
-            }
-        })
-        .catch(err => console.error('Ошибка отмены:', err));
+        const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
+        saveWorkerEdit()
+            .then(data => {
+                if (!data.success) throw new Error(data.error || 'Ошибка сохранения');
+                return fetch(`/cancel-request/${currentEditId}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } });
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeModal('editModal');
+                    loadWorkerRequests();
+                    alert('Изменения сохранены и заявка отменена');
+                } else {
+                    throw new Error(data.error || 'Ошибка отмены');
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка сохранения или отмены:', err);
+                alert(err.message || 'Ошибка сохранения или отмены');
+            })
+            .finally(() => { btn.disabled = false; btn.textContent = 'Отменить заявку'; });
     });
 
     function openFilterPanel() { document.getElementById('filterModal').classList.add('active'); }

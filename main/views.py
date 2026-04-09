@@ -10,6 +10,8 @@ import os, sys
 import requests
 from datetime import datetime, date
 import decimal
+from PIL import Image
+import io
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -44,6 +46,79 @@ except Exception:
 import json
 from datetime import datetime, timedelta
 import decimal
+
+def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_height=2048, quality=85):
+    """
+    Валидирует и оптимизирует изображение
+    - Проверяет формат (только JPEG, PNG, WebP)
+    - Проверяет размер файла
+    - Оптимизирует размер и качество
+    - Возвращает оптимизированное изображение или None при ошибке
+    """
+    try:
+        # Проверка размера файла (max_size_mb мегабайт)
+        if image_file.size > max_size_mb * 1024 * 1024:
+            return None, f"Файл слишком большой. Максимальный размер: {max_size_mb}MB"
+
+        # Проверка формата файла
+        allowed_formats = ['JPEG', 'PNG', 'WEBP', 'JPG', 'jpeg', 'png', 'webp', 'jpg']
+        file_extension = image_file.name.split('.')[-1].lower() if '.' in image_file.name else ''
+        
+        # Открываем изображение для проверки
+        image = Image.open(image_file)
+        
+        # Проверяем формат через PIL
+        if image.format not in ['JPEG', 'PNG', 'WEBP']:
+            return None, "Неподдерживаемый формат изображения. Разрешены: JPEG, PNG, WebP"
+        
+        # Проверяем, что файл действительно является изображением
+        # image.verify()  # Убрано, так как может быть слишком строгим
+        
+        # Снова открываем изображение после verify()
+        image_file.seek(0)
+        image = Image.open(image_file)
+        
+        # Конвертируем в RGB если необходимо (для прозрачных PNG)
+        if image.mode in ('RGBA', 'LA', 'P'):
+            # Создаем белый фон
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            if image.mode == 'P':
+                image = image.convert('RGBA')
+            background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
+            image = background
+        elif image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Изменяем размер если слишком большой
+        if image.width > max_width or image.height > max_height:
+            # Сохраняем соотношение сторон
+            ratio = min(max_width / image.width, max_height / image.height)
+            new_width = int(image.width * ratio)
+            new_height = int(image.height * ratio)
+            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Оптимизируем и сохраняем в памяти
+        output = io.BytesIO()
+        
+        # Сохраняем как JPEG для лучшей совместимости
+        image.save(output, format='JPEG', quality=quality, optimize=True)
+        output.seek(0)
+        
+        # Создаем новый InMemoryUploadedFile
+        from django.core.files.uploadedfile import InMemoryUploadedFile
+        optimized_file = InMemoryUploadedFile(
+            output,
+            'ImageField',
+            f"{os.path.splitext(image_file.name)[0]}.jpg",
+            'image/jpeg',
+            output.tell(),
+            None
+        )
+        
+        return optimized_file, None
+        
+    except Exception as e:
+        return None, f"Ошибка обработки изображения: {str(e)}"
 
 def register(request):
     if request.method == 'POST':
@@ -206,16 +281,17 @@ def create_request(request):
                     now = datetime.now()
                     text = f"""
 ━━━━━━━━━━━━━
-   🚀 НОВАЯ ЗАЯВКА #{req.id}
-   от {now.strftime('%d.%m.%Y %H:%M')}
+НОВАЯ ЗАЯВКА #{req.id}
+от {now.strftime('%d.%m.%Y %H:%M')}
 ━━━━━━━━━━━━━
-📌 ОПИСАНИЕ РАБОТ:
-`{req.description}`
+ОПИСАНИЕ РАБОТ:
+{req.description}
 ━━━━━━━━━━━━━
-👤 КЛИЕНТ: {req.client_name}
-📞 ТЕЛЕФОН: `{req.client_phone}`
-📍 АДРЕС: {req.client_address or '—'}
+КЛИЕНТ: {req.client_name}
+ТЕЛЕФОН: {req.client_phone}
+АДРЕС: {req.client_address or '—'}
 ━━━━━━━━━━━━━
+❗❗❗ВАЖНО: перезвоните клиенту в течении 30 минут и не опаздывайте к согласованому времени❗❗❗
 """
                     send_worker_notification(profile, text)
         except Exception:
@@ -251,6 +327,8 @@ def edit_request(request, pk):
             req.status = request.POST.get('status', req.status)
 
         previous_worker_id = req.assigned_to_id
+        is_closed = req.status in ['done', 'cancelled']
+
         if 'worker_id' in request.POST:
             worker_id = request.POST.get('worker_id')
             req.assigned_to_id = worker_id if worker_id else None
@@ -272,9 +350,17 @@ def edit_request(request, pk):
             else:
                 req.prepayment_amount = 0
 
+        if 'worker_percent' in request.POST:
+            try:
+                percent = int(request.POST.get('worker_percent', req.worker_percent))
+                if 0 <= percent <= 100:
+                    req.worker_percent = percent
+            except (TypeError, ValueError):
+                pass
+
         req.save()
 
-        if 'worker_id' in request.POST:
+        if 'worker_id' in request.POST and not is_closed:
             new_worker_id = req.assigned_to_id
             if previous_worker_id != new_worker_id:
                 if previous_worker_id:
@@ -314,7 +400,12 @@ def edit_request(request, pk):
                 return JsonResponse({'error': 'Максимум 5 фотографий договора'}, status=400)
             req.photos.filter(photo_type='contract').delete()
             for contract_file in contract_files:
-                Photo.objects.create(request=req, image=contract_file, photo_type='contract')
+                # Валидируем и оптимизируем изображение
+                optimized_image, error_msg = validate_and_optimize_image(contract_file)
+                if error_msg:
+                    return JsonResponse({'error': f'Ошибка с изображением договора: {error_msg}'}, status=400)
+                if optimized_image:
+                    Photo.objects.create(request=req, image=optimized_image, photo_type='contract')
         else:
             existing_contract_ids = request.POST.get('existing_contract_ids')
             if existing_contract_ids is not None:
@@ -340,7 +431,12 @@ def edit_request(request, pk):
                     part_obj.price = part.get('price') if part.get('price') else None
                     photo_field = f'part_photo_{i}'
                     if photo_field in request.FILES:
-                        part_obj.receipt_photo = request.FILES[photo_field]
+                        # Валидируем и оптимизируем изображение
+                        optimized_image, error_msg = validate_and_optimize_image(request.FILES[photo_field])
+                        if error_msg:
+                            return JsonResponse({'error': f'Ошибка с изображением чека для "{part.get("name", "детали")}"": {error_msg}'}, status=400)
+                        if optimized_image:
+                            part_obj.receipt_photo = optimized_image
                     part_obj.save()
                 else:
                     part_obj = Part(
@@ -350,7 +446,12 @@ def edit_request(request, pk):
                     )
                     photo_field = f'part_photo_{i}'
                     if photo_field in request.FILES:
-                        part_obj.receipt_photo = request.FILES[photo_field]
+                        # Валидируем и оптимизируем изображение
+                        optimized_image, error_msg = validate_and_optimize_image(request.FILES[photo_field])
+                        if error_msg:
+                            return JsonResponse({'error': f'Ошибка с изображением чека для "{part.get("name", "детали")}"": {error_msg}'}, status=400)
+                        if optimized_image:
+                            part_obj.receipt_photo = optimized_image
                     part_obj.save()
                 kept_part_ids.append(part_obj.id)
             req.parts.exclude(id__in=kept_part_ids).delete()
@@ -412,19 +513,9 @@ def send_sms(phone, message):
 
 def send_worker_notification(profile, text):
     try:
-        sent = False
-        if profile.tg_code and BOT_TOKEN:
-            url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
-            requests.post(url, json={'chat_id': profile.tg_code, 'text': text}, timeout=3)
-            sent = True
-        if profile.max_code and MAX_TOKEN:
-            url = f'https://api.max.org/bot{MAX_TOKEN}/sendMessage'
-            requests.post(url, json={'chat_id': profile.max_code, 'text': text}, timeout=3)
-            sent = True
-        if not sent:
-            site_user_id = str(profile.user.id) if profile.user and profile.user.id else None
-            if site_user_id:
-                requests.post('http://127.0.0.1:5000/create_ticket', json={'user_id': site_user_id, 'text': text}, timeout=3)
+        site_user_id = str(profile.user.id) if profile.user and profile.user.id else None
+        if site_user_id:
+            requests.post('http://127.0.0.1:5000/create_ticket', json={'user_id': site_user_id, 'text': text}, timeout=3)
     except Exception:
         print('Не удалось отправить уведомление')
 
@@ -518,9 +609,9 @@ def get_requests(request):
     if worker_id:
         requests = requests.filter(assigned_to_id=worker_id)
     if search:
-        # Поиск по id, client_address, client_name
+        # Поиск по id, описанию задачи, client_address, client_name
         requests = requests.filter(
-            Q(id__icontains=search) | Q(client_address__icontains=search) | Q(client_name__icontains=search)
+            Q(id__icontains=search) | Q(description__icontains=search) | Q(client_address__icontains=search) | Q(client_name__icontains=search)
         )
     status_list = [s for s in status_list if s]
     if status_list:
@@ -575,9 +666,9 @@ def get_worker_requests(request):
     if price_to:
         requests = requests.filter(price__lte=price_to)
     if search:
-        # Поиск по id, client_address, client_name
+        # Поиск по id, описанию задачи, client_address, client_name
         requests = requests.filter(
-            Q(id__icontains=search) | Q(client_address__icontains=search) | Q(client_name__icontains=search)
+            Q(id__icontains=search) | Q(description__icontains=search) | Q(client_address__icontains=search) | Q(client_name__icontains=search)
         )
     status_list = [s for s in status_list if s]
     if status_list:

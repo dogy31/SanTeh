@@ -2,7 +2,9 @@
 {% block extra_head %}
 <style>
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
-    .header h1 { font-size: 32px; color: #0b2b40; display: flex; align-items: center; gap: 10px; }
+    .header-buttons { display: flex; gap: 10px; }
+    .btn-large { padding: 16px 36px; font-size: 16px; }
+    .header h1 { font-size: 25px; color: #0b2b40; display: flex; align-items: center; gap: 10px; }
     .badge { background: #2f7e9e20; color: #1b5e7a; padding: 5px 14px; border-radius: 40px; }
     .btn-primary { background: #2f7e9e; color: white; border: none; padding: 12px 28px; border-radius: 40px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px #2f7e9e60; transition: 0.15s; }
     .btn-primary:hover { background: #1f5f7a; }
@@ -11,12 +13,19 @@
     .view-btn.active { background: #2f7e9e; color: white; border: none; box-shadow: 0 2px 4px #2f7e9e70; }
     .view-btn:not(.active) { border: 1.5px solid #2f7e9e; background: white; color: #1d5f7a; }
     .view-btn:not(.active):hover { background: #e7f0f5; }
-    .btn-secondary { background: transparent; border: 1.5px solid #2f7e9e; color: #1a5f7a; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; }
+    .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
+    .btn-secondary { background: #f5f9fd; border: 1px solid transparent; color: #1a5f7a; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; box-shadow: none; }
     .btn-secondary:hover { background: #e7f0f5; }
-    .filter-bar { background: white; padding: 18px 24px; border-radius: 60px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
-    .filter-item { display: flex; align-items: center; gap: 8px; flex: 1 1 20px;}
-    .filter-item label { font-weight: 500; color: #2c5770; font-size: 14px; }
-    .filter-item input, .filter-item select { padding: 8px 12px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; font-size: 14px; }
+    .btn-danger { background: #c03c2b; color: white; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; }
+    .btn-danger:hover { background: #a02f24; }
+    .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
+    .view-toggle-row { display: flex; justify-content: flex-start; gap: 10px; align-items: center; margin-top: 10px; }
+    .filter-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; margin-top: 12px; }
+    .filter-bar { background: white; padding: 18px 24px; border-radius: 60px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); width: 100%; }
+    .filter-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .filter-item label { font-weight: 500; color: #2c5770; font-size: 14px; white-space: nowrap; }
+    .filter-item input, .filter-item select { padding: 8px 12px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; font-size: 14px; width: 100%; }
+    .filter-bar button { min-width: 150px; }
     .filter-panel { position: relative; }
     .mobile-filter-toggle { display: none; margin-bottom: 20px; }
     .filter-modal { display: block; position: static; background: transparent; }
@@ -46,8 +55,23 @@
     .cancel-btn { color: #c03c2b; border-color: #c03c2b40; }
     .cancel-btn:hover { background: #ffeaea; }
     .money-delivered { width: 20px; height: 20px; accent-color: #2f7e9e; cursor: pointer; }
-    .blocks-view { margin-top: 20px; }
     .blocks-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+    .request-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; transition: 0.2s; }
+    .request-block:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.1); transform: translateY(-2px); }
+    .block-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .block-id { font-size: 18px; font-weight: 700; color: #1b6f8f; }
+    .block-status { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; }
+    .block-status.new { background: #e1edfb; color: #1b5f8c; }
+    .block-status.in-progress { background: #fff2d6; color: #a16500; }
+    .block-status.done { background: #dff0e0; color: #1d6f2c; }
+    .block-status.cancelled { background: #ffeaea; color: #c03c2b; }
+    .block-content { margin-bottom: 16px; }
+    .block-field { margin-bottom: 8px; }
+    .block-label { font-weight: 600; color: #2c5770; font-size: 13px; margin-bottom: 2px; }
+    .block-value { color: #1a4b5f; font-size: 14px; }
+    .block-alert { background: #fff2d6; color: #a16500; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; }
+    .block-old { background: #ffeaea; color: #c03c2b; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; }
+    .block-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .request-block { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; cursor: pointer; transition: transform 0.2s; }
     .request-block:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
     .request-block.new { border-left: 4px solid #2f7e9e; }
@@ -183,9 +207,11 @@
             justify-content: stretch;
         }
         .header > div .btn-primary,
-        .header > div .btn-secondary,
         .header > div a {
             width: 100%;
+        }
+        .header > div .btn-secondary {
+            width: 48%;
         }
         .header > div .btn-primary#bindMessengersBtn {
             width: auto;
@@ -211,11 +237,19 @@
 <div style="max-width: 1400px; margin: 30px auto; padding: 0 20px;">
     <div class="header">
         <h1>📋 Панель администратора <span class="badge">{{ request.user.first_name }}</span></h1>
-        <div>
-            <button class="btn-primary" id="showCreateModal">Новая заявка</button>
+        <div class="header-buttons">
+            <button class="btn-primary btn-large" id="showCreateModal">Новая заявка</button>
             <button class="btn-secondary" id="showWorkersModal">Мастера</button>
-            <button class="btn-secondary" id="bindMessengersBtn" style="margin-left: 15px;">Мессенджеры</button>
-            <a href="{% url 'logout' %}" class="btn-secondary" style="margin-left: 15px;">Выйти</a>
+            <button class="btn-secondary" id="bindMessengersBtn">Мессенджеры</button>
+            <a href="{% url 'logout' %}" class="btn-danger" style="text-decoration: none;">Выйти</a>
+        </div>
+    </div>
+
+    <!-- Поиск -->
+    <div class="search-and-view">
+        <div class="search-container" style="max-width: 480px;">
+            <label style="font-weight: 500; color: #2c5770; font-size: 14px; margin-right: 10px;">Поиск:</label>
+            <input type="text" id="filterSearch" placeholder="Номер, адрес, имя клиента или задача" style="width: 100%; padding: 10px 14px; border: 1px solid #ccdce8; border-radius: 30px; background: #f8fafc; font-size: 14px;">
         </div>
     </div>
 
@@ -225,7 +259,6 @@
         <div class="modal-content filter-modal-content">
             <button class="btn-secondary mobile-filter-close" id="closeFilterPanel" type="button">Закрыть</button>
             <div class="filter-bar">
-                <div class="filter-item"><label>Поиск:</label><input type="text" id="filterSearch" placeholder="Номер, адрес или имя клиента" style="width:200px"></div>
                 <div class="filter-item"><label>Дата c:</label><input type="date" id="filterDateFrom"></div>
                 <div class="filter-item"><label>по:</label><input type="date" id="filterDateTo"></div>
                 <div class="filter-item"><label>Цена от:</label><input type="number" id="filterPriceFrom" placeholder="0" style="width:90px"></div>
@@ -243,16 +276,17 @@
                     </div>
                 </div>
                 <button class="btn-primary" id="applyFilters" style="padding:8px 20px;">Применить</button>
-                <div class="view-toggle" style="margin-left: auto; display: flex; gap: 8px;">
-                    <button class="btn-outline view-btn active" id="tableViewBtn" data-view="table">
-                        <i class="fas fa-table"></i> Таблица
-                    </button>
-                    <button class="btn-outline view-btn" id="blocksViewBtn" data-view="blocks">
-                        <i class="fas fa-th"></i> Блоки
-                    </button>
-                </div>
             </div>
-        </div>
+            </div>
+    </div>
+
+    <div class="view-toggle view-toggle-row">
+        <button class="btn-outline view-btn active" id="tableViewBtn" data-view="table">
+            <i class="fas fa-table"></i> Таблица
+        </button>
+        <button class="btn-outline view-btn" id="blocksViewBtn" data-view="blocks">
+            <i class="fas fa-th"></i> Блоки
+        </button>
     </div>
 
     <!-- Таблица заявок -->
@@ -272,7 +306,7 @@
                     <th style="width:90px">Чистые (₽)</th>
                     <th style="width:90px">ЗП мастера (₽)</th>
                     <th style="width:90px">Процент (%)</th>
-                    <th style="width:90px">Остается у admin (₽)</th>
+                    <th style="width:90px">Остается у менеджера</th>
                     <th style="width:100px">Деньги сданы</th>
                     <th style="width:120px">Предоплата (₽)</th>
                     <th>Рабочий</th>
@@ -345,6 +379,7 @@
         <div class="field"><label>Адрес клиента</label><input type="text" id="adminClientAddress"></div>
         <div class="field"><label>Вид техники</label><input type="text" id="adminEquipmentType"></div>
         <div class="field"><label>Назначить рабочего</label><select id="adminWorker"><option value="">—</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Процент рабочего (%)</label><input type="number" id="adminWorkerPercent" min="0" max="100" step="1"></div>
         <div class="field"><label>Дата выполнения (дедлайн)</label><input type="date" id="adminDeadlineDate"></div>
         <div class="field"><label>Статус</label><select id="adminStatus"><option value="new">Новая</option><option value="in-progress">В работе</option><option value="done">Выполнена</option></select></div>
         <div class="field"><label>Цена</label><input type="number" id="adminPrice"></div>
@@ -540,25 +575,46 @@
                     <div class="block-id">#${r.id}</div>
                     <div class="${statusClass}">${statusText}</div>
                 </div>
-                <div class="block-info">
-                    <p><strong>Адрес:</strong> ${escapeHtml(r.client_address || '—')}</p>
-                    <p><strong>Телефон:</strong> ${escapeHtml(r.client_phone)}</p>
-                    <p><strong>Описание:</strong> ${escapeHtml(r.description.substring(0, 100))}${r.description.length > 100 ? '...' : ''}</p>
+                <div class="block-content">
+                    <div class="block-field">
+                        <div class="block-label">Задача</div>
+                        <div class="block-value">${escapeHtml(r.description)}</div>
+                    </div>
+                    <div class="block-field">
+                        <div class="block-label">Клиент</div>
+                        <div class="block-value">${escapeHtml(r.client_name)} • ${escapeHtml(r.client_phone)}</div>
+                    </div>
+                    <div class="block-field">
+                        <div class="block-label">Адрес</div>
+                        <div class="block-value">${escapeHtml(r.client_address || 'Не указан')}</div>
+                    </div>
+                    <div class="block-field">
+                        <div class="block-label">Техника</div>
+                        <div class="block-value">${escapeHtml(r.equipment_type || 'Не указана')}</div>
+                    </div>
+                    <div class="block-field">
+                        <div class="block-label">Цена</div>
+                        <div class="block-value">${r.price ? r.price + ' ₽' : 'Не указана'}</div>
+                    </div>
+                    <div class="block-field">
+                        <div class="block-label">ЗП мастера</div>
+                        <div class="block-value">${r.worker_salary ? r.worker_salary + ' ₽' : 'Не указана'} (${r.worker_percent}%)</div>
+                    </div>
+                    <div class="block-field">
+                        <div class="block-label">Рабочий</div>
+                        <div class="block-value">${escapeHtml(r.worker_name)}</div>
+                    </div>
+                    <div class="block-field">
+                        <div class="block-label">Дата создания</div>
+                        <div class="block-value">${created.toLocaleDateString()}</div>
+                    </div>
+                    ${r.deadline_date ? `<div class="block-field"><div class="block-label">Дедлайн</div><div class="block-value">${new Date(r.deadline_date).toLocaleDateString()}</div></div>` : ''}
                 </div>
-                ${r.status === 'new' ? '<div class="block-alert">⚠️ Необходимо перезвонить клиенту в течении 30 минут</div>' : ''}
                 ${daysSinceCreated >= 2 && r.status !== 'done' ? `<div class="block-old">⏰ Уже ${daysSinceCreated} дней в работе</div>` : ''}
                 <div class="block-actions">
                     <button class="btn-outline" onclick="event.stopPropagation(); showDetails(${r.id})">Детали</button>
                     <button class="btn-outline" onclick="event.stopPropagation(); editRequest(${r.id})">Редактировать</button>
                     ${r.status !== 'done' && r.status !== 'cancelled' ? `<button class="btn-danger" onclick="event.stopPropagation(); cancelRequest(${r.id}, this)">Отменить</button>` : ''}
-                </div>
-                <div class="block-details">
-                    <p><strong>Имя клиента:</strong> ${escapeHtml(r.client_name)}</p>
-                    <p><strong>Вид техники:</strong> ${escapeHtml(r.equipment_type || '—')}</p>
-                    <p><strong>Цена:</strong> ${r.price ? r.price + ' ₽' : '—'}</p>
-                    <p><strong>Рабочий:</strong> ${escapeHtml(r.worker_name)}</p>
-                    <p><strong>Дата создания:</strong> ${created.toLocaleDateString()}</p>
-                    ${r.deadline_date ? `<p><strong>Дедлайн:</strong> ${new Date(r.deadline_date).toLocaleDateString()}</p>` : ''}
                 </div>
             `;
             block.addEventListener('click', function() {
@@ -656,6 +712,7 @@
                 document.getElementById('adminDeadlineDate').value = data.deadline_date || '';
                 document.getElementById('adminStatus').value = data.status || '';
                 document.getElementById('adminWorker').value = data.worker_id || '';
+                document.getElementById('adminWorkerPercent').value = data.worker_percent != null ? data.worker_percent : '';
                 document.getElementById('adminOverdueReason').value = data.overdue_reason || '';
                 document.getElementById('adminPrepayment').value = data.prepayment_amount ? data.prepayment_amount : '';
 
@@ -702,10 +759,7 @@
             .catch(error => console.error('Ошибка загрузки данных заявки:', error));
     };
 
-    document.getElementById('saveAdminEditBtn').addEventListener('click', function() {
-        const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
-        const id = document.getElementById('adminEditId').textContent;
-        if (!id) return;
+    function saveAdminEdit(id) {
         const formData = new FormData();
         formData.append('description', document.getElementById('adminDesc').value);
         formData.append('client_name', document.getElementById('adminClientName').value);
@@ -719,13 +773,24 @@
         formData.append('deadline_date', document.getElementById('adminDeadlineDate').value);
         formData.append('status', document.getElementById('adminStatus').value);
         formData.append('worker_id', document.getElementById('adminWorker').value);
-        fetch(`/edit-request/${id}/`, {
+        formData.append('worker_percent', document.getElementById('adminWorkerPercent').value);
+        return fetch(`/edit-request/${id}/`, {
             method: 'POST',
             headers: { 'X-CSRFToken': csrftoken },
             body: formData
-        })
-        .then(response => response.json())
-        .then(data => { if (data.success) { closeModal('editModalAdmin'); loadRequests(); alert('Изменения сохранены'); } else alert('Ошибка сохранения'); })
+        }).then(response => response.json());
+    }
+
+    document.getElementById('saveAdminEditBtn').addEventListener('click', function() {
+        const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
+        const id = document.getElementById('adminEditId').textContent;
+        if (!id) {
+            btn.disabled = false;
+            btn.textContent = 'Сохранить';
+            return;
+        }
+        saveAdminEdit(id)
+        .then(data => { if (data.success) { closeModal('editModalAdmin'); loadRequests(); alert('Изменения сохранены'); } else alert('Ошибка сохранения: ' + (data.error || 'неизвестная ошибка')); })
         .catch(err => console.error('Ошибка сохранения:', err))
         .finally(() => { btn.disabled = false; btn.textContent = 'Сохранить'; });
     });
@@ -733,21 +798,27 @@
     document.getElementById('cancelRequestBtn').addEventListener('click', function() {
         const id = document.getElementById('adminEditId').textContent;
         if (!id || !confirm('Вы уверены, что хотите отменить эту заявку?')) return;
-        fetch(`/cancel-request/${id}/`, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': csrftoken }
+        const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
+        saveAdminEdit(id)
+        .then(data => {
+            if (!data.success) throw new Error(data.error || 'Ошибка сохранения');
+            return fetch(`/cancel-request/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } });
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 closeModal('editModalAdmin');
                 loadRequests();
-                alert('Заявка отменена');
+                alert('Изменения сохранены и заявка отменена');
             } else {
-                alert('Ошибка отмены: ' + (data.error || 'неизвестная ошибка'));
+                throw new Error(data.error || 'Ошибка отмены');
             }
         })
-        .catch(err => console.error('Ошибка отмены:', err));
+        .catch(err => {
+            console.error('Ошибка сохранения или отмены:', err);
+            alert(err.message || 'Ошибка сохранения или отмены');
+        })
+        .finally(() => { btn.disabled = false; btn.textContent = 'Отменить заявку'; });
     });
 
     window.cancelRequest = function(id, btn) {
