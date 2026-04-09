@@ -12,6 +12,7 @@ from datetime import datetime, date
 import decimal
 from PIL import Image
 import io
+import re
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -46,6 +47,27 @@ except Exception:
 import json
 from datetime import datetime, timedelta
 import decimal
+
+def sanitize_filename(filename):
+    """
+    Очищает имя файла от недопустимых символов для Django FileField
+    """
+    if not filename:
+        return 'image.jpg'
+    # Убираем путь, оставляем только имя файла
+    name = os.path.basename(filename)
+    # Убираем расширение
+    name_without_ext = os.path.splitext(name)[0]
+    # Заменяем недопустимые символы на подчеркивание
+    sanitized = re.sub(r'[^\w\-_\.]', '_', name_without_ext)
+    # Убираем множественные подчеркивания
+    sanitized = re.sub(r'_+', '_', sanitized)
+    # Убираем подчеркивания в начале и конце
+    sanitized = sanitized.strip('_')
+    # Если пустое, используем дефолт
+    if not sanitized:
+        sanitized = 'image'
+    return f"{sanitized}.jpg"
 
 def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_height=2048, quality=85):
     """
@@ -111,10 +133,11 @@ def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_
         print(f"DEBUG: Creating InMemoryUploadedFile")
         # Создаем новый InMemoryUploadedFile
         from django.core.files.uploadedfile import InMemoryUploadedFile
+        safe_filename = sanitize_filename(image_file.name)
         optimized_file = InMemoryUploadedFile(
             output,
             'ImageField',
-            f"{os.path.splitext(image_file.name)[0]}.jpg",
+            safe_filename,
             'image/jpeg',
             output.tell(),
             None
@@ -554,17 +577,7 @@ def send_notification(user, notification_type, title, text, request_obj=None):
     notification_type: 'new_request', 'reassign', 'cancel', 'complete'
     """
     try:
-        # Сохраняем в БД для истории
-        if user and hasattr(user, 'profile'):
-            Notification.objects.create(
-                user=user,
-                notification_type=notification_type,
-                request=request_obj,
-                title=title,
-                text=text
-            )
-        
-        # Отправляем в Telegram/MAX через api_server
+       # Отправляем в Telegram/MAX через api_server
         if user and hasattr(user, 'profile'):
             send_worker_notification(user.profile, text)
         

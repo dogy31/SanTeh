@@ -1010,7 +1010,10 @@
                 });
             } catch(e) {
                 console.error('Ошибка создания уведомления:', e);
+                alert(`${title}\n${text}`); // Fallback для Safari
             }
+        } else {
+            alert(`${title}\n${text}`); // Если разрешение не дано
         }
     }
     window.showBrowserNotification = showBrowserNotification;

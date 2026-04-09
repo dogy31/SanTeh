@@ -48,7 +48,7 @@
     .btn-primary { background: #2f7e9e; color: white; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
     #bindMessengersBtn { border: 2px solid #2f7e9e; background: white; color: #2f7e9e; }
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
-    .view-toggle-row { display: flex; justify-content: flex-start; gap: 10px; align-items: center; margin-top: 10px; }
+    .view-toggle-row { display: flex; justify-content: flex-start; gap: 10px; align-items: center; margin: 10px; }
     .filter-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; margin: 12px; }
     .view-toggle { margin-left: auto; display: flex; gap: 8px; }
     .view-btn { padding: 8px 16px; border-radius: 40px; font-weight: 500; font-size: 14px; cursor: pointer; text-align: center; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; }
@@ -398,10 +398,20 @@
 
     function showBrowserNotification(title, body) {
         if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(title, {
-                body: body,
-                icon: '/static/favicon.ico' // или другой иконка
-            });
+            try {
+                new Notification(title, {
+                    body: body,
+                    icon: '/static/favicon.ico',
+                    badge: '/static/favicon.ico',
+                    tag: 'santech-notification',
+                    requireInteraction: true
+                });
+            } catch(e) {
+                console.error('Ошибка создания уведомления:', e);
+                alert(`${title}\n${body}`); // Fallback для Safari
+            }
+        } else {
+            alert(`${title}\n${body}`); // Если разрешение не дано
         }
     }
 
@@ -632,17 +642,52 @@
     };
 
     window.viewRequest = function(id) {
-        editRequest(id);
-        setTimeout(() => {
-            document.querySelectorAll('#editModal input, #editModal textarea, #editModal select').forEach(el => el.disabled = true);
-            document.getElementById('saveEditBtn').style.display = 'none';
-            document.getElementById('cancelWorkerRequestBtn').style.display = 'none';
-            document.getElementById('addPartBtn').style.display = 'none';
-            document.querySelectorAll('.remove-part').forEach(btn => btn.style.display = 'none');
-            document.querySelectorAll('.remove').forEach(btn => btn.style.display = 'none');
-            document.getElementById('contractInput').disabled = true;
-            document.querySelectorAll('.part-receipt-input').forEach(input => input.disabled = true);
-        }, 200);
+        currentEditId = id;
+        fetch(`/edit-request/${id}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('editId').textContent = data.id;
+                document.getElementById('editDesc').value = data.description || '';
+                document.getElementById('editClientName').value = data.client_name || '';
+                document.getElementById('editClientPhone').value = data.client_phone || '';
+                document.getElementById('editClientEmail').value = data.client_email || '';
+                document.getElementById('editClientAddress').value = data.client_address || '';
+                document.getElementById('editEquipmentType').value = data.equipment_type || '';
+                document.getElementById('editPrice').value = data.price || '';
+                document.getElementById('editComment').value = data.comment || '';
+                document.getElementById('prepaymentAmount').value = data.prepayment_amount || '';
+
+                existingContractPhotos = data.photos.filter(p => p.photo_type === 'contract').map(p => ({ id: p.id, image: p.image }));
+                contractFiles = [];
+                renderContractPreview();
+
+                parts = [];
+                if (data.parts && data.parts.length) {
+                    data.parts.forEach(p => { parts.push({ name: p.name, price: p.price, file: null, existingId: p.id, existingPhotoUrl: p.receipt_photo_url }); });
+                } else { parts.push({ name: '', price: '', file: null, existingId: null, existingPhotoUrl: null }); }
+                renderParts();
+
+                const isOverdue = data.is_overdue && data.status !== 'done';
+                const overdueSection = document.getElementById('overdueReasonSection');
+                const overdueTextarea = document.getElementById('overdueReason');
+                if (isOverdue) { overdueSection.style.display = 'block'; overdueTextarea.value = data.overdue_reason || ''; }
+                else { overdueSection.style.display = 'none'; }
+                
+                // Disable all inputs for view mode
+                setTimeout(() => {
+                    document.querySelectorAll('#editModal input, #editModal textarea, #editModal select').forEach(el => el.disabled = true);
+                    document.getElementById('saveEditBtn').style.display = 'none';
+                    document.getElementById('cancelWorkerRequestBtn').style.display = 'none';
+                    document.getElementById('addPartBtn').style.display = 'none';
+                    document.querySelectorAll('.remove-part').forEach(btn => btn.style.display = 'none');
+                    document.querySelectorAll('.remove').forEach(btn => btn.style.display = 'none');
+                    document.getElementById('contractInput').disabled = true;
+                    document.querySelectorAll('.part-receipt-input').forEach(input => input.disabled = true);
+                }, 200);
+                
+                document.getElementById('editModal').classList.add('active');
+            })
+            .catch(err => console.error('Ошибка загрузки данных заявки:', err));
     };
 
     window.closeRequest = function(id, btn) {
