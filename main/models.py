@@ -84,3 +84,20 @@ class Notification(models.Model):
     
     def __str__(self):
         return f"{self.title} - {self.user.username}"
+
+
+class PushSubscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='push_subscriptions')
+    endpoint = models.TextField('Endpoint')
+    p256dh = models.CharField('P256DH ключ', max_length=255)
+    auth = models.CharField('Auth ключ', max_length=255)
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    updated_at = models.DateTimeField('Дата обновления', auto_now=True)
+    active = models.BooleanField('Активна', default=True)
+
+    class Meta:
+        unique_together = ('user', 'endpoint')
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"PushSubscription {self.user.username} - {self.endpoint[:40]}"

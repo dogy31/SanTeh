@@ -2,17 +2,26 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
-from .models import Profile, Request, Photo, Part
+from .models import Profile, Request, Photo, Part, Notification, PushSubscription
 import os, sys
 import requests
+import json
+import base64
 from datetime import datetime, date
 import decimal
 from PIL import Image
+import pillow_heif
 import io
 import re
+from pywebpush import webpush, WebPushException
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization
+
+# Register HEIF support
+pillow_heif.register_heif_opener()
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -51,6 +60,33 @@ import decimal
 
 # Адрес API сервера для уведомлений (может быть переопределен переменной окружения)
 API_SERVER_URL = os.getenv('API_SERVER_URL', 'http://127.0.0.1:5000')
+VAPID_EMAIL = os.getenv('VAPID_EMAIL', 'mailto:admin@example.com')
+VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
+VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY')
+
+
+def generate_vapid_keys():
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    private_bytes = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.X962,
+        format=serialization.PublicFormat.UncompressedPoint
+    )
+    public_key_b64 = base64.urlsafe_b64encode(public_key).rstrip(b'=').decode('utf-8')
+    return public_key_b64, private_bytes.decode('utf-8')
+
+
+if not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+    try:
+        VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY = generate_vapid_keys()
+        print('[VAPID] Созданы временные VAPID ключи для Web Push')
+    except Exception as e:
+        print('[VAPID] Не удалось создать VAPID ключи:', e)
+
 
 def sanitize_filename(filename):
     """
@@ -73,10 +109,69 @@ def sanitize_filename(filename):
         sanitized = 'image'
     return f"{sanitized}.jpg"
 
+
+def store_notification_record(user, notification_type, title, text, request_obj=None):
+    try:
+        Notification.objects.create(
+            user=user,
+            notification_type=notification_type,
+            title=title,
+            text=text,
+            request=request_obj
+        )
+    except Exception as e:
+        print('[WEB PUSH] Ошибка сохранения уведомления в БД:', e)
+
+
+def send_web_push_notification(user, title, text, request_obj=None):
+    if not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+        print('[WEB PUSH] Пропущено: VAPID ключи не настроены')
+        return False
+
+    subscriptions = PushSubscription.objects.filter(user=user, active=True)
+    if not subscriptions.exists():
+        print('[WEB PUSH] У пользователя нет активных подписок')
+        return False
+
+    payload = json.dumps({
+        'title': title,
+        'body': text,
+        'tag': 'santech-notification',
+        'url': '/worker-dashboard/' if getattr(user, 'profile', None) and user.profile.role == 'worker' else '/admin-dashboard/'
+    })
+    sent_count = 0
+
+    for subscription in subscriptions:
+        sub_info = {
+            'endpoint': subscription.endpoint,
+            'keys': {
+                'p256dh': subscription.p256dh,
+                'auth': subscription.auth
+            }
+        }
+        try:
+            webpush(
+                subscription_info=sub_info,
+                data=payload,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={'sub': VAPID_EMAIL}
+            )
+            sent_count += 1
+        except WebPushException as exc:
+            status_code = getattr(exc.response, 'status_code', None)
+            print('[WEB PUSH] Ошибка отправки:', exc)
+            if status_code in (404, 410):
+                subscription.delete()
+                print('[WEB PUSH] Удалена недействительная подписка')
+
+    print(f'[WEB PUSH] Отправлено уведомлений: {sent_count}')
+    return sent_count > 0
+
+
 def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_height=2048, quality=85):
     """
     Валидирует и оптимизирует изображение
-    - Проверяет формат (только JPEG, PNG, WebP)
+    - Проверяет формат (только JPEG, PNG, WebP, HEIC)
     - Проверяет размер файла
     - Оптимизирует размер и качество
     - Возвращает оптимизированное изображение или None при ошибке
@@ -87,17 +182,15 @@ def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_
             return None, f"Файл слишком большой. Максимальный размер: {max_size_mb}MB"
 
         # Проверка формата файла
-        allowed_formats = ['JPEG', 'PNG', 'WEBP', 'JPG', 'jpeg', 'png', 'webp', 'jpg']
+        allowed_formats = ['JPEG', 'PNG', 'WEBP', 'HEIC', 'JPG', 'jpeg', 'png', 'webp', 'heic', 'jpg']
         file_extension = image_file.name.split('.')[-1].lower() if '.' in image_file.name else ''
         
-        print(f"DEBUG: Opening image {image_file.name}")
         # Открываем изображение для проверки
         image = Image.open(image_file)
         
-        print(f"DEBUG: Image format: {image.format}")
         # Проверяем формат через PIL
-        if image.format not in ['JPEG', 'PNG', 'WEBP']:
-            return None, "Неподдерживаемый формат изображения. Разрешены: JPEG, PNG, WebP"
+        if image.format not in ['JPEG', 'PNG', 'WEBP', 'HEIC']:
+            return None, "Неподдерживаемый формат изображения. Разрешены: JPEG, PNG, WebP, HEIC"
         
         # Проверяем, что файл действительно является изображением
         # image.verify()  # Убрано, так как может быть слишком строгим
@@ -106,7 +199,10 @@ def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_
         image_file.seek(0)
         image = Image.open(image_file)
         
-        print(f"DEBUG: Resizing image if needed. Current size: {image.width}x{image.height}")
+        # Автоматическая ориентация по EXIF
+        from PIL import ImageOps
+        image = ImageOps.exif_transpose(image)
+        
         # Конвертируем в RGB если необходимо (для прозрачных PNG)
         if image.mode in ('RGBA', 'LA', 'P'):
             # Создаем белый фон
@@ -126,15 +222,11 @@ def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_
             new_height = int(image.height * ratio)
             image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
         
-        print(f"DEBUG: Saving image as JPEG")
         # Оптимизируем и сохраняем в памяти
         output = io.BytesIO()
-        
-        # Сохраняем как JPEG для лучшей совместимости
         image.save(output, format='JPEG', quality=quality, optimize=True)
         output.seek(0)
         
-        print(f"DEBUG: Creating InMemoryUploadedFile")
         # Создаем новый InMemoryUploadedFile
         from django.core.files.uploadedfile import InMemoryUploadedFile
         safe_filename = sanitize_filename(image_file.name)
@@ -146,13 +238,10 @@ def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_
             output.tell(),
             None
         )
-        
-        print(f"DEBUG: Image optimization completed successfully")
         return optimized_file, None
         
     except Exception as e:
         error_msg = f"Ошибка обработки изображения: {str(e)}"
-        print(f"DEBUG: {error_msg}")
         return None, error_msg
 
 def register(request):
@@ -343,6 +432,8 @@ def edit_request(request, pk):
         return JsonResponse({'error': 'permission denied'}, status=403)
 
     if request.method == 'POST':
+        previous_status = req.status
+
         if 'client_name' in request.POST:
             req.client_name = request.POST.get('client_name', req.client_name)
         if 'client_phone' in request.POST:
@@ -397,6 +488,47 @@ def edit_request(request, pk):
 
         req.save()
 
+        # Отправка уведомлений при изменении статуса
+        if req.status != previous_status and req.assigned_to and previous_status not in ['done', 'cancelled']:
+            if req.status == 'done':
+                complete_text = f"""
+━━━━━━━━━━━━━
+✅ ЗАЯВКА #{req.id} ВЫПОЛНЕНА
+━━━━━━━━━━━━━
+Статус: Выполнено
+━━━━━━━━━━━━━
+Клиент: {req.client_name}
+Телефон: {req.client_phone}
+Сумма: {req.price}₽
+━━━━━━━━━━━━━
+"""
+                send_notification(
+                    user=req.assigned_to,
+                    notification_type='complete',
+                    title=f'Заявка #{req.id} выполнена',
+                    text=complete_text,
+                    request_obj=req
+                )
+            elif req.status == 'cancelled':
+                cancel_text = f"""
+━━━━━━━━━━━━━
+🚫 ЗАЯВКА #{req.id} ОТМЕНЕНА
+━━━━━━━━━━━━━
+Статус: Отменено
+━━━━━━━━━━━━━
+Клиент: {req.client_name}
+Телефон: {req.client_phone}
+Сумма: {req.price}₽
+━━━━━━━━━━━━━
+"""
+                send_notification(
+                    user=req.assigned_to,
+                    notification_type='cancel',
+                    title=f'Заявка #{req.id} отменена',
+                    text=cancel_text,
+                    request_obj=req
+                )
+
         if 'worker_id' in request.POST and not is_closed:
             new_worker_id = req.assigned_to_id
             if previous_worker_id != new_worker_id:
@@ -444,31 +576,23 @@ def edit_request(request, pk):
 
         # Обработка договора
         contract_files = request.FILES.getlist('contract_photos')
-        print(f"DEBUG: contract_files count = {len(contract_files)}")
         if contract_files:
             if len(contract_files) > 5:
                 return JsonResponse({'error': 'Максимум 5 фотографий договора'}, status=400)
             req.photos.filter(photo_type='contract').delete()
-            for idx, contract_file in enumerate(contract_files):
-                print(f"DEBUG: Processing contract file {idx+1}: {contract_file.name}, size: {contract_file.size}")
-                # Валидируем и оптимизируем изображение
+            for contract_file in contract_files:
                 optimized_image, error_msg = validate_and_optimize_image(contract_file)
                 if error_msg:
-                    print(f"DEBUG: Error with contract file {idx+1}: {error_msg}")
                     return JsonResponse({'error': f'Ошибка с изображением договора: {error_msg}'}, status=400)
                 if optimized_image:
-                    print(f"DEBUG: Saving optimized contract image {idx+1}")
                     Photo.objects.create(request=req, image=optimized_image, photo_type='contract')
-                else:
-                    print(f"DEBUG: Optimized image is None for contract file {idx+1}")
         else:
             existing_contract_ids = request.POST.get('existing_contract_ids')
             if existing_contract_ids is not None:
                 try:
                     ids_to_keep = json.loads(existing_contract_ids)
                     req.photos.filter(photo_type='contract').exclude(id__in=ids_to_keep).delete()
-                except Exception as e:
-                    print(f"DEBUG: Error processing existing_contract_ids: {e}")
+                except Exception:
                     pass
             elif request.POST.get('delete_contract') == 'true':
                 req.photos.filter(photo_type='contract').delete()
@@ -608,6 +732,7 @@ def send_max_notification(profile, title, text):
 def send_notification(user, notification_type, title, text, request_obj=None):
     """
     Отправляет уведомление на все доступные каналы:
+    - Веб-пуш браузера (если подписан)
     - Telegram (если привязан)
     - MAX (если привязан)
     notification_type: 'new_request', 'reassign', 'cancel', 'complete'
@@ -615,25 +740,83 @@ def send_notification(user, notification_type, title, text, request_obj=None):
     if not user:
         print('[NOTIFICATION] Пользователь не указан')
         return
-    
+
     print('[NOTIFICATION] Начало отправки уведомления')
     print('[NOTIFICATION] Пользователь: ' + user.username)
     print('[NOTIFICATION] Тип: ' + notification_type)
     print('[NOTIFICATION] Заголовок: ' + title)
-    
+
     try:
+        store_notification_record(user, notification_type, title, text, request_obj)
+        push_sent = send_web_push_notification(user, title, text, request_obj)
+        push_status = 'OK' if push_sent else 'NO_PUSH'
+
+        tg_status = 'SKIPPED'
+        max_status = 'SKIPPED'
         if hasattr(user, 'profile'):
             tg_sent = send_telegram_notification(user.profile, title, text)
             max_sent = send_max_notification(user.profile, title, text)
             tg_status = 'OK' if tg_sent else 'FAIL'
             max_status = 'OK' if max_sent else 'FAIL'
-            print('[NOTIFICATION] Результаты - Telegram: ' + tg_status + ', MAX: ' + max_status)
         else:
             print('[NOTIFICATION] У пользователя нет профиля')
-        
+
+        print('[NOTIFICATION] Результаты - Web Push: ' + push_status + ', Telegram: ' + tg_status + ', MAX: ' + max_status)
         print('[NOTIFICATION] Уведомление обработано')
     except Exception as e:
         print('[NOTIFICATION] Ошибка: ' + str(e))
+
+def service_worker(request):
+    js_path = os.path.join(project_root, 'service-worker.js')
+    try:
+        with open(js_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except FileNotFoundError:
+        return JsonResponse({'error': 'service-worker.js not found'}, status=404)
+    return HttpResponse(content, content_type='application/javascript')
+
+@login_required
+def get_vapid_public_key(request):
+    return JsonResponse({'publicKey': VAPID_PUBLIC_KEY})
+
+@login_required
+def subscribe_push(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+        endpoint = payload.get('endpoint')
+        keys = payload.get('keys', {})
+        p256dh = keys.get('p256dh')
+        auth = keys.get('auth')
+        if not endpoint or not p256dh or not auth:
+            return JsonResponse({'error': 'Invalid subscription data'}, status=400)
+
+        PushSubscription.objects.update_or_create(
+            user=request.user,
+            endpoint=endpoint,
+            defaults={
+                'p256dh': p256dh,
+                'auth': auth,
+                'active': True
+            }
+        )
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@login_required
+def unsubscribe_push(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+        endpoint = payload.get('endpoint')
+        if endpoint:
+            PushSubscription.objects.filter(user=request.user, endpoint=endpoint).delete()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 @login_required
 def close_request(request, pk):
@@ -649,6 +832,25 @@ def close_request(request, pk):
                 return JsonResponse({'error': f'Отсутствует чек для детали "{part.name}"'}, status=400)
         req.status = 'done'
         req.save()
+        if req.assigned_to:
+            complete_text = f"""
+━━━━━━━━━━━━━
+✅ ЗАЯВКА #{req.id} ВЫПОЛНЕНА
+━━━━━━━━━━━━━
+Статус: Выполнено
+━━━━━━━━━━━━━
+Клиент: {req.client_name}
+Телефон: {req.client_phone}
+Сумма: {req.price}₽
+━━━━━━━━━━━━━
+"""
+            send_notification(
+                user=req.assigned_to,
+                notification_type='complete',
+                title=f'Заявка #{req.id} выполнена',
+                text=complete_text,
+                request_obj=req
+            )
         if req.client_phone:
             message = f"Ваша заявка выполнена. Сумма {req.price} руб. Гарантия 14 дней. При несоответсвии данных свяжитесь {+79059883225}. При искажении данных гарантия онулируется"
             send_sms(req.client_phone, message)
@@ -834,6 +1036,24 @@ def reopen_request(request, pk):
         if req.status == 'done':
             req.status = 'in-progress'
             req.save()
+            if req.assigned_to:
+                reopen_text = f"""
+━━━━━━━━━━━━━
+🔄 ЗАЯВКА #{req.id} ВОЗОБНОВЛЕНА
+━━━━━━━━━━━━━
+Статус: В работе
+━━━━━━━━━━━━━
+Клиент: {req.client_name}
+Телефон: {req.client_phone}
+━━━━━━━━━━━━━
+"""
+                send_notification(
+                    user=req.assigned_to,
+                    notification_type='reopen',
+                    title=f'Заявка #{req.id} возобновлена',
+                    text=reopen_text,
+                    request_obj=req
+                )
             return JsonResponse({'success': True})
     return JsonResponse({'error': 'Invalid request'}, status=400)
 

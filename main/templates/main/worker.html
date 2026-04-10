@@ -1,5 +1,6 @@
 {% extends 'main/base.html' %}
 {% block extra_head %}
+<script src="/static/push-notifications.js"></script>
 <style>
     .worker-header { display: flex; align-items: center; justify-content: space-between; background: white; padding: 20px 28px; border-radius: 50px; box-shadow: 0 5px 12px #bacddb; margin-bottom: 25px; }
     .worker-info { display: flex; align-items: center; gap: 16px; }
@@ -383,42 +384,6 @@
     let currentEditId = null;
     let viewMode = 'table'; // 'table' or 'blocks'
 
-    // Browser notifications
-    function requestNotificationPermission() {
-        if ('Notification' in window) {
-            if (Notification.permission === 'default') {
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        console.log('Разрешение на уведомления получено');
-                    }
-                });
-            }
-        }
-    }
-
-    function showBrowserNotification(title, body) {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            try {
-                new Notification(title, {
-                    body: body,
-                    icon: '/static/favicon.ico',
-                    badge: '/static/favicon.ico',
-                    tag: 'santech-notification',
-                    requireInteraction: true
-                });
-            } catch(e) {
-                console.error('Ошибка создания уведомления:', e);
-                alert(`${title}\n${body}`); // Fallback для Safari
-            }
-        } else {
-            alert(`${title}\n${body}`); // Если разрешение не дано
-        }
-    }
-
-    // Запрос разрешения при загрузке страницы
-    document.addEventListener('DOMContentLoaded', function() {
-        requestNotificationPermission();
-    });
     let contractFiles = [];
     let existingContractPhotos = [];
     let parts = [];
@@ -913,28 +878,11 @@
     window.onclick = function(event) { if (event.target.classList.contains('modal')) event.target.classList.remove('active'); };
     loadWorkerRequests();
 
-    // Запрос разрешения на браузер push-уведомления
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
-    
-    // Функция для показа браузер push-уведомления
-    function showBrowserNotification(title, text) {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            try {
-                new Notification(title, {
-                    body: text,
-                    icon: '/static/logo.png',
-                    badge: '/static/logo.png',
-                    tag: 'santech-notification',
-                    requireInteraction: true
-                });
-            } catch(e) {
-                console.error('Ошибка создания уведомления:', e);
-            }
-        }
-    }
-    window.showBrowserNotification = showBrowserNotification;
+
+    // Запрос разрешения на браузер push-уведомления - инициализируется в push-notifications.js
+
+    // Показ уведомлений и функции push - включены в push-notifications.js
+    // initializePushNotifications(); вызывается в push-notifications.js
 
     // Привязка мессенджеров
     document.addEventListener('DOMContentLoaded', function() {

@@ -1,5 +1,6 @@
 {% extends 'main/base.html' %}
 {% block extra_head %}
+<script src="/static/push-notifications.js"></script>
 <style>
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
     .header-buttons { display: flex; gap: 10px; }
@@ -1001,31 +1002,8 @@
         }
     });
 
-    // Запрос разрешения на браузер push-уведомления
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
-    
-    // Функция для показа браузер push-уведомления
-    function showBrowserNotification(title, text) {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            try {
-                new Notification(title, {
-                    body: text,
-                    icon: '/static/logo.png',
-                    badge: '/static/logo.png',
-                    tag: 'santech-notification',
-                    requireInteraction: true
-                });
-            } catch(e) {
-                console.error('Ошибка создания уведомления:', e);
-                alert(`${title}\n${text}`); // Fallback для Safari
-            }
-        } else {
-            alert(`${title}\n${text}`); // Если разрешение не дано
-        }
-    }
-    window.showBrowserNotification = showBrowserNotification;
+    // Push notifications инициализируются в push-notifications.js
+
 </script>
 
 <!-- Модальное окно списка рабочих -->

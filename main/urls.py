@@ -22,5 +22,9 @@ urlpatterns = [
     path('generate-tg-code/', views.generate_tg_code, name='generate_tg_code'),
     path('generate-max-code/', views.generate_max_code, name='generate_max_code'),
     path('bind-messengers/', views.bind_messengers, name='bind_messengers'),
+    path('api/push/vapid_public_key/', views.get_vapid_public_key, name='get_vapid_public_key'),
+    path('api/push/subscribe/', views.subscribe_push, name='subscribe_push'),
+    path('api/push/unsubscribe/', views.unsubscribe_push, name='unsubscribe_push'),
+    path('service-worker.js', views.service_worker, name='service_worker'),
     path('update-worker-percent/<int:pk>/', views.update_worker_percent, name='update_worker_percent'),
 ]
