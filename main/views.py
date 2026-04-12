@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q
 from .models import Profile, Request, Photo, Part
 import os, sys
 import requests
@@ -109,6 +110,54 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
+def forgot_password(request):
+    if request.method == 'POST':
+        phone = normalize_phone(request.POST.get('phone'))
+        if not phone or len(phone) != 11:
+            return render(request, 'main/forgot_password.html', {'error': 'Введите корректный номер телефона'})
+        try:
+            user = User.objects.get(username=phone)
+        except User.DoesNotExist:
+            return render(request, 'main/forgot_password.html', {'error': 'Пользователь с таким номером не найден'})
+        
+        import random
+        code = str(random.randint(100000, 999999))
+        request.session['reset_phone'] = phone
+        request.session['reset_code'] = code
+        
+        message = f"Код для сброса пароля: {code}"
+        send_sms(phone, message)
+        
+        return redirect('reset_password')
+    return render(request, 'main/forgot_password.html')
+
+def reset_password(request):
+    if request.method == 'POST':
+        code = request.POST.get('code')
+        password1 = request.POST.get('password1')
+        password2 = request.POST.get('password2')
+        
+        if not code or not password1 or not password2:
+            return render(request, 'main/reset_password.html', {'error': 'Заполните все поля'})
+        if password1 != password2:
+            return render(request, 'main/reset_password.html', {'error': 'Пароли не совпадают'})
+        
+        phone = request.session.get('reset_phone')
+        reset_code = request.session.get('reset_code')
+        if not phone or not reset_code or code != reset_code:
+            return render(request, 'main/reset_password.html', {'error': 'Неверный код'})
+        
+        try:
+            user = User.objects.get(username=phone)
+            user.set_password(password1)
+            user.save()
+            del request.session['reset_phone']
+            del request.session['reset_code']
+            return redirect('login')
+        except User.DoesNotExist:
+            return render(request, 'main/reset_password.html', {'error': 'Пользователь не найден'})
+    return render(request, 'main/reset_password.html')
+
 @login_required
 def admin_dashboard(request):
     if request.user.profile.role != 'admin':
@@ -157,28 +206,19 @@ def create_request(request):
                     now = datetime.now()
                     text = f"""
 ━━━━━━━━━━━━━
-   🚀 НОВАЯ ЗАЯВКА #{req.id}
-   от {now.strftime('%d.%m.%Y %H:%M')}
+НОВАЯ ЗАЯВКА #{req.id}
+от {now.strftime('%d.%m.%Y %H:%M')}
 ━━━━━━━━━━━━━
-📌 ОПИСАНИЕ РАБОТ:
-`{req.description}`
+ОПИСАНИЕ РАБОТ:
+{req.description}
 ━━━━━━━━━━━━━
-👤 КЛИЕНТ: {req.client_name}
-📞 ТЕЛЕФОН: `{req.client_phone}`
-📍 АДРЕС: {req.client_address or '—'}
+КЛИЕНТ: {req.client_name}
+ТЕЛЕФОН: {req.client_phone}
+АДРЕС: {req.client_address or '—'}
 ━━━━━━━━━━━━━
+❗❗❗ВАЖНО: перезвоните клиенту в течении 30 минут и не опаздывайте к согласованому времени❗❗❗
 """
-                    try:
-                        if profile.tg_code and BOT_TOKEN:
-                            url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
-                            requests.post(url, json={'chat_id': profile.tg_code, 'text': text}, timeout=3)
-                        if profile.max_code and MAX_TOKEN:
-                            url = f'https://api.max.org/bot{MAX_TOKEN}/sendMessage'
-                            requests.post(url, json={'chat_id': profile.max_code, 'text': text}, timeout=3)
-                        else:
-                            requests.post('http://127.0.0.1:5000/create_ticket', json={'user_id': worker.email, 'text': text}, timeout=3)
-                    except Exception:
-                        print('Не удалось отправить уведомление')
+                    send_worker_notification(profile, text)
         except Exception:
             pass
         return JsonResponse({'success': True, 'id': req.id})
@@ -191,35 +231,82 @@ def edit_request(request, pk):
         return JsonResponse({'error': 'permission denied'}, status=403)
 
     if request.method == 'POST':
-        req.client_name = request.POST.get('client_name', req.client_name)
-        req.client_phone = normalize_phone(request.POST.get('client_phone', req.client_phone))
-        req.client_email = request.POST.get('client_email', '')
-        req.client_address = request.POST.get('client_address', '')
-        req.equipment_type = request.POST.get('equipment_type', req.equipment_type)
-        price = request.POST.get('price')
-        if price:
-            req.price = price
-        req.comment = request.POST.get('comment', '')
-        req.overdue_reason = request.POST.get('overdue_reason', '')
+        if 'client_name' in request.POST:
+            req.client_name = request.POST.get('client_name', req.client_name)
+        if 'client_phone' in request.POST:
+            req.client_phone = normalize_phone(request.POST.get('client_phone', req.client_phone))
+        if 'client_email' in request.POST:
+            req.client_email = request.POST.get('client_email', req.client_email)
+        if 'client_address' in request.POST:
+            req.client_address = request.POST.get('client_address', req.client_address)
+        if 'equipment_type' in request.POST:
+            req.equipment_type = request.POST.get('equipment_type', req.equipment_type)
+        if 'price' in request.POST:
+            price = request.POST.get('price')
+            req.price = price if price else None
+        if 'comment' in request.POST:
+            req.comment = request.POST.get('comment', req.comment)
+        if 'overdue_reason' in request.POST:
+            req.overdue_reason = request.POST.get('overdue_reason', req.overdue_reason)
+        if 'status' in request.POST:
+            req.status = request.POST.get('status', req.status)
 
-        # Обновление дедлайна
-        deadline_date = request.POST.get('deadline_date')
-        req.deadline_date = deadline_date if deadline_date else None
+        previous_worker_id = req.assigned_to_id
+        if 'worker_id' in request.POST:
+            worker_id = request.POST.get('worker_id')
+            req.assigned_to_id = worker_id if worker_id else None
 
-        # Обновление предоплаты
-        prepayment_amount = request.POST.get('prepayment_amount')
-        if prepayment_amount:
-            try:
-                prepayment_amount = decimal.Decimal(prepayment_amount)
-                req.prepayment_amount = prepayment_amount
-                if req.status == 'new' and prepayment_amount > 0:
-                    req.status = 'in-progress'
-            except:
+        if 'deadline_date' in request.POST:
+            deadline_date = request.POST.get('deadline_date')
+            req.deadline_date = deadline_date if deadline_date else None
+
+        if 'prepayment_amount' in request.POST:
+            prepayment_amount = request.POST.get('prepayment_amount')
+            if prepayment_amount != '':
+                try:
+                    prepayment_amount = decimal.Decimal(prepayment_amount)
+                    req.prepayment_amount = prepayment_amount
+                    if req.status == 'new' and prepayment_amount > 0:
+                        req.status = 'in-progress'
+                except Exception:
+                    pass
+            else:
                 req.prepayment_amount = 0
-        else:
-            req.prepayment_amount = 0
 
         req.save()
+
+        if 'worker_id' in request.POST:
+            new_worker_id = req.assigned_to_id
+            if previous_worker_id != new_worker_id:
+                if previous_worker_id:
+                    old_worker = User.objects.filter(pk=previous_worker_id).first()
+                    if old_worker and hasattr(old_worker, 'profile'):
+                        cancel_text = f"""
+━━━━━━━━━━━━━
+   ❌ ЗАЯВКА #{req.id} ОТМЕНЕНА
+━━━━━━━━━━━━━
+Заявка была переназначена другому рабочему.
+"""
+                        send_worker_notification(old_worker.profile, cancel_text)
+                if new_worker_id:
+                    new_worker = User.objects.filter(pk=new_worker_id).first()
+                    if new_worker and hasattr(new_worker, 'profile'):
+                        now = datetime.now()
+                        assignment_text = f"""
+━━━━━━━━━━━━━
+ПЕРЕНАЗНАЧЕНА ЗАЯВКА #{req.id}
+от {now.strftime('%d.%m.%Y %H:%M')}
+━━━━━━━━━━━━━
+ОПИСАНИЕ РАБОТ:
+{req.description}
+━━━━━━━━━━━━━
+КЛИЕНТ: {req.client_name}
+ТЕЛЕФОН: {req.client_phone}
+АДРЕС: {req.client_address or '—'}
+━━━━━━━━━━━━━
+❗❗❗ВАЖНО: перезвоните клиенту в течении 30 минут и не опаздывайте к согласованому времени❗❗❗
+"""
+                        send_worker_notification(new_worker.profile, assignment_text)
 
         # Обработка договора
         contract_files = request.FILES.getlist('contract_photos')
@@ -244,17 +331,30 @@ def edit_request(request, pk):
         parts_data_json = request.POST.get('parts_data')
         if parts_data_json:
             parts_data = json.loads(parts_data_json)
-            req.parts.all().delete()
+            existing_parts = {part.id: part for part in req.parts.all()}
+            kept_part_ids = []
             for i, part in enumerate(parts_data):
-                part_obj = Part(
-                    request=req,
-                    name=part.get('name', ''),
-                    price=part.get('price') if part.get('price') else None
-                )
-                photo_field = f'part_photo_{i}'
-                if photo_field in request.FILES:
-                    part_obj.receipt_photo = request.FILES[photo_field]
-                part_obj.save()
+                existing_id = part.get('existingId')
+                if existing_id and existing_id in existing_parts:
+                    part_obj = existing_parts[existing_id]
+                    part_obj.name = part.get('name', '')
+                    part_obj.price = part.get('price') if part.get('price') else None
+                    photo_field = f'part_photo_{i}'
+                    if photo_field in request.FILES:
+                        part_obj.receipt_photo = request.FILES[photo_field]
+                    part_obj.save()
+                else:
+                    part_obj = Part(
+                        request=req,
+                        name=part.get('name', ''),
+                        price=part.get('price') if part.get('price') else None
+                    )
+                    photo_field = f'part_photo_{i}'
+                    if photo_field in request.FILES:
+                        part_obj.receipt_photo = request.FILES[photo_field]
+                    part_obj.save()
+                kept_part_ids.append(part_obj.id)
+            req.parts.exclude(id__in=kept_part_ids).delete()
 
         return JsonResponse({'success': True})
 
@@ -310,6 +410,25 @@ def send_sms(phone, message):
     except Exception as e:
         print(f"SMS error: {e}")
 
+
+def send_worker_notification(profile, text):
+    try:
+        sent = False
+        if profile.tg_code and BOT_TOKEN:
+            url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
+            requests.post(url, json={'chat_id': profile.tg_code, 'text': text}, timeout=3)
+            sent = True
+        if profile.max_code and MAX_TOKEN:
+            url = f'https://api.max.org/bot{MAX_TOKEN}/sendMessage'
+            requests.post(url, json={'chat_id': profile.max_code, 'text': text}, timeout=3)
+            sent = True
+        if not sent:
+            site_user_id = str(profile.user.id) if profile.user and profile.user.id else None
+            if site_user_id:
+                requests.post('http://127.0.0.1:5000/create_ticket', json={'user_id': site_user_id, 'text': text}, timeout=3)
+    except Exception:
+        print('Не удалось отправить уведомление')
+
 @login_required
 def close_request(request, pk):
     if request.method == 'POST':
@@ -325,8 +444,7 @@ def close_request(request, pk):
         req.status = 'done'
         req.save()
         if req.client_phone:
-            completion_date = date.today().strftime('%d.%m.%Y')
-            message = f"Ваша заявка выполнена {completion_date}. Сумма: {req.price} руб. Гарантия 14 дней."
+            message = f"Ваша заявка выполнена. Сумма {req.price} руб. Гарантия 14 дней. При несоответсвии данных свяжитесь {+79059883225}. При искажении данных гарантия онулируется"
             send_sms(req.client_phone, message)
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -387,6 +505,7 @@ def get_requests(request):
     price_from = request.GET.get('price_from')
     price_to = request.GET.get('price_to')
     worker_id = request.GET.get('worker')
+    search = request.GET.get('search')
     status_list = request.GET.getlist('status')
 
     if date_from:
@@ -399,6 +518,11 @@ def get_requests(request):
         requests = requests.filter(price__lte=price_to)
     if worker_id:
         requests = requests.filter(assigned_to_id=worker_id)
+    if search:
+        # Поиск по id, client_address, client_name
+        requests = requests.filter(
+            Q(id__icontains=search) | Q(client_address__icontains=search) | Q(client_name__icontains=search)
+        )
     status_list = [s for s in status_list if s]
     if status_list:
         requests = requests.filter(status__in=status_list)
@@ -408,6 +532,7 @@ def get_requests(request):
         cost_price = sum(float(part.price) for part in r.parts.all() if part.price)
         net_profit = float(r.price) - cost_price if r.price else 0
         worker_salary = net_profit * (r.worker_percent / 100) if net_profit else 0
+        admin_profit = net_profit - worker_salary if net_profit else 0
         data.append({
             'id': r.id,
             'description': r.description,
@@ -420,6 +545,7 @@ def get_requests(request):
             'cost_price': round(cost_price, 2),
             'net_profit': round(net_profit, 2) if net_profit is not None else None,
             'worker_salary': round(worker_salary, 2) if worker_salary is not None else None,
+            'admin_profit': round(admin_profit, 2) if admin_profit is not None else None,
             'worker_percent': r.worker_percent,
             'money_delivered': r.money_delivered,
             'prepayment_amount': str(r.prepayment_amount) if r.prepayment_amount else None,
@@ -438,6 +564,7 @@ def get_worker_requests(request):
     date_to = request.GET.get('date_to')
     price_from = request.GET.get('price_from')
     price_to = request.GET.get('price_to')
+    search = request.GET.get('search')
     status_list = request.GET.getlist('status')
 
     if date_from:
@@ -448,6 +575,11 @@ def get_worker_requests(request):
         requests = requests.filter(price__gte=price_from)
     if price_to:
         requests = requests.filter(price__lte=price_to)
+    if search:
+        # Поиск по id, client_address, client_name
+        requests = requests.filter(
+            Q(id__icontains=search) | Q(client_address__icontains=search) | Q(client_name__icontains=search)
+        )
     status_list = [s for s in status_list if s]
     if status_list:
         requests = requests.filter(status__in=status_list)
@@ -482,6 +614,14 @@ def get_worker_requests(request):
         })
     return JsonResponse(data, safe=False)
 
+@login_required
+def get_workers(request):
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    workers = User.objects.filter(profile__role='worker').values('first_name', 'username', 'email', 'profile__phone')
+    data = [{'first_name': w['first_name'], 'phone': w['profile__phone'], 'email': w['email']} for w in workers]
+    return JsonResponse(data, safe=False)
+
 def reopen_request(request, pk):
     if request.method == 'POST' and request.user.is_authenticated and request.user.profile.role == 'admin':
         req = get_object_or_404(Request, pk=pk)
@@ -490,6 +630,22 @@ def reopen_request(request, pk):
             req.save()
             return JsonResponse({'success': True})
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@login_required
+def cancel_request(request, pk):
+    req = get_object_or_404(Request, pk=pk)
+    if request.user.profile.role != 'admin' and req.assigned_to != request.user:
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    if req.status == 'done':
+        return JsonResponse({'error': 'Cannot cancel completed request'}, status=400)
+    if not req.price:
+        return JsonResponse({'error': 'Цена не указана'}, status=400)
+    req.status = 'cancelled'
+    req.save()
+    if req.client_phone:
+        message = f"Ваша заявка отменена. Диагностика {req.price} руб. Гарантия на отмену не распространяется. При несоответсвии данных свяжитесь {+79059883225}"
+        send_sms(req.client_phone, message)
+    return JsonResponse({'success': True})
 
 @csrf_exempt
 def generate_tg_code(request):
