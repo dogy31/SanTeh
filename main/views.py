@@ -1,15 +1,28 @@
+import logging
+import os
+import sys
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.db import transaction
+from django.forms import ValidationError as FormValidationError
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
+from .forms import RequestForm
 from .models import Profile, Request, Photo, Part
-import os, sys
+from .utils.image_processor import (
+    FileTooLargeError,
+    ImageConversionError,
+    NotAnImageError,
+    process_uploaded_image,
+)
 import requests
 from datetime import datetime, date
 import decimal
+
+logger = logging.getLogger(__name__)
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -171,32 +184,62 @@ def worker_dashboard(request):
         return redirect('admin_dashboard')
     return render(request, 'main/worker.html', {'max_enabled': bool(MAX_TOKEN)})
 
+def _json_image_error(exc: Exception):
+    if isinstance(exc, FileTooLargeError):
+        return JsonResponse({'error': str(exc)}, status=400)
+    if isinstance(exc, NotAnImageError):
+        return JsonResponse({'error': str(exc)}, status=400)
+    if isinstance(exc, ImageConversionError):
+        logger.exception('Ошибка конвертации изображения')
+        return JsonResponse({'error': str(exc)}, status=400)
+    return None
+
+
 @login_required
 def create_request(request):
     if request.method == 'POST':
-        data = request.POST
-        worker_id = data.get('worker_id')
-        client_address = data.get('client_address', '').strip()
-        if not client_address:
-            return JsonResponse({'error': 'Адрес обязателен для заполнения'}, status=400)
+        form = RequestForm(request.POST)
+        if not form.is_valid():
+            msg = '; '.join(str(e) for errs in form.errors.values() for e in errs)
+            return JsonResponse({'error': msg or 'Неверные данные'}, status=400)
+        cd = form.cleaned_data
+        worker_id = cd.get('worker_id')
+        if worker_id is not None:
+            worker_id = int(worker_id)
+        worker_percent = cd['worker_percent']
+        client_phone = normalize_phone(cd['client_phone'])
+        contract_files = request.FILES.getlist('contract_photos')
+        if contract_files:
+            try:
+                RequestForm.validate_contract_photo_files(contract_files)
+            except FormValidationError as e:
+                return JsonResponse({'error': '; '.join(e.messages)}, status=400)
+
         try:
-            worker_percent = int(data.get('worker_percent', 50))
-        except (ValueError, TypeError):
-            worker_percent = 50
-        if worker_percent < 0 or worker_percent > 100:
-            worker_percent = 50
-        client_phone = normalize_phone(data.get('client_phone', ''))
-        req = Request.objects.create(
-            description=data['description'],
-            client_name=data['client_name'],
-            client_phone=client_phone,
-            client_email=data.get('client_email', ''),
-            client_address=client_address,
-            equipment_type=data.get('equipment_type', ''),
-            assigned_to_id=worker_id if worker_id else None,
-            deadline_date=data.get('deadline_date'),
-            worker_percent=worker_percent
-        )
+            with transaction.atomic():
+                req = Request.objects.create(
+                    description=cd['description'],
+                    client_name=cd['client_name'],
+                    client_phone=client_phone,
+                    client_email=cd.get('client_email') or '',
+                    client_address=cd['client_address'],
+                    equipment_type=cd.get('equipment_type') or '',
+                    assigned_to_id=worker_id,
+                    deadline_date=cd['deadline_date'],
+                    worker_percent=worker_percent,
+                )
+                for contract_file in contract_files:
+                    rel = process_uploaded_image(contract_file, upload_subdir='requests')
+                    Photo.objects.create(request=req, image=rel, photo_type='contract')
+        except (FileTooLargeError, NotAnImageError, ImageConversionError) as e:
+            resp = _json_image_error(e)
+            if resp:
+                return resp
+            raise
+        except Exception:
+            logger.exception('Ошибка при создании заявки')
+            return JsonResponse({'error': 'Не удалось сохранить заявку'}, status=400)
+
         # Отправка уведомления
         try:
             if worker_id:
@@ -311,11 +354,21 @@ def edit_request(request, pk):
         # Обработка договора
         contract_files = request.FILES.getlist('contract_photos')
         if contract_files:
-            if len(contract_files) > 5:
-                return JsonResponse({'error': 'Максимум 5 фотографий договора'}, status=400)
-            req.photos.filter(photo_type='contract').delete()
-            for contract_file in contract_files:
-                Photo.objects.create(request=req, image=contract_file, photo_type='contract')
+            try:
+                RequestForm.validate_contract_photo_files(contract_files)
+            except FormValidationError as e:
+                return JsonResponse({'error': '; '.join(e.messages)}, status=400)
+            try:
+                with transaction.atomic():
+                    req.photos.filter(photo_type='contract').delete()
+                    for contract_file in contract_files:
+                        rel = process_uploaded_image(contract_file, upload_subdir='requests')
+                        Photo.objects.create(request=req, image=rel, photo_type='contract')
+            except (FileTooLargeError, NotAnImageError, ImageConversionError) as e:
+                resp = _json_image_error(e)
+                if resp:
+                    return resp
+                raise
         else:
             existing_contract_ids = request.POST.get('existing_contract_ids')
             if existing_contract_ids is not None:
@@ -341,7 +394,16 @@ def edit_request(request, pk):
                     part_obj.price = part.get('price') if part.get('price') else None
                     photo_field = f'part_photo_{i}'
                     if photo_field in request.FILES:
-                        part_obj.receipt_photo = request.FILES[photo_field]
+                        try:
+                            rel = process_uploaded_image(
+                                request.FILES[photo_field], upload_subdir='parts'
+                            )
+                            part_obj.receipt_photo = rel
+                        except (FileTooLargeError, NotAnImageError, ImageConversionError) as e:
+                            resp = _json_image_error(e)
+                            if resp:
+                                return resp
+                            raise
                     part_obj.save()
                 else:
                     part_obj = Part(
@@ -351,7 +413,16 @@ def edit_request(request, pk):
                     )
                     photo_field = f'part_photo_{i}'
                     if photo_field in request.FILES:
-                        part_obj.receipt_photo = request.FILES[photo_field]
+                        try:
+                            rel = process_uploaded_image(
+                                request.FILES[photo_field], upload_subdir='parts'
+                            )
+                            part_obj.receipt_photo = rel
+                        except (FileTooLargeError, NotAnImageError, ImageConversionError) as e:
+                            resp = _json_image_error(e)
+                            if resp:
+                                return resp
+                            raise
                     part_obj.save()
                 kept_part_ids.append(part_obj.id)
             req.parts.exclude(id__in=kept_part_ids).delete()

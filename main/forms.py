@@ -1,0 +1,50 @@
+from django import forms
+
+from .utils.image_processor import (
+    FileTooLargeError,
+    NotAnImageError,
+    validate_image_upload_preflight,
+)
+
+
+class RequestForm(forms.Form):
+    """Поля создания заявки (POST) и вспомогательные проверки файлов."""
+
+    description = forms.CharField()
+    client_name = forms.CharField(max_length=100)
+    client_phone = forms.CharField(max_length=32)
+    client_email = forms.EmailField(required=False)
+    client_address = forms.CharField(max_length=200)
+    equipment_type = forms.CharField(max_length=100, required=False)
+    worker_id = forms.IntegerField(required=False)
+    deadline_date = forms.DateField()
+    worker_percent = forms.IntegerField(min_value=0, max_value=100, initial=50)
+
+    def clean_client_address(self):
+        addr = (self.cleaned_data.get('client_address') or '').strip()
+        if not addr:
+            raise forms.ValidationError('Адрес обязателен для заполнения')
+        return addr
+
+    def clean_worker_percent(self):
+        val = self.cleaned_data.get('worker_percent')
+        if val is None:
+            return 50
+        return val
+
+    @staticmethod
+    def validate_single_image_file(uploaded) -> None:
+        """Проверка одного файла до конвертации (размер, тип)."""
+        try:
+            validate_image_upload_preflight(uploaded)
+        except FileTooLargeError as e:
+            raise forms.ValidationError(str(e)) from e
+        except NotAnImageError as e:
+            raise forms.ValidationError(str(e)) from e
+
+    @classmethod
+    def validate_contract_photo_files(cls, files, max_count: int = 5) -> None:
+        if len(files) > max_count:
+            raise forms.ValidationError(f'Максимум {max_count} фотографий договора')
+        for f in files:
+            cls.validate_single_image_file(f)
