@@ -2,26 +2,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Q
-from .models import Profile, Request, Photo, Part, Notification, PushSubscription
+from .models import Profile, Request, Photo, Part
 import os, sys
 import requests
-import json
-import base64
 from datetime import datetime, date
 import decimal
-from PIL import Image
-import pillow_heif
-import io
-import re
-from pywebpush import webpush, WebPushException
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import serialization
-
-# Register HEIF support
-pillow_heif.register_heif_opener()
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -53,196 +40,9 @@ except Exception:
     BOT_TOKEN = None
     MAX_TOKEN = None
     SMS_API_KEY = None
-
 import json
 from datetime import datetime, timedelta
 import decimal
-
-# Адрес API сервера для уведомлений (может быть переопределен переменной окружения)
-API_SERVER_URL = os.getenv('API_SERVER_URL', 'http://127.0.0.1:5000')
-VAPID_EMAIL = os.getenv('VAPID_EMAIL', 'mailto:admin@example.com')
-VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
-VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY')
-
-
-def generate_vapid_keys():
-    private_key = ec.generate_private_key(ec.SECP256R1())
-    private_bytes = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
-    )
-    public_key = private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.X962,
-        format=serialization.PublicFormat.UncompressedPoint
-    )
-    public_key_b64 = base64.urlsafe_b64encode(public_key).rstrip(b'=').decode('utf-8')
-    return public_key_b64, private_bytes.decode('utf-8')
-
-
-if not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
-    try:
-        VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY = generate_vapid_keys()
-        print('[VAPID] Созданы временные VAPID ключи для Web Push')
-    except Exception as e:
-        print('[VAPID] Не удалось создать VAPID ключи:', e)
-
-
-def sanitize_filename(filename):
-    """
-    Очищает имя файла от недопустимых символов для Django FileField
-    """
-    if not filename:
-        return 'image.jpg'
-    # Убираем путь, оставляем только имя файла
-    name = os.path.basename(filename)
-    # Убираем расширение
-    name_without_ext = os.path.splitext(name)[0]
-    # Заменяем недопустимые символы на подчеркивание
-    sanitized = re.sub(r'[^\w\-_\.]', '_', name_without_ext)
-    # Убираем множественные подчеркивания
-    sanitized = re.sub(r'_+', '_', sanitized)
-    # Убираем подчеркивания в начале и конце
-    sanitized = sanitized.strip('_')
-    # Если пустое, используем дефолт
-    if not sanitized:
-        sanitized = 'image'
-    return f"{sanitized}.jpg"
-
-
-def store_notification_record(user, notification_type, title, text, request_obj=None):
-    try:
-        Notification.objects.create(
-            user=user,
-            notification_type=notification_type,
-            title=title,
-            text=text,
-            request=request_obj
-        )
-    except Exception as e:
-        print('[WEB PUSH] Ошибка сохранения уведомления в БД:', e)
-
-
-def send_web_push_notification(user, title, text, request_obj=None):
-    if not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
-        print('[WEB PUSH] Пропущено: VAPID ключи не настроены')
-        return False
-
-    subscriptions = PushSubscription.objects.filter(user=user, active=True)
-    if not subscriptions.exists():
-        print('[WEB PUSH] У пользователя нет активных подписок')
-        return False
-
-    payload = json.dumps({
-        'title': title,
-        'body': text,
-        'tag': 'santech-notification',
-        'url': '/worker-dashboard/' if getattr(user, 'profile', None) and user.profile.role == 'worker' else '/admin-dashboard/'
-    })
-    sent_count = 0
-
-    for subscription in subscriptions:
-        sub_info = {
-            'endpoint': subscription.endpoint,
-            'keys': {
-                'p256dh': subscription.p256dh,
-                'auth': subscription.auth
-            }
-        }
-        try:
-            webpush(
-                subscription_info=sub_info,
-                data=payload,
-                vapid_private_key=VAPID_PRIVATE_KEY,
-                vapid_claims={'sub': VAPID_EMAIL}
-            )
-            sent_count += 1
-        except WebPushException as exc:
-            status_code = getattr(exc.response, 'status_code', None)
-            print('[WEB PUSH] Ошибка отправки:', exc)
-            if status_code in (404, 410):
-                subscription.delete()
-                print('[WEB PUSH] Удалена недействительная подписка')
-
-    print(f'[WEB PUSH] Отправлено уведомлений: {sent_count}')
-    return sent_count > 0
-
-
-def validate_and_optimize_image(image_file, max_size_mb=10, max_width=2048, max_height=2048, quality=85):
-    """
-    Валидирует и оптимизирует изображение
-    - Проверяет формат (только JPEG, PNG, WebP, HEIC)
-    - Проверяет размер файла
-    - Оптимизирует размер и качество
-    - Возвращает оптимизированное изображение или None при ошибке
-    """
-    try:
-        # Проверка размера файла (max_size_mb мегабайт)
-        if image_file.size > max_size_mb * 1024 * 1024:
-            return None, f"Файл слишком большой. Максимальный размер: {max_size_mb}MB"
-
-        # Проверка формата файла
-        allowed_formats = ['JPEG', 'PNG', 'WEBP', 'HEIC', 'JPG', 'jpeg', 'png', 'webp', 'heic', 'jpg']
-        file_extension = image_file.name.split('.')[-1].lower() if '.' in image_file.name else ''
-        
-        # Открываем изображение для проверки
-        image = Image.open(image_file)
-        
-        # Проверяем формат через PIL
-        if image.format not in ['JPEG', 'PNG', 'WEBP', 'HEIC']:
-            return None, "Неподдерживаемый формат изображения. Разрешены: JPEG, PNG, WebP, HEIC"
-        
-        # Проверяем, что файл действительно является изображением
-        # image.verify()  # Убрано, так как может быть слишком строгим
-        
-        # Снова открываем изображение после verify()
-        image_file.seek(0)
-        image = Image.open(image_file)
-        
-        # Автоматическая ориентация по EXIF
-        from PIL import ImageOps
-        image = ImageOps.exif_transpose(image)
-        
-        # Конвертируем в RGB если необходимо (для прозрачных PNG)
-        if image.mode in ('RGBA', 'LA', 'P'):
-            # Создаем белый фон
-            background = Image.new('RGB', image.size, (255, 255, 255))
-            if image.mode == 'P':
-                image = image.convert('RGBA')
-            background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
-            image = background
-        elif image.mode != 'RGB':
-            image = image.convert('RGB')
-        
-        # Изменяем размер если слишком большой
-        if image.width > max_width or image.height > max_height:
-            # Сохраняем соотношение сторон
-            ratio = min(max_width / image.width, max_height / image.height)
-            new_width = int(image.width * ratio)
-            new_height = int(image.height * ratio)
-            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-        
-        # Оптимизируем и сохраняем в памяти
-        output = io.BytesIO()
-        image.save(output, format='JPEG', quality=quality, optimize=True)
-        output.seek(0)
-        
-        # Создаем новый InMemoryUploadedFile
-        from django.core.files.uploadedfile import InMemoryUploadedFile
-        safe_filename = sanitize_filename(image_file.name)
-        optimized_file = InMemoryUploadedFile(
-            output,
-            'ImageField',
-            safe_filename,
-            'image/jpeg',
-            output.tell(),
-            None
-        )
-        return optimized_file, None
-        
-    except Exception as e:
-        error_msg = f"Ошибка обработки изображения: {str(e)}"
-        return None, error_msg
 
 def register(request):
     if request.method == 'POST':
@@ -309,54 +109,6 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
-def forgot_password(request):
-    if request.method == 'POST':
-        phone = normalize_phone(request.POST.get('phone'))
-        if not phone or len(phone) != 11:
-            return render(request, 'main/forgot_password.html', {'error': 'Введите корректный номер телефона'})
-        try:
-            user = User.objects.get(username=phone)
-        except User.DoesNotExist:
-            return render(request, 'main/forgot_password.html', {'error': 'Пользователь с таким номером не найден'})
-        
-        import random
-        code = str(random.randint(100000, 999999))
-        request.session['reset_phone'] = phone
-        request.session['reset_code'] = code
-        
-        message = f"Код для сброса пароля: {code}"
-        send_sms(phone, message)
-        
-        return redirect('reset_password')
-    return render(request, 'main/forgot_password.html')
-
-def reset_password(request):
-    if request.method == 'POST':
-        code = request.POST.get('code')
-        password1 = request.POST.get('password1')
-        password2 = request.POST.get('password2')
-        
-        if not code or not password1 or not password2:
-            return render(request, 'main/reset_password.html', {'error': 'Заполните все поля'})
-        if password1 != password2:
-            return render(request, 'main/reset_password.html', {'error': 'Пароли не совпадают'})
-        
-        phone = request.session.get('reset_phone')
-        reset_code = request.session.get('reset_code')
-        if not phone or not reset_code or code != reset_code:
-            return render(request, 'main/reset_password.html', {'error': 'Неверный код'})
-        
-        try:
-            user = User.objects.get(username=phone)
-            user.set_password(password1)
-            user.save()
-            del request.session['reset_phone']
-            del request.session['reset_code']
-            return redirect('login')
-        except User.DoesNotExist:
-            return render(request, 'main/reset_password.html', {'error': 'Пользователь не найден'})
-    return render(request, 'main/reset_password.html')
-
 @login_required
 def admin_dashboard(request):
     if request.user.profile.role != 'admin':
@@ -397,31 +149,38 @@ def create_request(request):
             worker_percent=worker_percent
         )
         # Отправка уведомления
-        if worker_id:
-            worker = User.objects.filter(pk=worker_id).first()
-            if worker:
-                now = datetime.now()
-                text = f"""
+        try:
+            if worker_id:
+                worker = User.objects.filter(pk=worker_id).first()
+                if worker and hasattr(worker, 'profile'):
+                    profile = worker.profile
+                    now = datetime.now()
+                    text = f"""
 ━━━━━━━━━━━━━
-🚀 НОВАЯ ЗАЯВКА #{req.id}
+   🚀 НОВАЯ ЗАЯВКА #{req.id}
+   от {now.strftime('%d.%m.%Y %H:%M')}
 ━━━━━━━━━━━━━
-Дата: {now.strftime('%d.%m.%Y %H:%M')}
+📌 ОПИСАНИЕ РАБОТ:
+`{req.description}`
 ━━━━━━━━━━━━━
-Описание: {req.description}
+👤 КЛИЕНТ: {req.client_name}
+📞 ТЕЛЕФОН: `{req.client_phone}`
+📍 АДРЕС: {req.client_address or '—'}
 ━━━━━━━━━━━━━
-Клиент: {req.client_name}
-Телефон: {req.client_phone}
-Адрес: {req.client_address or '—'}
-━━━━━━━━━━━━━
-⚠️ ВАЖНО: Позвоните клиенту в течение 30 минут!
 """
-                send_notification(
-                    user=worker,
-                    notification_type='new_request',
-                    title=f'Новая заявка #{req.id}',
-                    text=text,
-                    request_obj=req
-                )
+                    try:
+                        if profile.tg_code and BOT_TOKEN:
+                            url = f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage'
+                            requests.post(url, json={'chat_id': profile.tg_code, 'text': text}, timeout=3)
+                        if profile.max_code and MAX_TOKEN:
+                            url = f'https://api.max.org/bot{MAX_TOKEN}/sendMessage'
+                            requests.post(url, json={'chat_id': profile.max_code, 'text': text}, timeout=3)
+                        else:
+                            requests.post('http://127.0.0.1:5000/create_ticket', json={'user_id': worker.email, 'text': text}, timeout=3)
+                    except Exception:
+                        print('Не удалось отправить уведомление')
+        except Exception:
+            pass
         return JsonResponse({'success': True, 'id': req.id})
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -432,147 +191,35 @@ def edit_request(request, pk):
         return JsonResponse({'error': 'permission denied'}, status=403)
 
     if request.method == 'POST':
-        previous_status = req.status
+        req.client_name = request.POST.get('client_name', req.client_name)
+        req.client_phone = normalize_phone(request.POST.get('client_phone', req.client_phone))
+        req.client_email = request.POST.get('client_email', '')
+        req.client_address = request.POST.get('client_address', '')
+        req.equipment_type = request.POST.get('equipment_type', req.equipment_type)
+        price = request.POST.get('price')
+        if price:
+            req.price = price
+        req.comment = request.POST.get('comment', '')
+        req.overdue_reason = request.POST.get('overdue_reason', '')
 
-        if 'client_name' in request.POST:
-            req.client_name = request.POST.get('client_name', req.client_name)
-        if 'client_phone' in request.POST:
-            req.client_phone = normalize_phone(request.POST.get('client_phone', req.client_phone))
-        if 'client_email' in request.POST:
-            req.client_email = request.POST.get('client_email', req.client_email)
-        if 'client_address' in request.POST:
-            req.client_address = request.POST.get('client_address', req.client_address)
-        if 'equipment_type' in request.POST:
-            req.equipment_type = request.POST.get('equipment_type', req.equipment_type)
-        if 'price' in request.POST:
-            price = request.POST.get('price')
-            req.price = price if price else None
-        if 'comment' in request.POST:
-            req.comment = request.POST.get('comment', req.comment)
-        if 'overdue_reason' in request.POST:
-            req.overdue_reason = request.POST.get('overdue_reason', req.overdue_reason)
-        if 'status' in request.POST:
-            req.status = request.POST.get('status', req.status)
+        # Обновление дедлайна
+        deadline_date = request.POST.get('deadline_date')
+        req.deadline_date = deadline_date if deadline_date else None
 
-        previous_worker_id = req.assigned_to_id
-        is_closed = req.status in ['done', 'cancelled']
-
-        if 'worker_id' in request.POST:
-            worker_id = request.POST.get('worker_id')
-            req.assigned_to_id = worker_id if worker_id else None
-
-        if 'deadline_date' in request.POST:
-            deadline_date = request.POST.get('deadline_date')
-            req.deadline_date = deadline_date if deadline_date else None
-
-        if 'prepayment_amount' in request.POST:
-            prepayment_amount = request.POST.get('prepayment_amount')
-            if prepayment_amount != '':
-                try:
-                    prepayment_amount = decimal.Decimal(prepayment_amount)
-                    req.prepayment_amount = prepayment_amount
-                    if req.status == 'new' and prepayment_amount > 0:
-                        req.status = 'in-progress'
-                except Exception:
-                    pass
-            else:
-                req.prepayment_amount = 0
-
-        if 'worker_percent' in request.POST:
+        # Обновление предоплаты
+        prepayment_amount = request.POST.get('prepayment_amount')
+        if prepayment_amount:
             try:
-                percent = int(request.POST.get('worker_percent', req.worker_percent))
-                if 0 <= percent <= 100:
-                    req.worker_percent = percent
-            except (TypeError, ValueError):
-                pass
+                prepayment_amount = decimal.Decimal(prepayment_amount)
+                req.prepayment_amount = prepayment_amount
+                if req.status == 'new' and prepayment_amount > 0:
+                    req.status = 'in-progress'
+            except:
+                req.prepayment_amount = 0
+        else:
+            req.prepayment_amount = 0
 
         req.save()
-
-        # Отправка уведомлений при изменении статуса
-        if req.status != previous_status and req.assigned_to and previous_status not in ['done', 'cancelled']:
-            if req.status == 'done':
-                complete_text = f"""
-━━━━━━━━━━━━━
-✅ ЗАЯВКА #{req.id} ВЫПОЛНЕНА
-━━━━━━━━━━━━━
-Статус: Выполнено
-━━━━━━━━━━━━━
-Клиент: {req.client_name}
-Телефон: {req.client_phone}
-Сумма: {req.price}₽
-━━━━━━━━━━━━━
-"""
-                send_notification(
-                    user=req.assigned_to,
-                    notification_type='complete',
-                    title=f'Заявка #{req.id} выполнена',
-                    text=complete_text,
-                    request_obj=req
-                )
-            elif req.status == 'cancelled':
-                cancel_text = f"""
-━━━━━━━━━━━━━
-🚫 ЗАЯВКА #{req.id} ОТМЕНЕНА
-━━━━━━━━━━━━━
-Статус: Отменено
-━━━━━━━━━━━━━
-Клиент: {req.client_name}
-Телефон: {req.client_phone}
-Сумма: {req.price}₽
-━━━━━━━━━━━━━
-"""
-                send_notification(
-                    user=req.assigned_to,
-                    notification_type='cancel',
-                    title=f'Заявка #{req.id} отменена',
-                    text=cancel_text,
-                    request_obj=req
-                )
-
-        if 'worker_id' in request.POST and not is_closed:
-            new_worker_id = req.assigned_to_id
-            if previous_worker_id != new_worker_id:
-                if previous_worker_id:
-                    old_worker = User.objects.filter(pk=previous_worker_id).first()
-                    if old_worker:
-                        cancel_text = f"""
-━━━━━━━━━━━━━
-❌ ЗАЯВКА #{req.id} — ПЕРЕНАЗНАЧЕНА
-━━━━━━━━━━━━━
-Заявка передана другому мастеру.
-"""
-                        send_notification(
-                            user=old_worker,
-                            notification_type='reassign',
-                            title=f'Заявка #{req.id} переназначена',
-                            text=cancel_text,
-                            request_obj=req
-                        )
-                if new_worker_id:
-                    new_worker = User.objects.filter(pk=new_worker_id).first()
-                    if new_worker:
-                        now = datetime.now()
-                        assignment_text = f"""
-━━━━━━━━━━━━━
-🔄 ПЕРЕНАЗНАЧЕНА ЗАЯВКА #{req.id}
-━━━━━━━━━━━━━
-Дата: {now.strftime('%d.%m.%Y %H:%M')}
-━━━━━━━━━━━━━
-Описание: {req.description}
-━━━━━━━━━━━━━
-Клиент: {req.client_name}
-Телефон: {req.client_phone}
-Адрес: {req.client_address or '—'}
-━━━━━━━━━━━━━
-⚠️ ВАЖНО: Позвоните клиенту в течение 30 минут!
-"""
-                        send_notification(
-                            user=new_worker,
-                            notification_type='reassign',
-                            title=f'Заявка #{req.id} назначена вам',
-                            text=assignment_text,
-                            request_obj=req
-                        )
 
         # Обработка договора
         contract_files = request.FILES.getlist('contract_photos')
@@ -581,11 +228,7 @@ def edit_request(request, pk):
                 return JsonResponse({'error': 'Максимум 5 фотографий договора'}, status=400)
             req.photos.filter(photo_type='contract').delete()
             for contract_file in contract_files:
-                optimized_image, error_msg = validate_and_optimize_image(contract_file)
-                if error_msg:
-                    return JsonResponse({'error': f'Ошибка с изображением договора: {error_msg}'}, status=400)
-                if optimized_image:
-                    Photo.objects.create(request=req, image=optimized_image, photo_type='contract')
+                Photo.objects.create(request=req, image=contract_file, photo_type='contract')
         else:
             existing_contract_ids = request.POST.get('existing_contract_ids')
             if existing_contract_ids is not None:
@@ -601,40 +244,17 @@ def edit_request(request, pk):
         parts_data_json = request.POST.get('parts_data')
         if parts_data_json:
             parts_data = json.loads(parts_data_json)
-            existing_parts = {part.id: part for part in req.parts.all()}
-            kept_part_ids = []
+            req.parts.all().delete()
             for i, part in enumerate(parts_data):
-                existing_id = part.get('existingId')
-                if existing_id and existing_id in existing_parts:
-                    part_obj = existing_parts[existing_id]
-                    part_obj.name = part.get('name', '')
-                    part_obj.price = part.get('price') if part.get('price') else None
-                    photo_field = f'part_photo_{i}'
-                    if photo_field in request.FILES:
-                        # Валидируем и оптимизируем изображение
-                        optimized_image, error_msg = validate_and_optimize_image(request.FILES[photo_field])
-                        if error_msg:
-                            return JsonResponse({'error': f'Ошибка с изображением чека для "{part.get("name", "детали")}"": {error_msg}'}, status=400)
-                        if optimized_image:
-                            part_obj.receipt_photo = optimized_image
-                    part_obj.save()
-                else:
-                    part_obj = Part(
-                        request=req,
-                        name=part.get('name', ''),
-                        price=part.get('price') if part.get('price') else None
-                    )
-                    photo_field = f'part_photo_{i}'
-                    if photo_field in request.FILES:
-                        # Валидируем и оптимизируем изображение
-                        optimized_image, error_msg = validate_and_optimize_image(request.FILES[photo_field])
-                        if error_msg:
-                            return JsonResponse({'error': f'Ошибка с изображением чека для "{part.get("name", "детали")}"": {error_msg}'}, status=400)
-                        if optimized_image:
-                            part_obj.receipt_photo = optimized_image
-                    part_obj.save()
-                kept_part_ids.append(part_obj.id)
-            req.parts.exclude(id__in=kept_part_ids).delete()
+                part_obj = Part(
+                    request=req,
+                    name=part.get('name', ''),
+                    price=part.get('price') if part.get('price') else None
+                )
+                photo_field = f'part_photo_{i}'
+                if photo_field in request.FILES:
+                    part_obj.receipt_photo = request.FILES[photo_field]
+                part_obj.save()
 
         return JsonResponse({'success': True})
 
@@ -690,134 +310,6 @@ def send_sms(phone, message):
     except Exception as e:
         print(f"SMS error: {e}")
 
-
-def send_telegram_notification(profile, title, text):
-    """Отправляет уведомление в Telegram"""
-    try:
-        if not profile or not profile.tg_code:
-            print('[TELEGRAM] Profile не имеет привязанного Telegram')
-            return False
-        
-        site_user_id = str(profile.user.id) if profile.user else None
-        formatted_text = "📌 " + title + "\n\n" + text
-        
-        payload = {'user_id': site_user_id, 'text': formatted_text, 'channel': 'telegram'}
-        response = requests.post(API_SERVER_URL + '/send_notification', json=payload, timeout=5)
-        status = response.status_code == 200
-        print('[TELEGRAM] Отправлено для ' + str(site_user_id) + ': ' + str(response.status_code))
-        return status
-    except Exception as e:
-        print('[TELEGRAM] Ошибка: ' + str(e))
-        return False
-
-def send_max_notification(profile, title, text):
-    """Отправляет уведомление в MAX"""
-    try:
-        if not profile or not profile.max_code:
-            print('[MAX] Profile не имеет привязанного MAX')
-            return False
-        
-        site_user_id = str(profile.user.id) if profile.user else None
-        formatted_text = "📌 " + title + "\n\n" + text
-        
-        payload = {'user_id': site_user_id, 'text': formatted_text, 'channel': 'max'}
-        response = requests.post(API_SERVER_URL + '/send_notification', json=payload, timeout=5)
-        status = response.status_code == 200
-        print('[MAX] Отправлено для ' + str(site_user_id) + ': ' + str(response.status_code))
-        return status
-    except Exception as e:
-        print('[MAX] Ошибка: ' + str(e))
-        return False
-
-def send_notification(user, notification_type, title, text, request_obj=None):
-    """
-    Отправляет уведомление на все доступные каналы:
-    - Веб-пуш браузера (если подписан)
-    - Telegram (если привязан)
-    - MAX (если привязан)
-    notification_type: 'new_request', 'reassign', 'cancel', 'complete'
-    """
-    if not user:
-        print('[NOTIFICATION] Пользователь не указан')
-        return
-
-    print('[NOTIFICATION] Начало отправки уведомления')
-    print('[NOTIFICATION] Пользователь: ' + user.username)
-    print('[NOTIFICATION] Тип: ' + notification_type)
-    print('[NOTIFICATION] Заголовок: ' + title)
-
-    try:
-        store_notification_record(user, notification_type, title, text, request_obj)
-        push_sent = send_web_push_notification(user, title, text, request_obj)
-        push_status = 'OK' if push_sent else 'NO_PUSH'
-
-        tg_status = 'SKIPPED'
-        max_status = 'SKIPPED'
-        if hasattr(user, 'profile'):
-            tg_sent = send_telegram_notification(user.profile, title, text)
-            max_sent = send_max_notification(user.profile, title, text)
-            tg_status = 'OK' if tg_sent else 'FAIL'
-            max_status = 'OK' if max_sent else 'FAIL'
-        else:
-            print('[NOTIFICATION] У пользователя нет профиля')
-
-        print('[NOTIFICATION] Результаты - Web Push: ' + push_status + ', Telegram: ' + tg_status + ', MAX: ' + max_status)
-        print('[NOTIFICATION] Уведомление обработано')
-    except Exception as e:
-        print('[NOTIFICATION] Ошибка: ' + str(e))
-
-def service_worker(request):
-    js_path = os.path.join(project_root, 'service-worker.js')
-    try:
-        with open(js_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-    except FileNotFoundError:
-        return JsonResponse({'error': 'service-worker.js not found'}, status=404)
-    return HttpResponse(content, content_type='application/javascript')
-
-@login_required
-def get_vapid_public_key(request):
-    return JsonResponse({'publicKey': VAPID_PUBLIC_KEY})
-
-@login_required
-def subscribe_push(request):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
-    try:
-        payload = json.loads(request.body.decode('utf-8') or '{}')
-        endpoint = payload.get('endpoint')
-        keys = payload.get('keys', {})
-        p256dh = keys.get('p256dh')
-        auth = keys.get('auth')
-        if not endpoint or not p256dh or not auth:
-            return JsonResponse({'error': 'Invalid subscription data'}, status=400)
-
-        PushSubscription.objects.update_or_create(
-            user=request.user,
-            endpoint=endpoint,
-            defaults={
-                'p256dh': p256dh,
-                'auth': auth,
-                'active': True
-            }
-        )
-        return JsonResponse({'success': True})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
-@login_required
-def unsubscribe_push(request):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
-    try:
-        payload = json.loads(request.body.decode('utf-8') or '{}')
-        endpoint = payload.get('endpoint')
-        if endpoint:
-            PushSubscription.objects.filter(user=request.user, endpoint=endpoint).delete()
-        return JsonResponse({'success': True})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
 @login_required
 def close_request(request, pk):
     if request.method == 'POST':
@@ -832,27 +324,9 @@ def close_request(request, pk):
                 return JsonResponse({'error': f'Отсутствует чек для детали "{part.name}"'}, status=400)
         req.status = 'done'
         req.save()
-        if req.assigned_to:
-            complete_text = f"""
-━━━━━━━━━━━━━
-✅ ЗАЯВКА #{req.id} ВЫПОЛНЕНА
-━━━━━━━━━━━━━
-Статус: Выполнено
-━━━━━━━━━━━━━
-Клиент: {req.client_name}
-Телефон: {req.client_phone}
-Сумма: {req.price}₽
-━━━━━━━━━━━━━
-"""
-            send_notification(
-                user=req.assigned_to,
-                notification_type='complete',
-                title=f'Заявка #{req.id} выполнена',
-                text=complete_text,
-                request_obj=req
-            )
         if req.client_phone:
-            message = f"Ваша заявка выполнена. Сумма {req.price} руб. Гарантия 14 дней. При несоответсвии данных свяжитесь {+79059883225}. При искажении данных гарантия онулируется"
+            completion_date = date.today().strftime('%d.%m.%Y')
+            message = f"Ваша заявка выполнена {completion_date}. Сумма: {req.price} руб. Гарантия 14 дней."
             send_sms(req.client_phone, message)
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -913,7 +387,6 @@ def get_requests(request):
     price_from = request.GET.get('price_from')
     price_to = request.GET.get('price_to')
     worker_id = request.GET.get('worker')
-    search = request.GET.get('search')
     status_list = request.GET.getlist('status')
 
     if date_from:
@@ -926,11 +399,6 @@ def get_requests(request):
         requests = requests.filter(price__lte=price_to)
     if worker_id:
         requests = requests.filter(assigned_to_id=worker_id)
-    if search:
-        # Поиск по id, описанию задачи, client_address, client_name
-        requests = requests.filter(
-            Q(id__icontains=search) | Q(description__icontains=search) | Q(client_address__icontains=search) | Q(client_name__icontains=search)
-        )
     status_list = [s for s in status_list if s]
     if status_list:
         requests = requests.filter(status__in=status_list)
@@ -940,7 +408,6 @@ def get_requests(request):
         cost_price = sum(float(part.price) for part in r.parts.all() if part.price)
         net_profit = float(r.price) - cost_price if r.price else 0
         worker_salary = net_profit * (r.worker_percent / 100) if net_profit else 0
-        admin_profit = net_profit - worker_salary if net_profit else 0
         data.append({
             'id': r.id,
             'description': r.description,
@@ -953,7 +420,6 @@ def get_requests(request):
             'cost_price': round(cost_price, 2),
             'net_profit': round(net_profit, 2) if net_profit is not None else None,
             'worker_salary': round(worker_salary, 2) if worker_salary is not None else None,
-            'admin_profit': round(admin_profit, 2) if admin_profit is not None else None,
             'worker_percent': r.worker_percent,
             'money_delivered': r.money_delivered,
             'prepayment_amount': str(r.prepayment_amount) if r.prepayment_amount else None,
@@ -972,7 +438,6 @@ def get_worker_requests(request):
     date_to = request.GET.get('date_to')
     price_from = request.GET.get('price_from')
     price_to = request.GET.get('price_to')
-    search = request.GET.get('search')
     status_list = request.GET.getlist('status')
 
     if date_from:
@@ -983,11 +448,6 @@ def get_worker_requests(request):
         requests = requests.filter(price__gte=price_from)
     if price_to:
         requests = requests.filter(price__lte=price_to)
-    if search:
-        # Поиск по id, описанию задачи, client_address, client_name
-        requests = requests.filter(
-            Q(id__icontains=search) | Q(description__icontains=search) | Q(client_address__icontains=search) | Q(client_name__icontains=search)
-        )
     status_list = [s for s in status_list if s]
     if status_list:
         requests = requests.filter(status__in=status_list)
@@ -1022,78 +482,14 @@ def get_worker_requests(request):
         })
     return JsonResponse(data, safe=False)
 
-@login_required
-def get_workers(request):
-    if request.user.profile.role != 'admin':
-        return JsonResponse({'error': 'permission denied'}, status=403)
-    workers = User.objects.filter(profile__role='worker').values('first_name', 'username', 'email', 'profile__phone')
-    data = [{'first_name': w['first_name'], 'phone': w['profile__phone'], 'email': w['email']} for w in workers]
-    return JsonResponse(data, safe=False)
-
 def reopen_request(request, pk):
     if request.method == 'POST' and request.user.is_authenticated and request.user.profile.role == 'admin':
         req = get_object_or_404(Request, pk=pk)
         if req.status == 'done':
             req.status = 'in-progress'
             req.save()
-            if req.assigned_to:
-                reopen_text = f"""
-━━━━━━━━━━━━━
-🔄 ЗАЯВКА #{req.id} ВОЗОБНОВЛЕНА
-━━━━━━━━━━━━━
-Статус: В работе
-━━━━━━━━━━━━━
-Клиент: {req.client_name}
-Телефон: {req.client_phone}
-━━━━━━━━━━━━━
-"""
-                send_notification(
-                    user=req.assigned_to,
-                    notification_type='reopen',
-                    title=f'Заявка #{req.id} возобновлена',
-                    text=reopen_text,
-                    request_obj=req
-                )
             return JsonResponse({'success': True})
     return JsonResponse({'error': 'Invalid request'}, status=400)
-
-@login_required
-def cancel_request(request, pk):
-    req = get_object_or_404(Request, pk=pk)
-    if request.user.profile.role != 'admin' and req.assigned_to != request.user:
-        return JsonResponse({'error': 'permission denied'}, status=403)
-    if req.status == 'done':
-        return JsonResponse({'error': 'Cannot cancel completed request'}, status=400)
-    if not req.price:
-        return JsonResponse({'error': 'Цена не указана'}, status=400)
-    req.status = 'cancelled'
-    req.save()
-    
-    # Отправка уведомления мастеру об отмене
-    if req.assigned_to:
-        cancel_text = f"""
-━━━━━━━━━━━━━
-🚫 ЗАЯВКА #{req.id} ОТМЕНЕНА
-━━━━━━━━━━━━━
-Статус: Отменено
-━━━━━━━━━━━━━
-Клиент: {req.client_name}
-Телефон: {req.client_phone}
-Сумма: {req.price}₽
-━━━━━━━━━━━━━
-"""
-        send_notification(
-            user=req.assigned_to,
-            notification_type='cancel',
-            title=f'Заявка #{req.id} отменена',
-            text=cancel_text,
-            request_obj=req
-        )
-    
-    if req.client_phone:
-        message = f"Ваша заявка отменена. Диагностика {req.price} руб. Гарантия на отмену не распространяется. При несоответсвии данных свяжитесь {+79059883225}"
-        send_sms(req.client_phone, message)
-    return JsonResponse({'success': True})
 
 @csrf_exempt
 def generate_tg_code(request):
