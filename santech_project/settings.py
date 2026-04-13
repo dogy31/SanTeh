@@ -58,7 +58,9 @@ else:
 # Static files
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Без manifest-хешей в именах: иначе collectstatic убирает /static/logo.png,
+# а уведомления и service-worker обращаются к фиксированному пути.
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Media files
 MEDIA_URL = '/media/'

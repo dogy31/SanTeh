@@ -423,6 +423,10 @@
     let viewMode = 'table'; // 'table' or 'blocks'
 
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function showUserWarning(message, focusEl) {
+        alert(message);
+        try { if (focusEl) focusEl.focus(); } catch (e) {}
+    }
 
     function formatDateInputValue(date) {
         const year = date.getFullYear();
@@ -670,14 +674,16 @@
         fetch(`/view-request/${id}/`)
             .then(response => response.json())
             .then(data => {
-                const contractPhoto = data.photos.find(p => p.photo_type === 'contract');
                 const contractDiv = document.getElementById('detailsContract');
                 contractDiv.innerHTML = '';
-                if (contractPhoto) {
-                    const div = document.createElement('div');
-                    div.className = 'photo-thumb';
-                    div.innerHTML = `<img src="${contractPhoto.image}" alt="contract" onclick="openPhotoViewer('${contractPhoto.image}')">`;
-                    contractDiv.appendChild(div);
+                const contractPhotos = (data.photos || []).filter(p => p.photo_type === 'contract');
+                if (contractPhotos.length) {
+                    contractPhotos.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = 'photo-thumb';
+                        div.innerHTML = `<img src="${p.image}" alt="contract" onclick="openPhotoViewer('${p.image}')">`;
+                        contractDiv.appendChild(div);
+                    });
                 } else contractDiv.innerHTML = '<p>Нет договора</p>';
 
                 const partsDiv = document.getElementById('detailsPartsList');
@@ -740,14 +746,16 @@
                 if (isOverdue) overdueField.style.display = 'block';
                 else overdueField.style.display = 'none';
 
-                const contractPhoto = data.photos.find(p => p.photo_type === 'contract');
                 const contractGallery = document.getElementById('adminContractGallery');
                 contractGallery.innerHTML = '';
-                if (contractPhoto) {
-                    const div = document.createElement('div');
-                    div.className = 'photo-thumb';
-                    div.innerHTML = `<img src="${contractPhoto.image}" alt="contract" onclick="openPhotoViewer('${contractPhoto.image}')">`;
-                    contractGallery.appendChild(div);
+                const contractPhotos = (data.photos || []).filter(p => p.photo_type === 'contract');
+                if (contractPhotos.length) {
+                    contractPhotos.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = 'photo-thumb';
+                        div.innerHTML = `<img src="${p.image}" alt="contract" onclick="openPhotoViewer('${p.image}')">`;
+                        contractGallery.appendChild(div);
+                    });
                 } else contractGallery.innerHTML = '<p>Нет договора</p>';
 
                 const partsDiv = document.getElementById('adminPartsList');
@@ -833,8 +841,14 @@
 
     window.cancelRequest = function(id, btn) {
         if (!confirm('Вы уверены, что хотите отменить заявку?')) return;
+        const comment = (prompt('Комментарий (обязательно при отмене):') || '').trim();
+        if (!comment) { alert('Комментарий обязателен при отмене заявки'); return; }
         btn.disabled = true; btn.textContent = 'Отмена...';
-        fetch(`/cancel-request/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } })
+        fetch(`/cancel-request/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment })
+        })
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 200 && body.success) {
@@ -850,34 +864,55 @@
 
     document.getElementById('saveCreateBtn').addEventListener('click', function() {
         const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
+        const descEl = document.getElementById('createDesc');
+        const nameEl = document.getElementById('createClientName');
+        const phoneInput = document.getElementById('createClientPhone');
+        const addrEl = document.getElementById('createClientAddress');
+        const deadlineEl = document.getElementById('createDeadlineDate');
+        const desc = (descEl.value || '').trim();
+        const clientName = (nameEl.value || '').trim();
+        const addr = (addrEl.value || '').trim();
+
+        if (!desc) {
+            showUserWarning('Заполните описание задачи', descEl);
+            btn.disabled = false; btn.textContent = 'Создать';
+            return;
+        }
+        if (!clientName) {
+            showUserWarning('Заполните имя клиента', nameEl);
+            btn.disabled = false; btn.textContent = 'Создать';
+            return;
+        }
+        if (!addr) {
+            showUserWarning('Заполните адрес клиента', addrEl);
+            btn.disabled = false; btn.textContent = 'Создать';
+            return;
+        }
         const workerSelect = document.getElementById('createWorker');
         const workerId = workerSelect.value;
         if (!workerId) {
-            alert('Выберите рабочего!');
+            showUserWarning('Выберите мастера (исполнителя)', workerSelect);
             btn.disabled = false; btn.textContent = 'Создать';
             return;
         }
-        const phoneInput = document.getElementById('createClientPhone');
         const phoneDigits = phoneInput.value.replace(/\D/g, '');
         if (phoneDigits.length !== 11) {
-            alert('Введите корректный номер телефона в формате +7 (XXX) XXX-XX-XX');
+            showUserWarning('Введите корректный номер телефона в формате +7 (XXX) XXX-XX-XX', phoneInput);
             btn.disabled = false; btn.textContent = 'Создать';
-            phoneInput.focus();
             return;
         }
-        const deadlineDate = document.getElementById('createDeadlineDate').value;
+        const deadlineDate = deadlineEl.value;
         if (!deadlineDate) {
-            alert('Заполните дату выполнения заявки');
+            showUserWarning('Заполните дату выполнения (дедлайн)', deadlineEl);
             btn.disabled = false; btn.textContent = 'Создать';
-            document.getElementById('createDeadlineDate').focus();
             return;
         }
         const formData = new FormData();
-        formData.append('description', document.getElementById('createDesc').value);
-        formData.append('client_name', document.getElementById('createClientName').value);
+        formData.append('description', desc);
+        formData.append('client_name', clientName);
         formData.append('client_phone', phoneDigits);
         formData.append('client_email', document.getElementById('createClientEmail').value);
-        formData.append('client_address', document.getElementById('createClientAddress').value);
+        formData.append('client_address', addr);
         formData.append('equipment_type', document.getElementById('createEquipmentType').value);
         formData.append('worker_id', workerId);
         formData.append('worker_percent', document.getElementById('createWorkerPercent').value || '50');
@@ -894,9 +929,9 @@
                 closeModal('createModal');
                 loadRequests();
             }
-            else alert('Ошибка создания: ' + (data.error || 'неизвестная ошибка'));
+            else showUserWarning('Ошибка создания: ' + (data.error || 'неизвестная ошибка'));
         })
-        .catch(error => console.error('Ошибка создания:', error))
+        .catch(error => { console.error('Ошибка создания:', error); showUserWarning('Не удалось создать заявку. Проверьте интернет/сервер и попробуйте ещё раз.'); })
         .finally(() => { btn.disabled = false; btn.textContent = 'Создать'; });
     });
 

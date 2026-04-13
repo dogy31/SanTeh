@@ -590,20 +590,31 @@ def get_requests(request):
     if worker_id:
         requests = requests.filter(assigned_to_id=worker_id)
     if search:
-        # Поиск по id, client_address, client_name
+        # Поиск по номеру заявки, имени, адресу, задаче и названию деталей
         requests = requests.filter(
-            Q(id__icontains=search) | Q(client_address__icontains=search) | Q(client_name__icontains=search)
-        )
+            Q(id__icontains=search)
+            | Q(client_address__icontains=search)
+            | Q(client_name__icontains=search)
+            | Q(description__icontains=search)
+            | Q(parts__name__icontains=search)
+        ).distinct()
     status_list = [s for s in status_list if s]
     if status_list:
         requests = requests.filter(status__in=status_list)
 
     data = []
     for r in requests:
-        cost_price = sum(float(part.price) for part in r.parts.all() if part.price)
-        net_profit = float(r.price) - cost_price if r.price else 0
-        worker_salary = net_profit * (r.worker_percent / 100) if net_profit else 0
-        admin_profit = net_profit - worker_salary if net_profit else 0
+        if r.status == 'cancelled':
+            # При отмене: все деньги остаются у мастера, без расчётов
+            cost_price = 0
+            net_profit = float(r.price) if r.price else 0
+            worker_salary = float(r.price) if r.price else 0
+            admin_profit = 0
+        else:
+            cost_price = sum(float(part.price) for part in r.parts.all() if part.price)
+            net_profit = float(r.price) - cost_price if r.price else 0
+            worker_salary = net_profit * (r.worker_percent / 100) if net_profit else 0
+            admin_profit = net_profit - worker_salary if net_profit else 0
         data.append({
             'id': r.id,
             'description': r.description,
@@ -647,10 +658,14 @@ def get_worker_requests(request):
     if price_to:
         requests = requests.filter(price__lte=price_to)
     if search:
-        # Поиск по id, client_address, client_name
+        # Поиск по номеру заявки, имени, адресу, задаче и названию деталей
         requests = requests.filter(
-            Q(id__icontains=search) | Q(client_address__icontains=search) | Q(client_name__icontains=search)
-        )
+            Q(id__icontains=search)
+            | Q(client_address__icontains=search)
+            | Q(client_name__icontains=search)
+            | Q(description__icontains=search)
+            | Q(parts__name__icontains=search)
+        ).distinct()
     status_list = [s for s in status_list if s]
     if status_list:
         requests = requests.filter(status__in=status_list)
@@ -658,9 +673,14 @@ def get_worker_requests(request):
     data = []
     for r in requests:
         # Расчёт себестоимости, чистой прибыли и зарплаты рабочего
-        cost_price = sum(float(part.price) for part in r.parts.all() if part.price)
-        net_profit = float(r.price) - cost_price if r.price else 0
-        worker_salary = net_profit * (r.worker_percent / 100) if net_profit else 0
+        if r.status == 'cancelled':
+            cost_price = 0
+            net_profit = float(r.price) if r.price else 0
+            worker_salary = float(r.price) if r.price else 0
+        else:
+            cost_price = sum(float(part.price) for part in r.parts.all() if part.price)
+            net_profit = float(r.price) - cost_price if r.price else 0
+            worker_salary = net_profit * (r.worker_percent / 100) if net_profit else 0
 
         data.append({
             'id': r.id,
@@ -711,6 +731,28 @@ def cancel_request(request, pk):
         return JsonResponse({'error': 'Cannot cancel completed request'}, status=400)
     if not req.price:
         return JsonResponse({'error': 'Цена не указана'}, status=400)
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    # Комментарий обязателен при отмене. Может прийти в этом POST,
+    # либо быть уже сохранён через /edit-request/ перед отменой.
+    cancel_comment = ''
+    try:
+        if request.content_type and request.content_type.startswith('application/json'):
+            payload = json.loads((request.body or b'{}').decode('utf-8'))
+            cancel_comment = (payload.get('comment') or '').strip()
+        else:
+            cancel_comment = (request.POST.get('comment') or '').strip()
+    except Exception:
+        cancel_comment = ''
+
+    effective_comment = cancel_comment or (req.comment or '').strip()
+    if not effective_comment:
+        return JsonResponse({'error': 'Комментарий обязателен при отмене заявки'}, status=400)
+    if cancel_comment:
+        req.comment = cancel_comment
+
     req.status = 'cancelled'
     req.save()
     if req.client_phone:

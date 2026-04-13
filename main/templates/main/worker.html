@@ -389,6 +389,10 @@
     let parts = [];
 
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function showUserWarning(message, focusEl) {
+        alert(message);
+        try { if (focusEl) focusEl.focus(); } catch (e) {}
+    }
 
     function initStatusDropdown(toggleId, optionsId) {
         const toggle = document.getElementById(toggleId);
@@ -501,6 +505,7 @@
     function renderBlocksView(requests) {
         const container = document.getElementById('requestsBlocks');
         container.innerHTML = '';
+        const now = new Date();
         let activeCount = 0;
         let newCount = 0;
         requests.forEach(r => {
@@ -510,12 +515,25 @@
             if (r.status === 'in-progress') { statusClass = 'block-status in-progress'; statusText = 'В работе'; }
             else if (r.status === 'done') { statusClass = 'block-status done'; statusText = 'Выполнена'; }
             else if (r.status === 'cancelled') { statusClass = 'block-status cancelled'; statusText = 'Отменена'; }
+
+            const created = new Date(r.created_date);
+            const daysSinceCreated = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+            const ageText = daysSinceCreated <= 0 ? '' : (
+                daysSinceCreated % 10 === 1 && daysSinceCreated % 100 !== 11 ? `${daysSinceCreated} день` :
+                (daysSinceCreated % 10 >= 2 && daysSinceCreated % 10 <= 4 && (daysSinceCreated % 100 < 12 || daysSinceCreated % 100 > 14)) ? `${daysSinceCreated} дня` :
+                `${daysSinceCreated} дней`
+            );
+            const showAge = ageText && r.status !== 'done' && r.status !== 'cancelled';
+
             const block = document.createElement('div');
             block.className = `request-block ${r.status}`;
             block.innerHTML = `
                 <div class="block-header">
                     <div class="block-id">#${r.id}</div>
-                    <div class="${statusClass}">${statusText}</div>
+                    <div>
+                        <div class="${statusClass}">${statusText}</div>
+                        ${showAge ? `<div style="margin-top:6px; font-size:12px; color:#4a6778;">⏱ ${ageText}</div>` : ''}
+                    </div>
                 </div>
                 <div class="block-content">
                     <div class="block-field">
@@ -670,8 +688,14 @@
 
     window.cancelWorkerRequest = function(id, btn) {
         if (!confirm('Вы уверены, что хотите отменить заявку?')) return;
+        const comment = (prompt('Комментарий (обязательно при отмене):') || '').trim();
+        if (!comment) { alert('Комментарий обязателен при отмене заявки'); return; }
         btn.disabled = true; btn.textContent = 'Отмена...';
-        fetch(`/cancel-request/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } })
+        fetch(`/cancel-request/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment })
+        })
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 200 && body.success) { loadWorkerRequests(); alert('Заявка отменена'); }
@@ -770,6 +794,29 @@
 
     function saveWorkerEdit() {
         if (!currentEditId) return Promise.reject(new Error('ID заявки не указан'));
+
+        const priceEl = document.getElementById('editPrice');
+        const commentEl = document.getElementById('editComment');
+        const overdueSection = document.getElementById('overdueReasonSection');
+        const overdueEl = document.getElementById('overdueReason');
+        const priceRaw = (priceEl.value || '').trim();
+        if (!priceRaw) {
+            showUserWarning('Заполните поле «Стоимость работ»', priceEl);
+            return Promise.reject(new Error('validation'));
+        }
+        const priceVal = Number(priceRaw);
+        if (!Number.isFinite(priceVal) || priceVal <= 0) {
+            showUserWarning('«Стоимость работ» должна быть числом больше 0', priceEl);
+            return Promise.reject(new Error('validation'));
+        }
+        if (overdueSection && overdueSection.style.display !== 'none') {
+            const reason = (overdueEl.value || '').trim();
+            if (!reason) {
+                showUserWarning('Укажите причину просрочки (это обязательное поле)', overdueEl);
+                return Promise.reject(new Error('validation'));
+            }
+        }
+
         return fetch(`/edit-request/${currentEditId}/`)
             .then(response => response.json())
             .then(data => {
@@ -777,9 +824,9 @@
                     throw new Error('Нельзя редактировать закрытые заявки');
                 }
                 const formData = new FormData();
-                formData.append('price', document.getElementById('editPrice').value);
-                formData.append('comment', document.getElementById('editComment').value);
-                formData.append('overdue_reason', document.getElementById('overdueReason').value);
+                formData.append('price', priceRaw);
+                formData.append('comment', (commentEl.value || '').trim());
+                formData.append('overdue_reason', (overdueEl.value || '').trim());
                 formData.append('prepayment_amount', document.getElementById('prepaymentAmount').value);
                 formData.append('client_address', document.getElementById('editClientAddress').value);
                 if (contractFiles.length) {
@@ -818,16 +865,17 @@
                     loadWorkerRequests();
                 } else {
                     console.error('Ошибка сохранения:', data);
-                    alert('Ошибка сохранения: ' + (data.error || 'неизвестная ошибка'));
+                    showUserWarning('Ошибка сохранения: ' + (data.error || 'неизвестная ошибка'));
                 }
             })
             .catch(err => {
                 console.error('Ошибка сохранения:', err);
+                if (err && err.message === 'validation') return;
                 if (err.message === 'Нельзя редактировать закрытые заявки') {
-                    alert(err.message);
+                    showUserWarning(err.message);
                     closeModal('editModal');
                 } else {
-                    alert('Ошибка: ' + err.message);
+                    showUserWarning('Ошибка: ' + (err.message || 'неизвестная ошибка'));
                 }
             })
             .finally(() => { btn.disabled = false; btn.textContent = 'Сохранить изменения'; });
@@ -835,11 +883,17 @@
 
     document.getElementById('cancelWorkerRequestBtn').addEventListener('click', function() {
         if (!currentEditId || !confirm('Вы уверены, что хотите отменить эту заявку?')) return;
+        const comment = (document.getElementById('editComment').value || '').trim();
+        if (!comment) { alert('Комментарий обязателен при отмене заявки'); return; }
         const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
         saveWorkerEdit()
             .then(data => {
                 if (!data.success) throw new Error(data.error || 'Ошибка сохранения');
-                return fetch(`/cancel-request/${currentEditId}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } });
+                return fetch(`/cancel-request/${currentEditId}/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comment })
+                });
             })
             .then(response => response.json())
             .then(data => {
