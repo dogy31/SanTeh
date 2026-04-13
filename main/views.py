@@ -523,12 +523,20 @@ def close_request(request, pk):
 @login_required
 def view_request(request, pk):
     req = get_object_or_404(Request, pk=pk)
-    cost_price = sum(float(part.price) for part in req.parts.all() if part.price)
-    net_profit = None
-    worker_salary = None
-    if req.price:
-        net_profit = float(req.price) - cost_price
-        worker_salary = net_profit * (req.worker_percent / 100) if net_profit else 0
+    if req.status == 'cancelled':
+        cost_price = 0
+        net_profit = float(req.price) if req.price else 0
+        worker_salary = float(req.price) if req.price else 0
+        admin_profit = 0
+    else:
+        cost_price = sum(float(part.price) for part in req.parts.all() if part.price)
+        net_profit = None
+        worker_salary = None
+        admin_profit = None
+        if req.price:
+            net_profit = float(req.price) - cost_price
+            worker_salary = net_profit * (req.worker_percent / 100) if net_profit else 0
+            admin_profit = net_profit - worker_salary if net_profit else 0
     data = {
         'id': req.id,
         'description': req.description,
@@ -542,6 +550,7 @@ def view_request(request, pk):
         'cost_price': round(cost_price, 2),
         'net_profit': round(net_profit, 2) if net_profit is not None else None,
         'worker_salary': round(worker_salary, 2) if worker_salary is not None else None,
+        'admin_profit': round(admin_profit, 2) if admin_profit is not None else None,
         'money_delivered': req.money_delivered,
         'prepayment_amount': str(req.prepayment_amount) if req.prepayment_amount else None,
         'created_date': req.created_date.strftime('%d.%m.%Y %H:%M'),

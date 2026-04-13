@@ -25,7 +25,7 @@
     .status-dropdown__options label { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; color: #2c5770; cursor: pointer; }
     .status-dropdown__options label:last-child { margin-bottom: 0; }
     .status-dropdown__options input[type='checkbox'] { accent-color: #2f7e9e; width: 16px; height: 16px; }
-    .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -10px #bac9d4; overflow-x: auto; }
+    .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -1 0px #bac9d4; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle; }
     th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; }
@@ -368,8 +368,13 @@
         <div class="field"><label>Email клиента</label><input type="email" id="editClientEmail" readonly></div>
         <div class="field"><label>Адрес клиента</label><input type="text" id="editClientAddress" readonly></div>
         <div class="field"><label>Вид техники</label><input type="text" id="editEquipmentType" readonly></div>
+        <div class="field"><label>Статус</label><input type="text" id="editStatus" readonly></div>
         <div class="field"><label>Сумма предоплаты (₽)</label><input type="number" id="prepaymentAmount" step="0.01" placeholder="0"></div>
         <div class="field"><label>Стоимость работ <span class="required-star">*</span></label><input type="number" id="editPrice" required></div>
+        <div class="field"><label>Себестоимость (₽)</label><input type="text" id="editCostPrice" readonly></div>
+        <div class="field"><label>Чистые (₽)</label><input type="text" id="editNetProfit" readonly></div>
+        <div class="field"><label>ЗП мастера (₽)</label><input type="text" id="editWorkerSalary" readonly></div>
+        <div class="field"><label>% мастера</label><input type="text" id="editWorkerPercent" readonly></div>
         <div class="field"><label>Комментарий</label><textarea id="editComment" rows="3"></textarea></div>
         <div class="field"><label>Договор (1–5 фото)</label><div class="photo-upload-area"><input type="file" id="contractInput" accept="image/*" multiple><div class="photo-previews" id="contractPreviews"></div></div></div>
         <div class="parts-section"><label>Детали (чеки для каждой детали обязательны для закрытия)</label><div id="partsContainer"></div><button type="button" class="add-part-btn" id="addPartBtn">Добавить деталь</button></div>
@@ -529,13 +534,17 @@
             block.className = `request-block ${r.status}`;
             block.innerHTML = `
                 <div class="block-header">
-                    <div class="block-id">#${r.id}</div>
+                    <div class="block-id">#${r.id} • ${created.toLocaleDateString()}</div>
                     <div>
                         <div class="${statusClass}">${statusText}</div>
                         ${showAge ? `<div style="margin-top:6px; font-size:12px; color:#4a6778;">⏱ ${ageText}</div>` : ''}
                     </div>
                 </div>
                 <div class="block-content">
+                    <div class="block-field">
+                        <div class="block-label">Техника</div>
+                        <div class="block-value">${escapeHtml(r.equipment_type || 'Не указана')}</div>
+                    </div>
                     <div class="block-field">
                         <div class="block-label">Задача</div>
                         <div class="block-value">${escapeHtml(r.description)}</div>
@@ -547,18 +556,6 @@
                     <div class="block-field">
                         <div class="block-label">Адрес</div>
                         <div class="block-value">${escapeHtml(r.client_address || 'Не указан')}</div>
-                    </div>
-                    <div class="block-field">
-                        <div class="block-label">Техника</div>
-                        <div class="block-value">${escapeHtml(r.equipment_type || 'Не указана')}</div>
-                    </div>
-                    <div class="block-field">
-                        <div class="block-label">Цена</div>
-                        <div class="block-value">${r.price ? r.price + ' ₽' : 'Не указана'}</div>
-                    </div>
-                    <div class="block-field">
-                        <div class="block-label">ЗП мастера</div>
-                        <div class="block-value">${r.worker_salary ? r.worker_salary + ' ₽' : 'Не указана'} (${r.worker_percent}%)</div>
                     </div>
                 </div>
                 ${r.status === 'new' ? '<div class="block-alert">⚠️ Перезвоните клиенту в течении 30 минут</div>' : ''}
@@ -600,6 +597,7 @@
                 document.getElementById('editClientEmail').value = data.client_email || '';
                 document.getElementById('editClientAddress').value = data.client_address || '';
                 document.getElementById('editEquipmentType').value = data.equipment_type || '';
+                document.getElementById('editStatus').value = data.status === 'new' ? 'Новая' : data.status === 'in-progress' ? 'В работе' : data.status === 'done' ? 'Выполнена' : data.status === 'cancelled' ? 'Отменена' : '';
                 document.getElementById('editPrice').value = data.price || '';
                 document.getElementById('editComment').value = data.comment || '';
                 document.getElementById('prepaymentAmount').value = data.prepayment_amount || '';
@@ -619,6 +617,15 @@
                 const overdueTextarea = document.getElementById('overdueReason');
                 if (isOverdue) { overdueSection.style.display = 'block'; overdueTextarea.value = data.overdue_reason || ''; }
                 else { overdueSection.style.display = 'none'; }
+                fetch(`/view-request/${id}/`)
+                    .then(res => res.json())
+                    .then(viewData => {
+                        document.getElementById('editCostPrice').value = viewData.cost_price !== null && viewData.cost_price !== undefined ? viewData.cost_price + ' ₽' : '—';
+                        document.getElementById('editNetProfit').value = viewData.net_profit !== null && viewData.net_profit !== undefined ? viewData.net_profit + ' ₽' : '—';
+                        document.getElementById('editWorkerSalary').value = viewData.worker_salary !== null && viewData.worker_salary !== undefined ? viewData.worker_salary + ' ₽' : '—';
+                        document.getElementById('editWorkerPercent').value = viewData.worker_percent != null ? viewData.worker_percent + '%' : '—';
+                    })
+                    .catch(err => console.error('Ошибка загрузки вычисленных полей:', err));
                 document.getElementById('editModal').classList.add('active');
             })
             .catch(err => console.error('Ошибка загрузки данных заявки:', err));
@@ -636,6 +643,7 @@
                 document.getElementById('editClientEmail').value = data.client_email || '';
                 document.getElementById('editClientAddress').value = data.client_address || '';
                 document.getElementById('editEquipmentType').value = data.equipment_type || '';
+                document.getElementById('editStatus').value = data.status === 'new' ? 'Новая' : data.status === 'in-progress' ? 'В работе' : data.status === 'done' ? 'Выполнена' : data.status === 'cancelled' ? 'Отменена' : '';
                 document.getElementById('editPrice').value = data.price || '';
                 document.getElementById('editComment').value = data.comment || '';
                 document.getElementById('prepaymentAmount').value = data.prepayment_amount || '';
@@ -655,6 +663,15 @@
                 const overdueTextarea = document.getElementById('overdueReason');
                 if (isOverdue) { overdueSection.style.display = 'block'; overdueTextarea.value = data.overdue_reason || ''; }
                 else { overdueSection.style.display = 'none'; }
+                fetch(`/view-request/${id}/`)
+                    .then(res => res.json())
+                    .then(viewData => {
+                        document.getElementById('editCostPrice').value = viewData.cost_price !== null && viewData.cost_price !== undefined ? viewData.cost_price + ' ₽' : '—';
+                        document.getElementById('editNetProfit').value = viewData.net_profit !== null && viewData.net_profit !== undefined ? viewData.net_profit + ' ₽' : '—';
+                        document.getElementById('editWorkerSalary').value = viewData.worker_salary !== null && viewData.worker_salary !== undefined ? viewData.worker_salary + ' ₽' : '—';
+                        document.getElementById('editWorkerPercent').value = viewData.worker_percent != null ? viewData.worker_percent + '%' : '—';
+                    })
+                    .catch(err => console.error('Ошибка загрузки вычисленных полей:', err));
                 
                 // Disable all inputs for view mode
                 setTimeout(() => {

@@ -368,10 +368,12 @@
         <h2>📄 Детали заявки #<span id="detailsId"></span></h2>
         <div class="field"><label>Договор</label><div class="photo-gallery" id="detailsContract"></div></div>
         <div class="field"><label>Детали и чеки</label><div id="detailsPartsList" class="parts-list"></div></div>
+        <div class="field"><label>Изначальная сумма (₽)</label><div id="detailsPrice">—</div></div>
         <div class="field"><label>Предоплата (₽)</label><div id="detailsPrepayment">—</div></div>
         <div class="field"><label>Себестоимость (₽)</label><div id="detailsCostPrice">—</div></div>
         <div class="field"><label>Чистые (₽)</label><div id="detailsNetProfit">—</div></div>
         <div class="field"><label>ЗП мастера (₽)</label><div id="detailsWorkerSalary">—</div></div>
+        <div class="field"><label>Остаётся у менеджера (₽)</label><div id="detailsAdminProfit">—</div></div>
         <div class="field"><label>Процент мастера (%)</label><div id="detailsWorkerPercent">—</div></div>
         <div class="field"><label>Причина просрочки</label><div id="detailsOverdueReason" style="background: #f9fafc; padding: 10px; border-radius: 12px;"></div></div>
         <div class="modal-actions"><button class="btn-secondary" onclick="closeModal('detailsModal')">Закрыть</button></div>
@@ -398,6 +400,7 @@
         <div class="field"><label>Себестоимость (₽)</label><input type="text" id="adminCostPrice" readonly style="background:#f0f5fa;"></div>
         <div class="field"><label>Чистые (₽)</label><input type="text" id="adminNetProfit" readonly style="background:#f0f5fa;"></div>
         <div class="field"><label>ЗП Мастера (₽)</label><input type="text" id="adminWorkerSalary" readonly style="background:#f0f5fa;"></div>
+        <div class="field"><label>Остаётся у менеджера (₽)</label><input type="text" id="adminAdminProfit" readonly style="background:#f0f5fa;"></div>
         <div class="field"><label>Договор</label><div class="photo-gallery" id="adminContractGallery"></div></div>
         <div class="field"><label>Детали (чеки)</label><div id="adminPartsList" class="parts-list"></div></div>
         <div class="field" id="adminOverdueReasonField"><label>Причина просрочки</label><textarea id="adminOverdueReason" readonly rows="3" style="background:#f0f5fa;"></textarea></div>
@@ -586,7 +589,7 @@
             block.className = `request-block ${r.status}`;
             block.innerHTML = `
                 <div class="block-header">
-                    <div class="block-id">#${r.id}</div>
+                    <div class="block-id">#${r.id} • ${created.toLocaleDateString()}</div>
                     <div class="${statusClass}">${statusText}</div>
                 </div>
                 <div class="block-content">
@@ -701,9 +704,11 @@
                 } else partsDiv.innerHTML = '<p>Нет деталей</p>';
 
                 document.getElementById('detailsPrepayment').innerHTML = data.prepayment_amount ? data.prepayment_amount + ' ₽' : '—';
+                document.getElementById('detailsPrice').innerHTML = data.price ? data.price + ' ₽' : '—';
                 document.getElementById('detailsCostPrice').innerHTML = data.cost_price ? data.cost_price + ' ₽' : '—';
                 document.getElementById('detailsNetProfit').innerHTML = data.net_profit ? data.net_profit + ' ₽' : '—';
                 document.getElementById('detailsWorkerSalary').innerHTML = data.worker_salary ? data.worker_salary + ' ₽' : '—';
+                document.getElementById('detailsAdminProfit').innerHTML = data.admin_profit !== null && data.admin_profit !== undefined ? data.admin_profit + ' ₽' : '—';
                 document.getElementById('detailsWorkerPercent').innerHTML = data.worker_percent || '50';
                 document.getElementById('detailsOverdueReason').innerHTML = data.overdue_reason ? escapeHtml(data.overdue_reason) : 'не указана';
                 document.getElementById('detailsId').textContent = id;
@@ -738,6 +743,7 @@
                         document.getElementById('adminCostPrice').value = viewData.cost_price ? viewData.cost_price + ' ₽' : '—';
                         document.getElementById('adminNetProfit').value = viewData.net_profit ? viewData.net_profit + ' ₽' : '—';
                         document.getElementById('adminWorkerSalary').value = viewData.worker_salary ? viewData.worker_salary + ' ₽' : '—';
+                        document.getElementById('adminAdminProfit').value = viewData.admin_profit !== null && viewData.admin_profit !== undefined ? viewData.admin_profit + ' ₽' : '—';
                     })
                     .catch(err => console.error('Ошибка загрузки вычисленных данных:', err));
 
