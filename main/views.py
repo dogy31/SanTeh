@@ -718,9 +718,52 @@ def get_worker_requests(request):
 def get_workers(request):
     if request.user.profile.role != 'admin':
         return JsonResponse({'error': 'permission denied'}, status=403)
-    workers = User.objects.filter(profile__role='worker').values('first_name', 'username', 'email', 'profile__phone')
-    data = [{'first_name': w['first_name'], 'phone': w['profile__phone'], 'email': w['email']} for w in workers]
+    workers = User.objects.filter(profile__role='worker').values('id', 'first_name', 'username', 'email', 'profile__phone')
+    data = [{'id': w['id'], 'first_name': w['first_name'], 'phone': w['profile__phone'], 'email': w['email']} for w in workers]
     return JsonResponse(data, safe=False)
+
+
+def _delete_request_files(req):
+    # Физически удаляем изображения из хранилища перед удалением заявки из БД.
+    for photo in req.photos.all():
+        try:
+            if photo.image:
+                photo.image.delete(save=False)
+        except Exception:
+            logger.exception("Не удалось удалить фото заявки %s", req.id)
+    for part in req.parts.all():
+        try:
+            if part.receipt_photo:
+                part.receipt_photo.delete(save=False)
+        except Exception:
+            logger.exception("Не удалось удалить чек детали %s для заявки %s", part.id, req.id)
+
+
+@login_required
+def delete_request(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+
+    req = get_object_or_404(Request, pk=pk)
+    with transaction.atomic():
+        _delete_request_files(req)
+        req.delete()
+    return JsonResponse({'success': True})
+
+
+@login_required
+def delete_worker(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+
+    worker = get_object_or_404(User, pk=pk, profile__role='worker')
+    worker_name = worker.first_name or worker.username
+    worker.delete()
+    return JsonResponse({'success': True, 'worker_name': worker_name})
 
 def reopen_request(request, pk):
     if request.method == 'POST' and request.user.is_authenticated and request.user.profile.role == 'admin':

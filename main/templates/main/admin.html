@@ -558,8 +558,11 @@
                 <td>${created.toLocaleDateString()}</td>
                 <td>${deadlineDate ? deadlineDate.toLocaleDateString() : '—'}</td>
                 <td><button class="action-link" onclick="showDetails(${r.id})">Детали</button></td>
-                <td><button class="action-link" onclick="editRequest(${r.id})">Редактировать</button></td>
-                ${r.status !== 'done' && r.status !== 'cancelled' ? `<td><button class="action-link cancel-btn" onclick="cancelRequest(${r.id}, this)">Отменить</button></td>` : '<td></td>'}
+                <td>
+                    <button class="action-link" onclick="editRequest(${r.id})">Редактировать</button>
+                    ${r.status !== 'done' && r.status !== 'cancelled' ? `<button class="action-link cancel-btn" onclick="cancelRequest(${r.id}, this)">Отменить</button>` : ''}
+                    <button class="action-link cancel-btn" onclick="deleteRequest(${r.id}, this)">Удалить</button>
+                </td>
             `;
             tbody.appendChild(row);
         });
@@ -632,12 +635,15 @@
                     <button class="btn-outline" onclick="event.stopPropagation(); showDetails(${r.id})">Детали</button>
                     <button class="btn-outline" onclick="event.stopPropagation(); editRequest(${r.id})">Редактировать</button>
                     ${r.status !== 'done' && r.status !== 'cancelled' ? `<button class="btn-danger" onclick="event.stopPropagation(); cancelRequest(${r.id}, this)">Отменить</button>` : ''}
+                    <button class="btn-danger" onclick="event.stopPropagation(); deleteRequest(${r.id}, this)">Удалить</button>
                 </div>
             `;
             block.addEventListener('click', function() {
                 const details = this.querySelector('.block-details');
-                details.style.display = details.style.display === 'block' ? 'none' : 'block';
-                this.classList.toggle('block-expanded');
+                if (details) {
+                    details.style.display = details.style.display === 'block' ? 'none' : 'block';
+                    this.classList.toggle('block-expanded');
+                }
             });
             container.appendChild(block);
         });
@@ -822,11 +828,21 @@
     document.getElementById('cancelRequestBtn').addEventListener('click', function() {
         const id = document.getElementById('adminEditId').textContent;
         if (!id || !confirm('Вы уверены, что хотите отменить эту заявку?')) return;
+        const comment = (prompt('Комментарий (обязательно при отмене):') || '').trim();
+        if (!comment) {
+            alert('Комментарий обязателен при отмене заявки');
+            return;
+        }
+        document.getElementById('adminComment').value = comment;
         const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
         saveAdminEdit(id)
         .then(data => {
             if (!data.success) throw new Error(data.error || 'Ошибка сохранения');
-            return fetch(`/cancel-request/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } });
+            return fetch(`/cancel-request/${id}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ comment })
+            });
         })
         .then(response => response.json())
         .then(data => {
@@ -849,7 +865,8 @@
         if (!confirm('Вы уверены, что хотите отменить заявку?')) return;
         const comment = (prompt('Комментарий (обязательно при отмене):') || '').trim();
         if (!comment) { alert('Комментарий обязателен при отмене заявки'); return; }
-        btn.disabled = true; btn.textContent = 'Отмена...';
+        const initialText = btn ? btn.textContent : 'Отменить';
+        if (btn) { btn.disabled = true; btn.textContent = 'Отмена...'; }
         fetch(`/cancel-request/${id}/`, {
             method: 'POST',
             headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
@@ -865,7 +882,42 @@
             else alert('Ошибка: ' + (body.error || 'Не удалось отменить заявку'));
         })
         .catch(err => console.error('Ошибка отмены:', err))
-        .finally(() => { btn.disabled = false; btn.textContent = 'Отменить'; });
+        .finally(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = initialText;
+            }
+        });
+    };
+
+    window.deleteRequest = function(id, btn) {
+        if (!confirm(`Вы уверены, что хотите полностью удалить заявку #${id} из базы со всеми данными и изображениями?`)) return;
+        const initialText = btn ? btn.textContent : 'Удалить';
+        if (btn) { btn.disabled = true; btn.textContent = 'Удаление...'; }
+        fetch(`/delete-request/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken }
+        })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200 && body.success) {
+                closeModal('editModalAdmin');
+                loadRequests();
+                alert(`Заявка #${id} удалена`);
+            } else {
+                alert('Ошибка: ' + (body.error || 'Не удалось удалить заявку'));
+            }
+        })
+        .catch(err => {
+            console.error('Ошибка удаления заявки:', err);
+            alert('Не удалось удалить заявку');
+        })
+        .finally(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = initialText;
+            }
+        });
     };
 
     document.getElementById('saveCreateBtn').addEventListener('click', function() {
@@ -1004,8 +1056,42 @@
                 <div style="font-size: 14px; color: #4a6778;">
                     <div style="margin-bottom: 6px;">📞 ${escapeHtml(w.phone || '—')}</div>
                 </div>
+                <div style="margin-top: 12px;">
+                    <button class="btn-danger worker-delete-btn" data-worker-id="${w.id}" data-worker-name="${escapeHtml(w.first_name || 'Мастер')}">Удалить мастера</button>
+                </div>
             `;
             container.appendChild(workerBlock);
+        });
+        container.querySelectorAll('.worker-delete-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const workerId = this.dataset.workerId;
+                const workerName = this.dataset.workerName || 'мастера';
+                if (!workerId) return;
+                if (!confirm(`Удалить ${workerName} из базы данных?`)) return;
+                const initialText = this.textContent;
+                this.disabled = true;
+                this.textContent = 'Удаление...';
+                fetch(`/delete-worker/${workerId}/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken }
+                })
+                .then(response => response.json().then(data => ({status: response.status, body: data})))
+                .then(({status, body}) => {
+                    if (status === 200 && body.success) {
+                        loadWorkers();
+                    } else {
+                        alert('Ошибка: ' + (body.error || 'Не удалось удалить мастера'));
+                    }
+                })
+                .catch(err => {
+                    console.error('Ошибка удаления мастера:', err);
+                    alert('Не удалось удалить мастера');
+                })
+                .finally(() => {
+                    this.disabled = false;
+                    this.textContent = initialText;
+                });
+            });
         });
     }
 
