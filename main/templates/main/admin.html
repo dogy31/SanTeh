@@ -48,6 +48,7 @@
     tr.overdue { background-color: #ffefed; }
     .status { display: inline-block; padding: 5px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; white-space: nowrap; }
     .status.new { background: #e1edfb; color: #1b5f8c; }
+    .status.accepted { background: #e8f7ec; color: #1f7a38; }
     .status.done { background: #dff0e0; color: #1d6f2c; }
     .status.cancelled { background: #ffeaea; color: #c03c2b; }
     .status.in-progress { background: #fff2d6; color: #a16500; }
@@ -64,6 +65,7 @@
     .block-id { font-size: 18px; font-weight: 700; color: #1b6f8f; }
     .block-status { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; }
     .block-status.new { background: #e1edfb; color: #1b5f8c; }
+    .block-status.accepted { background: #e8f7ec; color: #1f7a38; }
     .block-status.in-progress { background: #fff2d6; color: #a16500; }
     .block-status.done { background: #dff0e0; color: #1d6f2c; }
     .block-status.cancelled { background: #ffeaea; color: #c03c2b; }
@@ -77,6 +79,7 @@
     .request-block { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; cursor: pointer; transition: transform 0.2s; }
     .request-block:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
     .request-block.new { border-left: 4px solid #2f7e9e; }
+    .request-block.accepted { border-left: 4px solid #1f7a38; }
     .request-block.in-progress { border-left: 4px solid #a16500; }
     .request-block.done { border-left: 4px solid #1d6f2c; }
     .request-block.cancelled { border-left: 4px solid #c03c2b; }
@@ -84,6 +87,7 @@
     .block-id { font-size: 18px; font-weight: 700; color: #0b2b40; }
     .block-status { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 500; }
     .block-status.new { background: #e1edfb; color: #1b5f8c; }
+    .block-status.accepted { background: #e8f7ec; color: #1f7a38; }
     .block-status.in-progress { background: #fff2d6; color: #a16500; }
     .block-status.done { background: #dff0e0; color: #1d6f2c; }
     .block-status.cancelled { background: #ffeaea; color: #c03c2b; }
@@ -124,9 +128,16 @@
     .field { margin-bottom: 16px; }
     .field label { display: block; font-weight: 500; color: #1d4f65; margin-bottom: 4px; font-size: 14px; }
     .field input, .field select, .field textarea { width: 100%; padding: 10px 14px; border: 1px solid #cbdae7; border-radius: 20px; font-size: 15px; background: #f9fcff; }
+    .field-inline-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+    .field-inline-row input { width: 100%; }
+    .option-row { display: flex; gap: 8px; align-items: center; }
+    .option-row .btn-secondary { padding: 10px 14px; white-space: nowrap; }
     .field textarea { min-height: 80px; resize: vertical; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 25px; flex-wrap: wrap; }
     .photo-gallery { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+    .documents-list { display: grid; gap: 10px; margin-top: 12px; }
+    .document-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #d9e5ef; border-radius: 14px; background: #f8fafc; }
+    .document-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .photo-thumb { width: 80px; height: 80px; background: #d9e2e8; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #2f5568; border: 1px solid #b8cfdd; cursor: pointer; overflow: hidden; }
     .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
     .parts-list { margin-top: 10px; }
@@ -201,6 +212,7 @@
             border-radius: 24px;
         }
         .modal-content h2 { font-size: 24px; }
+        .field-inline-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .mobile-filter-close {
             display: inline-flex;
         }
@@ -249,6 +261,7 @@
         <div class="header-buttons">
             <button class="btn-primary btn-large" id="showCreateModal">Новая заявка</button>
             <button class="btn-secondary" id="showWorkersModal">Мастера</button>
+            <button class="btn-secondary" id="showDocumentsModal">Документы</button>
             <button class="btn-secondary" id="bindMessengersBtn">Мессенджеры</button>
             <a href="{% url 'logout' %}" class="btn-danger" style="text-decoration: none;">Выйти</a>
         </div>
@@ -278,6 +291,7 @@
                         <button type="button" class="status-dropdown__button" id="filterStatusToggle">Все</button>
                         <div class="status-dropdown__options" id="filterStatusOptions">
                             <label><input type="checkbox" class="status-checkbox" value="new">Новая</label>
+                            <label><input type="checkbox" class="status-checkbox" value="accepted">Принял</label>
                             <label><input type="checkbox" class="status-checkbox" value="in-progress">В работе</label>
                             <label><input type="checkbox" class="status-checkbox" value="done">Выполнена</label>
                             <label><input type="checkbox" class="status-checkbox" value="cancelled">Отменена</label>
@@ -306,8 +320,8 @@
                 <tr>
                     <th style="width:60px">ID</th>
                     <th>Задача</th>
-                    <th>Имя клиента</th>
                     <th style="width:120px">Телефон</th>
+                    <th style="width:90px">Время</th>
                     <th>Адрес</th>
                     <th style="width:120px">Вид техники</th>
                     <th style="width:100px">Статус</th>
@@ -341,11 +355,32 @@
     <div class="modal-content">
         <h2>➕ Новая заявка</h2>
         <div class="field"><label>Описание задачи</label><textarea id="createDesc" placeholder="Что нужно сделать?" required></textarea></div>
-        <div class="field"><label>Имя клиента</label><input type="text" id="createClientName" placeholder="Например: Иванов Иван" required></div>
         <div class="field"><label>Телефон клиента</label><input type="tel" id="createClientPhone" class="phone-input" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="+7 (___) ___-__-__" required></div>
         <div class="field"><label>Email клиента</label><input type="email" id="createClientEmail" placeholder="client@example.ru"></div>
-        <div class="field"><label>Адрес клиента</label><input type="text" id="createClientAddress" placeholder="ул. Ленина, д.10, кв.5" required></div>
-        <div class="field"><label>Вид техники</label><input type="text" id="createEquipmentType" placeholder="Например: водонагреватель"></div>
+        <div class="field">
+            <label>Адрес клиента</label>
+            <div class="option-row">
+                <select id="createClientAddress">
+                    <option value="">Выберите адрес</option>
+                </select>
+                <button type="button" class="btn-secondary" id="addCreateAddressBtn">Добавить</button>
+            </div>
+            <div class="field-inline-row">
+                <input type="text" id="createHouseNumber" placeholder="Дом">
+                <input type="text" id="createEntrance" placeholder="Подъезд">
+                <input type="text" id="createFloor" placeholder="Этаж">
+                <input type="text" id="createApartment" placeholder="Квартира">
+            </div>
+        </div>
+        <div class="field">
+            <label>Вид техники</label>
+            <div class="option-row">
+                <select id="createEquipmentType">
+                    <option value="">Выберите вид техники</option>
+                </select>
+                <button type="button" class="btn-secondary" id="addCreateEquipmentBtn">Добавить</button>
+            </div>
+        </div>
         <div class="field"><label>Назначить рабочего</label>
             <select id="createWorker" name="worker_id">
                 {% for w in workers %}
@@ -354,6 +389,7 @@
             </select>
         </div>
         <div class="field"><label>Процент рабочего (%)</label><input type="number" id="createWorkerPercent" value="50" min="0" max="100"></div>
+        <div class="field"><label>Время</label><input type="time" id="createVisitTime"></div>
         <div class="field"><label>Дата выполнения (дедлайн)</label><input type="date" id="createDeadlineDate" required></div>
         <div class="modal-actions">
             <button class="btn-secondary" onclick="closeModal('createModal')">Отмена</button>
@@ -368,6 +404,7 @@
         <h2>📄 Детали заявки #<span id="detailsId"></span></h2>
         <div class="field"><label>Договор</label><div class="photo-gallery" id="detailsContract"></div></div>
         <div class="field"><label>Детали и чеки</label><div id="detailsPartsList" class="parts-list"></div></div>
+        <div class="field"><label>Транспортные</label><div id="detailsTransportList" class="parts-list"></div></div>
         <div class="field"><label>Изначальная сумма (₽)</label><div id="detailsPrice">—</div></div>
         <div class="field"><label>Предоплата (₽)</label><div id="detailsPrepayment">—</div></div>
         <div class="field"><label>Себестоимость (₽)</label><div id="detailsCostPrice">—</div></div>
@@ -385,15 +422,37 @@
     <div class="modal-content">
         <h2>✏️ Редактирование заявки #<span id="adminEditId"></span></h2>
         <div class="field"><label>Описание задачи</label><textarea id="adminDesc"></textarea></div>
-        <div class="field"><label>Имя клиента</label><input type="text" id="adminClientName"></div>
         <div class="field"><label>Телефон клиента</label><input type="tel" id="adminClientPhone" class="phone-input"></div>
         <div class="field"><label>Email клиента</label><input type="email" id="adminClientEmail"></div>
-        <div class="field"><label>Адрес клиента</label><input type="text" id="adminClientAddress"></div>
-        <div class="field"><label>Вид техники</label><input type="text" id="adminEquipmentType"></div>
+        <div class="field">
+            <label>Адрес клиента</label>
+            <div class="option-row">
+                <select id="adminClientAddress">
+                    <option value="">Выберите адрес</option>
+                </select>
+                <button type="button" class="btn-secondary" id="addAdminAddressBtn">Добавить</button>
+            </div>
+            <div class="field-inline-row">
+                <input type="text" id="adminHouseNumber" placeholder="Дом">
+                <input type="text" id="adminEntrance" placeholder="Подъезд">
+                <input type="text" id="adminFloor" placeholder="Этаж">
+                <input type="text" id="adminApartment" placeholder="Квартира">
+            </div>
+        </div>
+        <div class="field">
+            <label>Вид техники</label>
+            <div class="option-row">
+                <select id="adminEquipmentType">
+                    <option value="">Выберите вид техники</option>
+                </select>
+                <button type="button" class="btn-secondary" id="addAdminEquipmentBtn">Добавить</button>
+            </div>
+        </div>
         <div class="field"><label>Назначить рабочего</label><select id="adminWorker"><option value="">—</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
         <div class="field"><label>Процент рабочего (%)</label><input type="number" id="adminWorkerPercent" min="0" max="100" step="1"></div>
+        <div class="field"><label>Время</label><input type="time" id="adminVisitTime"></div>
         <div class="field"><label>Дата выполнения (дедлайн)</label><input type="date" id="adminDeadlineDate"></div>
-        <div class="field"><label>Статус</label><select id="adminStatus"><option value="new">Новая</option><option value="in-progress">В работе</option><option value="done">Выполнена</option></select></div>
+        <div class="field"><label>Статус</label><select id="adminStatus"><option value="new">Новая</option><option value="accepted">Принял</option><option value="in-progress">В работе</option><option value="done">Выполнена</option></select></div>
         <div class="field"><label>Цена</label><input type="number" id="adminPrice"></div>
         <div class="field"><label>Комментарий</label><textarea id="adminComment"></textarea></div>
         <div class="field"><label>Предоплата (₽)</label><input type="text" id="adminPrepayment" readonly style="background:#f0f5fa;"></div>
@@ -403,6 +462,7 @@
         <div class="field"><label>Остаётся у менеджера (₽)</label><input type="text" id="adminAdminProfit" readonly style="background:#f0f5fa;"></div>
         <div class="field"><label>Договор</label><div class="photo-gallery" id="adminContractGallery"></div></div>
         <div class="field"><label>Детали (чеки)</label><div id="adminPartsList" class="parts-list"></div></div>
+        <div class="field"><label>Транспортные</label><div id="adminTransportList" class="parts-list"></div></div>
         <div class="field" id="adminOverdueReasonField"><label>Причина просрочки</label><textarea id="adminOverdueReason" readonly rows="3" style="background:#f0f5fa;"></textarea></div>
         <div class="modal-actions">
             <button class="btn-secondary" onclick="closeModal('editModalAdmin')">Отмена</button>
@@ -424,8 +484,91 @@
     const csrftoken = '{{ csrf_token }}';
     const currentUserId = parseInt("{{ request.user.id }}") || 0;
     let viewMode = 'table'; // 'table' or 'blocks'
+    let equipmentOptions = [];
+    let addressBaseOptions = [];
+    const statusTextMap = {
+        'new': 'Новая',
+        'accepted': 'Принял',
+        'in-progress': 'В работе',
+        'done': 'Выполнена',
+        'cancelled': 'Отменена'
+    };
 
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function phoneLinkHtml(phone) {
+        const raw = (phone || '').toString();
+        const digits = raw.replace(/\D/g, '');
+        if (!digits) return '—';
+        const href = digits.length === 11 ? `+${digits}` : digits;
+        const title = formatPhoneValue(digits);
+        return `<a href="tel:${href}" style="color:#2f7e9e; text-decoration:underline;">${escapeHtml(title || raw)}</a>`;
+    }
+    function normalizeOptionValue(value) { return (value || '').trim(); }
+    function ensureInOptions(options, value) {
+        const normalized = normalizeOptionValue(value);
+        if (!normalized) return false;
+        const exists = options.some(item => item.toLowerCase() === normalized.toLowerCase());
+        if (!exists) options.push(normalized);
+        options.sort((a, b) => a.localeCompare(b, 'ru'));
+        return true;
+    }
+    function renderSelectOptions(selectId, options, placeholder) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const currentValue = normalizeOptionValue(select.value);
+        let html = `<option value="">${placeholder}</option>`;
+        options.forEach(opt => {
+            const selected = currentValue && opt.toLowerCase() === currentValue.toLowerCase() ? 'selected' : '';
+            html += `<option value="${escapeHtml(opt)}" ${selected}>${escapeHtml(opt)}</option>`;
+        });
+        select.innerHTML = html;
+    }
+    function syncOptionSelects() {
+        renderSelectOptions('createEquipmentType', equipmentOptions, 'Выберите вид техники');
+        renderSelectOptions('adminEquipmentType', equipmentOptions, 'Выберите вид техники');
+        renderSelectOptions('createClientAddress', addressBaseOptions, 'Выберите адрес');
+        renderSelectOptions('adminClientAddress', addressBaseOptions, 'Выберите адрес');
+    }
+    function addEquipmentOption(value, selectedTargetId) {
+        const normalized = normalizeOptionValue(value);
+        if (!normalized) return false;
+        if (!ensureInOptions(equipmentOptions, normalized)) return false;
+        syncOptionSelects();
+        const target = document.getElementById(selectedTargetId);
+        if (target) target.value = normalized;
+        return true;
+    }
+    function addAddressOption(value, selectedTargetId) {
+        const normalized = normalizeOptionValue(value);
+        if (!normalized) return false;
+        if (!ensureInOptions(addressBaseOptions, normalized)) return false;
+        syncOptionSelects();
+        const target = document.getElementById(selectedTargetId);
+        if (target) target.value = normalized;
+        return true;
+    }
+    function askAndAddOption(message, addFn, targetId) {
+        const value = prompt(message);
+        if (value === null) return;
+        if (!addFn(value, targetId)) {
+            alert('Введите непустое значение');
+        }
+    }
+    function loadRequestOptions() {
+        return fetch('/api/request-options/')
+            .then(response => response.json())
+            .then(data => {
+                equipmentOptions = Array.isArray(data.equipment_types) ? data.equipment_types.filter(Boolean) : [];
+                addressBaseOptions = Array.isArray(data.address_bases) ? data.address_bases.filter(Boolean) : [];
+                equipmentOptions.sort((a, b) => a.localeCompare(b, 'ru'));
+                addressBaseOptions.sort((a, b) => a.localeCompare(b, 'ru'));
+                syncOptionSelects();
+            })
+            .catch(err => {
+                console.error('Ошибка загрузки опций заявок:', err);
+                syncOptionSelects();
+            });
+    }
     function showUserWarning(message, focusEl) {
         alert(message);
         try { if (focusEl) focusEl.focus(); } catch (e) {}
@@ -485,7 +628,8 @@
         options.querySelectorAll('.status-checkbox').forEach(input => {
             input.addEventListener('change', function() {
                 const checked = Array.from(options.querySelectorAll('.status-checkbox:checked')).map(i => i.value);
-                toggle.textContent = checked.length === 0 || checked.length === 4 ? 'Все' : checked.map(v => v === 'new' ? 'Новая' : v === 'in-progress' ? 'В работе' : v === 'done' ? 'Выполнена' : v === 'cancelled' ? 'Отменена' : '').join(', ');
+                const total = options.querySelectorAll('.status-checkbox').length;
+                toggle.textContent = checked.length === 0 || checked.length === total ? 'Все' : checked.map(v => statusTextMap[v] || '').join(', ');
             });
         });
     }
@@ -535,14 +679,15 @@
             const row = document.createElement('tr');
             if (isOverdue) row.classList.add('overdue');
             let statusClass = 'status new', statusText = 'Новая';
+            if (r.status === 'accepted') { statusClass = 'status accepted'; statusText = 'Принял'; }
             if (r.status === 'in-progress') { statusClass = 'status in-progress'; statusText = 'В работе'; }
             else if (r.status === 'done') { statusClass = 'status done'; statusText = 'Выполнена'; }
             else if (r.status === 'cancelled') { statusClass = 'status cancelled'; statusText = 'Отменена'; }
             row.innerHTML = `
                 <td>#${r.id}</td>
                 <td>${escapeHtml(r.description)}</td>
-                <td>${escapeHtml(r.client_name)}</td>
-                <td>${escapeHtml(r.client_phone)}</td>
+                <td>${phoneLinkHtml(r.client_phone)}</td>
+                <td>${r.visit_time || '—'}</td>
                 <td>${escapeHtml(r.client_address || '')}</td>
                 <td>${escapeHtml(r.equipment_type || '')}</td>
                 <td><span class="${statusClass}">${statusText}</span></td>
@@ -560,6 +705,7 @@
                 <td><button class="action-link" onclick="showDetails(${r.id})">Детали</button></td>
                 <td>
                     <button class="action-link" onclick="editRequest(${r.id})">Редактировать</button>
+                    ${r.status === 'new' ? `<button class="action-link" onclick="acceptRequest(${r.id}, this)">Принять</button>` : ''}
                     ${r.status !== 'done' && r.status !== 'cancelled' ? `<button class="action-link cancel-btn" onclick="cancelRequest(${r.id}, this)">Отменить</button>` : ''}
                     <button class="action-link cancel-btn" onclick="deleteRequest(${r.id}, this)">Удалить</button>
                 </td>
@@ -585,6 +731,7 @@
             const created = new Date(r.created_date);
             const daysSinceCreated = Math.floor((today - created) / (1000 * 60 * 60 * 24));
             let statusClass = 'block-status new', statusText = 'Новая';
+            if (r.status === 'accepted') { statusClass = 'block-status accepted'; statusText = 'Принял'; }
             if (r.status === 'in-progress') { statusClass = 'block-status in-progress'; statusText = 'В работе'; }
             else if (r.status === 'done') { statusClass = 'block-status done'; statusText = 'Выполнена'; }
             else if (r.status === 'cancelled') { statusClass = 'block-status cancelled'; statusText = 'Отменена'; }
@@ -592,7 +739,7 @@
             block.className = `request-block ${r.status}`;
             block.innerHTML = `
                 <div class="block-header">
-                    <div class="block-id">#${r.id} • ${created.toLocaleDateString()}</div>
+                    <div class="block-id">#${r.id} • ${r.visit_time || '—'} • ${created.toLocaleDateString()}</div>
                     <div class="${statusClass}">${statusText}</div>
                 </div>
                 <div class="block-content">
@@ -601,8 +748,8 @@
                         <div class="block-value">${escapeHtml(r.description)}</div>
                     </div>
                     <div class="block-field">
-                        <div class="block-label">Клиент</div>
-                        <div class="block-value">${escapeHtml(r.client_name)} • ${escapeHtml(r.client_phone)}</div>
+                        <div class="block-label">Номер</div>
+                        <div class="block-value">${phoneLinkHtml(r.client_phone)}</div>
                     </div>
                     <div class="block-field">
                         <div class="block-label">Адрес</div>
@@ -634,6 +781,7 @@
                 <div class="block-actions">
                     <button class="btn-outline" onclick="event.stopPropagation(); showDetails(${r.id})">Детали</button>
                     <button class="btn-outline" onclick="event.stopPropagation(); editRequest(${r.id})">Редактировать</button>
+                    ${r.status === 'new' ? `<button class="btn-outline" onclick="event.stopPropagation(); acceptRequest(${r.id}, this)">Принять</button>` : ''}
                     ${r.status !== 'done' && r.status !== 'cancelled' ? `<button class="btn-danger" onclick="event.stopPropagation(); cancelRequest(${r.id}, this)">Отменить</button>` : ''}
                     <button class="btn-danger" onclick="event.stopPropagation(); deleteRequest(${r.id}, this)">Удалить</button>
                 </div>
@@ -709,6 +857,20 @@
                     });
                 } else partsDiv.innerHTML = '<p>Нет деталей</p>';
 
+                const transportDiv = document.getElementById('detailsTransportList');
+                transportDiv.innerHTML = '';
+                if (data.transport && data.transport.length) {
+                    data.transport.forEach(item => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'part-item';
+                        itemDiv.innerHTML = `
+                            <strong>${escapeHtml(item.note || 'Без описания')}</strong><br>
+                            ${item.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;" onclick="openPhotoViewer('${item.receipt_photo_url}')"><img src="${item.receipt_photo_url}" alt="transport"></div>` : '<span style="color:#4a6778;">Фото не прикреплено</span>'}
+                        `;
+                        transportDiv.appendChild(itemDiv);
+                    });
+                } else transportDiv.innerHTML = '<p>Нет транспортных</p>';
+
                 document.getElementById('detailsPrepayment').innerHTML = data.prepayment_amount ? data.prepayment_amount + ' ₽' : '—';
                 document.getElementById('detailsPrice').innerHTML = data.price ? data.price + ' ₽' : '—';
                 document.getElementById('detailsCostPrice').innerHTML = data.cost_price ? data.cost_price + ' ₽' : '—';
@@ -729,14 +891,18 @@
             .then(data => {
                 document.getElementById('adminEditId').textContent = data.id;
                 document.getElementById('adminDesc').value = data.description || '';
-                document.getElementById('adminClientName').value = data.client_name || '';
                 document.getElementById('adminClientPhone').value = data.client_phone || '';
                 document.getElementById('adminClientEmail').value = data.client_email || '';
-                document.getElementById('adminClientAddress').value = data.client_address || '';
-                document.getElementById('adminEquipmentType').value = data.equipment_type || '';
+                addAddressOption(data.base_address || data.client_address || '', 'adminClientAddress');
+                addEquipmentOption(data.equipment_type || '', 'adminEquipmentType');
+                document.getElementById('adminHouseNumber').value = data.house_number || '';
+                document.getElementById('adminEntrance').value = data.entrance || '';
+                document.getElementById('adminFloor').value = data.floor || '';
+                document.getElementById('adminApartment').value = data.apartment || '';
                 document.getElementById('adminPrice').value = data.price || '';
                 document.getElementById('adminComment').value = data.comment || '';
                 document.getElementById('adminDeadlineDate').value = data.deadline_date || '';
+                document.getElementById('adminVisitTime').value = data.visit_time || '';
                 document.getElementById('adminStatus').value = data.status || '';
                 document.getElementById('adminWorker').value = data.worker_id || '';
                 document.getElementById('adminWorkerPercent').value = data.worker_percent != null ? data.worker_percent : '';
@@ -784,6 +950,20 @@
                     });
                 } else partsDiv.innerHTML = '<p>Нет деталей</p>';
 
+                const transportDiv = document.getElementById('adminTransportList');
+                transportDiv.innerHTML = '';
+                if (data.transport && data.transport.length) {
+                    data.transport.forEach(item => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'part-item';
+                        itemDiv.innerHTML = `
+                            <strong>${escapeHtml(item.note || 'Без описания')}</strong><br>
+                            ${item.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;" onclick="openPhotoViewer('${item.receipt_photo_url}')"><img src="${item.receipt_photo_url}" alt="transport"></div>` : '<span style="color:#4a6778;">Фото не прикреплено</span>'}
+                        `;
+                        transportDiv.appendChild(itemDiv);
+                    });
+                } else transportDiv.innerHTML = '<p>Нет транспортных</p>';
+
                 document.getElementById('editModalAdmin').classList.add('active');
             })
             .catch(error => console.error('Ошибка загрузки данных заявки:', error));
@@ -792,15 +972,19 @@
     function saveAdminEdit(id) {
         const formData = new FormData();
         formData.append('description', document.getElementById('adminDesc').value);
-        formData.append('client_name', document.getElementById('adminClientName').value);
         formData.append('client_phone', document.getElementById('adminClientPhone').value.replace(/\D/g, ''));
         formData.append('client_email', document.getElementById('adminClientEmail').value);
         formData.append('client_address', document.getElementById('adminClientAddress').value);
+        formData.append('house_number', document.getElementById('adminHouseNumber').value);
+        formData.append('entrance', document.getElementById('adminEntrance').value);
+        formData.append('floor', document.getElementById('adminFloor').value);
+        formData.append('apartment', document.getElementById('adminApartment').value);
         formData.append('equipment_type', document.getElementById('adminEquipmentType').value);
         formData.append('price', document.getElementById('adminPrice').value);
         formData.append('comment', document.getElementById('adminComment').value);
         formData.append('prepayment_amount', document.getElementById('adminPrepayment').value);
         formData.append('deadline_date', document.getElementById('adminDeadlineDate').value);
+        formData.append('visit_time', document.getElementById('adminVisitTime').value);
         formData.append('status', document.getElementById('adminStatus').value);
         formData.append('worker_id', document.getElementById('adminWorker').value);
         formData.append('worker_percent', document.getElementById('adminWorkerPercent').value);
@@ -920,24 +1104,105 @@
         });
     };
 
+    window.acceptRequest = function(id, btn) {
+        if (!confirm(`Подтвердить принятие заявки #${id}?`)) return;
+        const initialText = btn ? btn.textContent : 'Принять';
+        if (btn) { btn.disabled = true; btn.textContent = 'Принятие...'; }
+        fetch(`/accept-request/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken }
+        })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200 && body.success) {
+                loadRequests();
+            } else {
+                alert('Ошибка: ' + (body.error || 'Не удалось принять заявку'));
+            }
+        })
+        .catch(err => {
+            console.error('Ошибка принятия заявки:', err);
+            alert('Не удалось принять заявку');
+        })
+        .finally(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = initialText;
+            }
+        });
+    };
+
+    function resetCreateForm() {
+        document.getElementById('createDesc').value = '';
+        document.getElementById('createClientPhone').value = '';
+        document.getElementById('createClientEmail').value = '';
+        document.getElementById('createClientAddress').value = '';
+        document.getElementById('createHouseNumber').value = '';
+        document.getElementById('createEntrance').value = '';
+        document.getElementById('createFloor').value = '';
+        document.getElementById('createApartment').value = '';
+        document.getElementById('createEquipmentType').value = '';
+        document.getElementById('createVisitTime').value = '';
+        document.getElementById('createWorkerPercent').value = '50';
+    }
+
+    function renderDocumentsList(documents) {
+        const list = document.getElementById('documentsList');
+        list.innerHTML = '';
+        if (!documents || !documents.length) {
+            list.innerHTML = '<div style="color:#4a6778;">Документы пока не загружены</div>';
+            return;
+        }
+        documents.forEach(doc => {
+            const row = document.createElement('div');
+            row.className = 'document-item';
+            row.innerHTML = `
+                <div>
+                    <div style="font-weight:600; color:#0b2b40;">${escapeHtml(doc.title || 'Документ')}</div>
+                    <div style="font-size:12px; color:#4a6778;">${escapeHtml(doc.filename || '')}</div>
+                </div>
+                <div class="document-actions">
+                    <a class="btn-secondary" href="${doc.file_url}" target="_blank" download>Скачать</a>
+                    <button class="btn-secondary" type="button" onclick="window.open('${doc.file_url}', '_blank')">Печать</button>
+                    <button class="btn-danger" type="button" onclick="deleteDocument(${doc.id})">Удалить</button>
+                </div>
+            `;
+            list.appendChild(row);
+        });
+    }
+
+    function loadDocuments() {
+        fetch('/api/documents/')
+            .then(response => response.json())
+            .then(data => renderDocumentsList(data))
+            .catch(err => console.error('Ошибка загрузки документов:', err));
+    }
+
+    window.deleteDocument = function(id) {
+        if (!confirm('Удалить этот документ?')) return;
+        fetch(`/delete-document/${id}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken }
+        })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200 && body.success) loadDocuments();
+            else alert('Ошибка: ' + (body.error || 'Не удалось удалить документ'));
+        })
+        .catch(err => console.error('Ошибка удаления документа:', err));
+    };
+
     document.getElementById('saveCreateBtn').addEventListener('click', function() {
         const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
         const descEl = document.getElementById('createDesc');
-        const nameEl = document.getElementById('createClientName');
         const phoneInput = document.getElementById('createClientPhone');
         const addrEl = document.getElementById('createClientAddress');
         const deadlineEl = document.getElementById('createDeadlineDate');
         const desc = (descEl.value || '').trim();
-        const clientName = (nameEl.value || '').trim();
         const addr = (addrEl.value || '').trim();
 
         if (!desc) {
             showUserWarning('Заполните описание задачи', descEl);
-            btn.disabled = false; btn.textContent = 'Создать';
-            return;
-        }
-        if (!clientName) {
-            showUserWarning('Заполните имя клиента', nameEl);
             btn.disabled = false; btn.textContent = 'Создать';
             return;
         }
@@ -967,11 +1232,15 @@
         }
         const formData = new FormData();
         formData.append('description', desc);
-        formData.append('client_name', clientName);
         formData.append('client_phone', phoneDigits);
         formData.append('client_email', document.getElementById('createClientEmail').value);
         formData.append('client_address', addr);
+        formData.append('house_number', document.getElementById('createHouseNumber').value);
+        formData.append('entrance', document.getElementById('createEntrance').value);
+        formData.append('floor', document.getElementById('createFloor').value);
+        formData.append('apartment', document.getElementById('createApartment').value);
         formData.append('equipment_type', document.getElementById('createEquipmentType').value);
+        formData.append('visit_time', document.getElementById('createVisitTime').value);
         formData.append('worker_id', workerId);
         formData.append('worker_percent', document.getElementById('createWorkerPercent').value || '50');
         formData.append('deadline_date', deadlineDate);
@@ -985,6 +1254,7 @@
             if (data.success) {
                 showBrowserNotification('✅ Заявка создана', `Заявка #${data.id} успешно создана и назначена мастеру`);
                 closeModal('createModal');
+                resetCreateForm();
                 loadRequests();
             }
             else showUserWarning('Ошибка создания: ' + (data.error || 'неизвестная ошибка'));
@@ -994,6 +1264,7 @@
     });
 
     document.getElementById('showCreateModal').addEventListener('click', function() {
+        resetCreateForm();
         setDefaultDeadlineOffset(5);
         document.getElementById('createModal').classList.add('active');
     });
@@ -1036,7 +1307,49 @@
     };
     window.onclick = function(event) { if (event.target.classList.contains('modal')) event.target.classList.remove('active'); };
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
-    loadRequests();
+    document.getElementById('addCreateEquipmentBtn').addEventListener('click', function() {
+        askAndAddOption('Введите новый вид техники', addEquipmentOption, 'createEquipmentType');
+    });
+    document.getElementById('addAdminEquipmentBtn').addEventListener('click', function() {
+        askAndAddOption('Введите новый вид техники', addEquipmentOption, 'adminEquipmentType');
+    });
+    document.getElementById('addCreateAddressBtn').addEventListener('click', function() {
+        askAndAddOption('Введите базовый адрес (улица/населённый пункт)', addAddressOption, 'createClientAddress');
+    });
+    document.getElementById('addAdminAddressBtn').addEventListener('click', function() {
+        askAndAddOption('Введите базовый адрес (улица/населённый пункт)', addAddressOption, 'adminClientAddress');
+    });
+    document.getElementById('showDocumentsModal').addEventListener('click', function() {
+        loadDocuments();
+        document.getElementById('documentsModal').classList.add('active');
+    });
+    document.getElementById('uploadDocumentBtn').addEventListener('click', function() {
+        const title = (document.getElementById('documentTitle').value || '').trim();
+        const fileInput = document.getElementById('documentFile');
+        const file = fileInput.files && fileInput.files[0];
+        if (!title) { alert('Введите название документа'); return; }
+        if (!file) { alert('Выберите файл документа'); return; }
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('file', file);
+        fetch('/upload-document/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200 && body.success) {
+                document.getElementById('documentTitle').value = '';
+                fileInput.value = '';
+                loadDocuments();
+            } else {
+                alert('Ошибка: ' + (body.error || 'Не удалось загрузить документ'));
+            }
+        })
+        .catch(err => console.error('Ошибка загрузки документа:', err));
+    });
+    loadRequestOptions().finally(() => loadRequests());
 
     function loadWorkers() {
         fetch('/api/workers/')
@@ -1140,6 +1453,28 @@
         <div id="workersList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin: 20px 0;"></div>
         <div class="modal-actions">
             <button class="btn-secondary" onclick="closeModal('workersModal')">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно документов -->
+<div class="modal" id="documentsModal">
+    <div class="modal-content">
+        <h2>📄 Документы</h2>
+        <div class="field">
+            <label>Название документа</label>
+            <input type="text" id="documentTitle" placeholder="Например: Акт выполненных работ">
+        </div>
+        <div class="field">
+            <label>Файл документа</label>
+            <input type="file" id="documentFile">
+        </div>
+        <div class="modal-actions" style="margin-top: 12px;">
+            <button class="btn-primary" id="uploadDocumentBtn">Загрузить</button>
+        </div>
+        <div class="documents-list" id="documentsList"></div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('documentsModal')">Закрыть</button>
         </div>
     </div>
 </div>

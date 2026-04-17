@@ -18,19 +18,25 @@ class Profile(models.Model):
 class Request(models.Model):
     STATUS_CHOICES = (
         ('new', 'Новая'),
+        ('accepted', 'Принял'),
         ('in-progress', 'В работе'),
         ('done', 'Выполнена'),
         ('cancelled', 'Отменена'),
     )
     description = models.TextField('Описание задачи')
-    client_name = models.CharField('Имя клиента', max_length=100)
+    client_name = models.CharField('Имя клиента', max_length=100, blank=True, default='')
     client_phone = models.CharField('Телефон клиента', max_length=20)
     client_email = models.EmailField('Email клиента', blank=True)
     client_address = models.CharField('Адрес клиента', max_length=200, blank=True)
+    house_number = models.CharField('Номер дома', max_length=20, blank=True, default='')
+    entrance = models.CharField('Подъезд', max_length=20, blank=True, default='')
+    floor = models.CharField('Этаж', max_length=20, blank=True, default='')
+    apartment = models.CharField('Квартира', max_length=20, blank=True, default='')
     equipment_type = models.CharField('Вид техники', max_length=100, blank=True)
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='requests', verbose_name='Исполнитель')
     created_date = models.DateTimeField('Дата создания', auto_now_add=True)
     deadline_date = models.DateField('Дата выполнения', null=True, blank=True)
+    visit_time = models.TimeField('Время визита', null=True, blank=True)
     status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='new')
     price = models.DecimalField('Цена', max_digits=10, decimal_places=2, null=True, blank=True)
     comment = models.TextField('Комментарий рабочего', blank=True)
@@ -40,7 +46,29 @@ class Request(models.Model):
     worker_percent = models.PositiveSmallIntegerField('Процент рабочего от чистой прибыли', default=50)
 
     def __str__(self):
-        return f"Заявка #{self.id} - {self.client_name}"
+        return f"Заявка #{self.id} - {self.client_name or 'без имени'}"
+
+
+class EquipmentTypeOption(models.Model):
+    value = models.CharField('Вид техники', max_length=100, unique=True)
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+
+    class Meta:
+        ordering = ['value']
+
+    def __str__(self):
+        return self.value
+
+
+class AddressBaseOption(models.Model):
+    value = models.CharField('Базовый адрес', max_length=200, unique=True)
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+
+    class Meta:
+        ordering = ['value']
+
+    def __str__(self):
+        return self.value
 
 class Photo(models.Model):
     PHOTO_TYPE_CHOICES = (
@@ -63,6 +91,15 @@ class Part(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.price}₽"
+
+
+class TransportExpense(models.Model):
+    request = models.ForeignKey(Request, on_delete=models.CASCADE, related_name='transport_expenses')
+    note = models.CharField('Описание', max_length=255, blank=True, default='')
+    receipt_photo = models.ImageField('Фото/чек', upload_to='transport/', blank=True, null=True)
+
+    def __str__(self):
+        return f"Транспортные для заявки #{self.request_id}"
 
 class Notification(models.Model):
     NOTIFICATION_TYPE_CHOICES = (
@@ -101,3 +138,16 @@ class PushSubscription(models.Model):
 
     def __str__(self):
         return f"PushSubscription {self.user.username} - {self.endpoint[:40]}"
+
+
+class Document(models.Model):
+    title = models.CharField('Название документа', max_length=200)
+    file = models.FileField('Файл', upload_to='documents/')
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='uploaded_documents')
+    created_at = models.DateTimeField('Дата загрузки', auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title

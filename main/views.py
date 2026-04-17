@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 from .forms import RequestForm
-from .models import Profile, Request, Photo, Part
+from .models import Profile, Request, Photo, Part, EquipmentTypeOption, AddressBaseOption, Document, TransportExpense
 from .utils.image_processor import (
     FileTooLargeError,
     ImageConversionError,
@@ -40,6 +40,42 @@ def normalize_phone(phone):
     if len(digits) > 11:
         digits = digits[:11]
     return digits
+
+
+def compose_full_address(base_address, house_number='', entrance='', floor='', apartment=''):
+    base = (base_address or '').strip()
+    parts = [base] if base else []
+    if house_number:
+        parts.append(f"д. {house_number.strip()}")
+    if entrance:
+        parts.append(f"под. {entrance.strip()}")
+    if floor:
+        parts.append(f"эт. {floor.strip()}")
+    if apartment:
+        parts.append(f"кв. {apartment.strip()}")
+    return ', '.join(parts)
+
+
+def extract_base_address(full_address):
+    raw = (full_address or '').strip()
+    if not raw:
+        return ''
+    markers = [', д.', ', под.', ', эт.', ', кв.']
+    cut = len(raw)
+    for marker in markers:
+        idx = raw.find(marker)
+        if idx != -1 and idx < cut:
+            cut = idx
+    return raw[:cut].strip()
+
+
+def save_request_options(equipment_type='', base_address=''):
+    eq = (equipment_type or '').strip()
+    if eq:
+        EquipmentTypeOption.objects.get_or_create(value=eq)
+    base = (base_address or '').strip()
+    if base:
+        AddressBaseOption.objects.get_or_create(value=base)
 tg_bot_path = os.path.join(project_root, 'Messenger_bot')
 if tg_bot_path not in sys.path:
     sys.path.append(tg_bot_path)
@@ -208,6 +244,14 @@ def create_request(request):
             worker_id = int(worker_id)
         worker_percent = cd['worker_percent']
         client_phone = normalize_phone(cd['client_phone'])
+        visit_time = cd.get('visit_time')
+        base_address = (cd.get('client_address') or '').strip()
+        house_number = (cd.get('house_number') or '').strip()
+        entrance = (cd.get('entrance') or '').strip()
+        floor = (cd.get('floor') or '').strip()
+        apartment = (cd.get('apartment') or '').strip()
+        full_address = compose_full_address(base_address, house_number, entrance, floor, apartment)
+        equipment_type = (cd.get('equipment_type') or '').strip()
         contract_files = request.FILES.getlist('contract_photos')
         if contract_files:
             try:
@@ -219,15 +263,21 @@ def create_request(request):
             with transaction.atomic():
                 req = Request.objects.create(
                     description=cd['description'],
-                    client_name=cd['client_name'],
+                    client_name=(cd.get('client_name') or '').strip(),
                     client_phone=client_phone,
                     client_email=cd.get('client_email') or '',
-                    client_address=cd['client_address'],
-                    equipment_type=cd.get('equipment_type') or '',
+                    client_address=full_address,
+                    house_number=house_number,
+                    entrance=entrance,
+                    floor=floor,
+                    apartment=apartment,
+                    equipment_type=equipment_type,
                     assigned_to_id=worker_id,
                     deadline_date=cd['deadline_date'],
+                    visit_time=visit_time,
                     worker_percent=worker_percent,
                 )
+                save_request_options(equipment_type=equipment_type, base_address=base_address)
                 for contract_file in contract_files:
                     rel = process_uploaded_image(contract_file, upload_subdir='requests')
                     Photo.objects.create(request=req, image=rel, photo_type='contract')
@@ -275,15 +325,38 @@ def edit_request(request, pk):
 
     if request.method == 'POST':
         if 'client_name' in request.POST:
-            req.client_name = request.POST.get('client_name', req.client_name)
+            req.client_name = (request.POST.get('client_name', req.client_name) or '').strip()
         if 'client_phone' in request.POST:
             req.client_phone = normalize_phone(request.POST.get('client_phone', req.client_phone))
         if 'client_email' in request.POST:
             req.client_email = request.POST.get('client_email', req.client_email)
-        if 'client_address' in request.POST:
-            req.client_address = request.POST.get('client_address', req.client_address)
+        has_base_address = 'client_address' in request.POST
+        if has_base_address:
+            req.client_address = (request.POST.get('client_address', req.client_address) or '').strip()
+        if 'house_number' in request.POST:
+            req.house_number = (request.POST.get('house_number', req.house_number) or '').strip()
+        if 'entrance' in request.POST:
+            req.entrance = (request.POST.get('entrance', req.entrance) or '').strip()
+        if 'floor' in request.POST:
+            req.floor = (request.POST.get('floor', req.floor) or '').strip()
+        if 'apartment' in request.POST:
+            req.apartment = (request.POST.get('apartment', req.apartment) or '').strip()
         if 'equipment_type' in request.POST:
-            req.equipment_type = request.POST.get('equipment_type', req.equipment_type)
+            req.equipment_type = (request.POST.get('equipment_type', req.equipment_type) or '').strip()
+        if has_base_address or 'house_number' in request.POST or 'entrance' in request.POST or 'floor' in request.POST or 'apartment' in request.POST:
+            req.client_address = compose_full_address(
+                request.POST.get('client_address', req.client_address),
+                req.house_number,
+                req.entrance,
+                req.floor,
+                req.apartment,
+            )
+            save_request_options(
+                equipment_type=req.equipment_type,
+                base_address=request.POST.get('client_address', ''),
+            )
+        elif 'equipment_type' in request.POST:
+            save_request_options(equipment_type=req.equipment_type, base_address='')
         if 'price' in request.POST:
             price = request.POST.get('price')
             req.price = price if price else None
@@ -302,6 +375,9 @@ def edit_request(request, pk):
         if 'deadline_date' in request.POST:
             deadline_date = request.POST.get('deadline_date')
             req.deadline_date = deadline_date if deadline_date else None
+        if 'visit_time' in request.POST:
+            visit_time = (request.POST.get('visit_time') or '').strip()
+            req.visit_time = visit_time if visit_time else None
 
         if 'prepayment_amount' in request.POST:
             prepayment_amount = request.POST.get('prepayment_amount')
@@ -427,6 +503,48 @@ def edit_request(request, pk):
                 kept_part_ids.append(part_obj.id)
             req.parts.exclude(id__in=kept_part_ids).delete()
 
+        transport_data_json = request.POST.get('transport_data')
+        if transport_data_json:
+            transport_data = json.loads(transport_data_json)
+            existing_items = {item.id: item for item in req.transport_expenses.all()}
+            kept_transport_ids = []
+            for i, item in enumerate(transport_data):
+                existing_id = item.get('existingId')
+                note = (item.get('note') or '').strip()
+                if existing_id and existing_id in existing_items:
+                    transport_obj = existing_items[existing_id]
+                    transport_obj.note = note
+                    photo_field = f'transport_photo_{i}'
+                    if photo_field in request.FILES:
+                        try:
+                            rel = process_uploaded_image(
+                                request.FILES[photo_field], upload_subdir='transport'
+                            )
+                            transport_obj.receipt_photo = rel
+                        except (FileTooLargeError, NotAnImageError, ImageConversionError) as e:
+                            resp = _json_image_error(e)
+                            if resp:
+                                return resp
+                            raise
+                    transport_obj.save()
+                else:
+                    transport_obj = TransportExpense(request=req, note=note)
+                    photo_field = f'transport_photo_{i}'
+                    if photo_field in request.FILES:
+                        try:
+                            rel = process_uploaded_image(
+                                request.FILES[photo_field], upload_subdir='transport'
+                            )
+                            transport_obj.receipt_photo = rel
+                        except (FileTooLargeError, NotAnImageError, ImageConversionError) as e:
+                            resp = _json_image_error(e)
+                            if resp:
+                                return resp
+                            raise
+                    transport_obj.save()
+                kept_transport_ids.append(transport_obj.id)
+            req.transport_expenses.exclude(id__in=kept_transport_ids).delete()
+
         return JsonResponse({'success': True})
 
     # GET — вернуть данные
@@ -438,6 +556,13 @@ def edit_request(request, pk):
             'price': str(part.price) if part.price else None,
             'receipt_photo_url': part.receipt_photo.url if part.receipt_photo else None,
         })
+    transport_data = []
+    for item in req.transport_expenses.all():
+        transport_data.append({
+            'id': item.id,
+            'note': item.note,
+            'receipt_photo_url': item.receipt_photo.url if item.receipt_photo else None,
+        })
     data = {
         'id': req.id,
         'description': req.description,
@@ -445,18 +570,25 @@ def edit_request(request, pk):
         'client_phone': req.client_phone,
         'client_email': req.client_email,
         'client_address': req.client_address,
+        'base_address': extract_base_address(req.client_address),
+        'house_number': req.house_number,
+        'entrance': req.entrance,
+        'floor': req.floor,
+        'apartment': req.apartment,
         'equipment_type': req.equipment_type,
         'price': str(req.price) if req.price else None,
         'comment': req.comment,
         'photos': [{'id': p.id, 'image': p.image.url, 'photo_type': p.photo_type} for p in req.photos.all()],
         'status': req.status,
         'parts': parts_data,
+        'transport': transport_data,
         'overdue_reason': req.overdue_reason,
         'is_overdue': date.today() > req.deadline_date if req.deadline_date else False,
         'worker_id': req.assigned_to.id if req.assigned_to else '',
         'prepayment_amount': str(req.prepayment_amount) if req.prepayment_amount else None,
         'worker_percent': req.worker_percent,
         'deadline_date': req.deadline_date.isoformat() if req.deadline_date else '',  # добавлено
+        'visit_time': req.visit_time.isoformat(timespec='minutes') if req.visit_time else '',
     }
     return JsonResponse(data)
 
@@ -544,8 +676,10 @@ def view_request(request, pk):
         'client_phone': req.client_phone,
         'client_email': req.client_email,
         'client_address': req.client_address,
+        'base_address': extract_base_address(req.client_address),
         'equipment_type': req.equipment_type,
         'status': req.status,
+        'visit_time': req.visit_time.isoformat(timespec='minutes') if req.visit_time else '',
         'price': str(req.price) if req.price else None,
         'cost_price': round(cost_price, 2),
         'net_profit': round(net_profit, 2) if net_profit is not None else None,
@@ -558,6 +692,7 @@ def view_request(request, pk):
         'worker': req.assigned_to.first_name if req.assigned_to else '',
         'photos': [{'image': p.image.url, 'photo_type': p.photo_type} for p in req.photos.all()],
         'parts': [{'id': p.id, 'name': p.name, 'price': str(p.price) if p.price else None, 'receipt_photo_url': p.receipt_photo.url if p.receipt_photo else None} for p in req.parts.all()],
+        'transport': [{'id': t.id, 'note': t.note, 'receipt_photo_url': t.receipt_photo.url if t.receipt_photo else None} for t in req.transport_expenses.all()],
         'overdue_reason': req.overdue_reason,
         'worker_percent': req.worker_percent,
     }
@@ -630,6 +765,11 @@ def get_requests(request):
             'client_name': r.client_name,
             'client_phone': r.client_phone,
             'client_address': r.client_address,
+            'base_address': extract_base_address(r.client_address),
+            'house_number': r.house_number,
+            'entrance': r.entrance,
+            'floor': r.floor,
+            'apartment': r.apartment,
             'equipment_type': r.equipment_type,
             'status': r.status,
             'price': str(r.price) if r.price else None,
@@ -643,6 +783,7 @@ def get_requests(request):
             'worker_name': r.assigned_to.first_name if r.assigned_to else '',
             'created_date': r.created_date.isoformat(),
             'deadline_date': r.deadline_date.isoformat() if r.deadline_date else None,
+            'visit_time': r.visit_time.isoformat(timespec='minutes') if r.visit_time else '',
         })
     return JsonResponse(data, safe=False)
 
@@ -698,6 +839,11 @@ def get_worker_requests(request):
             'client_phone': r.client_phone,
             'client_email': r.client_email,
             'client_address': r.client_address,
+            'base_address': extract_base_address(r.client_address),
+            'house_number': r.house_number,
+            'entrance': r.entrance,
+            'floor': r.floor,
+            'apartment': r.apartment,
             'equipment_type': r.equipment_type,
             'status': r.status,
             'price': str(r.price) if r.price else None,
@@ -705,7 +851,9 @@ def get_worker_requests(request):
             'prepayment_amount': str(r.prepayment_amount) if r.prepayment_amount else None,
             'worker_name': r.assigned_to.first_name if r.assigned_to else '',
             'created_date': r.created_date.isoformat(),
+            'visit_time': r.visit_time.isoformat(timespec='minutes') if r.visit_time else '',
             'photos': [{'image': p.image.url, 'photo_type': p.photo_type} for p in r.photos.all()],
+            'transport': [{'id': t.id, 'note': t.note, 'receipt_photo_url': t.receipt_photo.url if t.receipt_photo else None} for t in r.transport_expenses.all()],
             # Новые поля
             'cost_price': round(cost_price, 2),
             'net_profit': round(net_profit, 2) if net_profit else None,
@@ -723,6 +871,93 @@ def get_workers(request):
     return JsonResponse(data, safe=False)
 
 
+@login_required
+def get_request_options(request):
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    equipment_types = set(EquipmentTypeOption.objects.values_list('value', flat=True))
+    equipment_types.update(Request.objects.exclude(equipment_type='').values_list('equipment_type', flat=True).distinct())
+    address_bases = set(AddressBaseOption.objects.values_list('value', flat=True))
+    address_bases.update([
+        extract_base_address(item) for item in Request.objects.exclude(client_address='').values_list('client_address', flat=True).distinct()
+    ])
+    return JsonResponse({
+        'equipment_types': sorted([item for item in equipment_types if item], key=lambda x: x.lower()),
+        'address_bases': sorted([item for item in address_bases if item], key=lambda x: x.lower()),
+    })
+
+
+@login_required
+def accept_request(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    req = get_object_or_404(Request, pk=pk)
+    is_admin = request.user.profile.role == 'admin'
+    is_assigned_worker = req.assigned_to_id == request.user.id
+    if not is_admin and not is_assigned_worker:
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    if req.status in ('done', 'cancelled'):
+        return JsonResponse({'error': 'Нельзя принять закрытую заявку'}, status=400)
+    req.status = 'accepted'
+    req.save(update_fields=['status'])
+    return JsonResponse({'success': True, 'status': req.status})
+
+
+@login_required
+def get_documents(request):
+    if request.user.profile.role not in ('admin', 'worker'):
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    data = [{
+        'id': d.id,
+        'title': d.title,
+        'file_url': d.file.url if d.file else '',
+        'filename': os.path.basename(d.file.name) if d.file else '',
+        'created_at': d.created_at.isoformat(),
+    } for d in Document.objects.all()]
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+def upload_document(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    title = (request.POST.get('title') or '').strip()
+    doc_file = request.FILES.get('file')
+    if not title:
+        return JsonResponse({'error': 'Укажите название документа'}, status=400)
+    if not doc_file:
+        return JsonResponse({'error': 'Выберите файл документа'}, status=400)
+    doc = Document.objects.create(title=title, file=doc_file, uploaded_by=request.user)
+    return JsonResponse({
+        'success': True,
+        'document': {
+            'id': doc.id,
+            'title': doc.title,
+            'file_url': doc.file.url if doc.file else '',
+            'filename': os.path.basename(doc.file.name) if doc.file else '',
+            'created_at': doc.created_at.isoformat(),
+        }
+    })
+
+
+@login_required
+def delete_document(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    doc = get_object_or_404(Document, pk=pk)
+    try:
+        if doc.file:
+            doc.file.delete(save=False)
+    except Exception:
+        logger.exception("Не удалось удалить файл документа %s", doc.id)
+    doc.delete()
+    return JsonResponse({'success': True})
+
+
 def _delete_request_files(req):
     # Физически удаляем изображения из хранилища перед удалением заявки из БД.
     for photo in req.photos.all():
@@ -737,6 +972,12 @@ def _delete_request_files(req):
                 part.receipt_photo.delete(save=False)
         except Exception:
             logger.exception("Не удалось удалить чек детали %s для заявки %s", part.id, req.id)
+    for item in req.transport_expenses.all():
+        try:
+            if item.receipt_photo:
+                item.receipt_photo.delete(save=False)
+        except Exception:
+            logger.exception("Не удалось удалить транспортный файл %s для заявки %s", item.id, req.id)
 
 
 @login_required

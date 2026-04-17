@@ -11,13 +11,18 @@ class RequestForm(forms.Form):
     """Поля создания заявки (POST) и вспомогательные проверки файлов."""
 
     description = forms.CharField()
-    client_name = forms.CharField(max_length=100)
+    client_name = forms.CharField(max_length=100, required=False)
     client_phone = forms.CharField(max_length=32)
     client_email = forms.EmailField(required=False)
     client_address = forms.CharField(max_length=200)
+    house_number = forms.CharField(max_length=20, required=False)
+    entrance = forms.CharField(max_length=20, required=False)
+    floor = forms.CharField(max_length=20, required=False)
+    apartment = forms.CharField(max_length=20, required=False)
     equipment_type = forms.CharField(max_length=100, required=False)
     worker_id = forms.IntegerField(required=False)
     deadline_date = forms.DateField()
+    visit_time = forms.TimeField(required=False)
     worker_percent = forms.IntegerField(min_value=0, max_value=100, initial=50)
 
     def clean_client_address(self):

@@ -33,6 +33,7 @@
     tbody tr:hover { background-color: #f1f5f9; }
     .status-badge { display: inline-block; padding: 5px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; white-space: nowrap; }
     .status-badge.new { background: #e1edfb; color: #1b5f8c; }
+    .status-badge.accepted { background: #e8f7ec; color: #1f7a38; }
     .status-badge.in-progress { background: #fff2d6; color: #a16500; }
     .status-badge.done { background: #dff0e0; color: #1d6f2c; }
     .status-badge.cancelled { background: #ffeaea; color: #c03c2b; }
@@ -64,6 +65,7 @@
     .block-id { font-size: 18px; font-weight: 700; color: #1b6f8f; }
     .block-status { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; }
     .block-status.new { background: #e1edfb; color: #1b5f8c; }
+    .block-status.accepted { background: #e8f7ec; color: #1f7a38; }
     .block-status.in-progress { background: #fff2d6; color: #a16500; }
     .block-status.done { background: #dff0e0; color: #1d6f2c; }
     .block-status.cancelled { background: #ffeaea; color: #c03c2b; }
@@ -242,6 +244,7 @@
     .request-block { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; cursor: pointer; transition: transform 0.2s; }
     .request-block:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
     .request-block.new { border-left: 4px solid #2f7e9e; }
+    .request-block.accepted { border-left: 4px solid #1f7a38; }
     .request-block.in-progress { border-left: 4px solid #a16500; }
     .request-block.done { border-left: 4px solid #1d6f2c; }
     .request-block.cancelled { border-left: 4px solid #c03c2b; }
@@ -249,6 +252,7 @@
     .block-id { font-size: 18px; font-weight: 700; color: #0b2b40; }
     .block-status { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 500; }
     .block-status.new { background: #e1edfb; color: #1b5f8c; }
+    .block-status.accepted { background: #e8f7ec; color: #1f7a38; }
     .block-status.in-progress { background: #fff2d6; color: #a16500; }
     .block-status.done { background: #dff0e0; color: #1d6f2c; }
     .block-status.cancelled { background: #ffeaea; color: #c03c2b; }
@@ -261,6 +265,9 @@
     .block-expanded { background: #f8fafc; }
     .block-details { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; }
     .block-details p { margin: 5px 0; }
+    .documents-list { display: grid; gap: 10px; margin-top: 12px; }
+    .document-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #d9e5ef; border-radius: 14px; background: #f8fafc; }
+    .document-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     @media (max-width: 768px) {
         .blocks-container { grid-template-columns: 1fr; }
         .request-block { padding: 15px; }
@@ -279,6 +286,7 @@
             </div>
         </div>
         <div class="stats"><span id="activeCount">0</span> активных</div>
+        <button id="showDocumentsModal" class="btn-secondary">Документы</button>
         <button id="bindMessengersBtn" class="btn-primary">Привязать мессенджеры</button>
         <a href="{% url 'logout' %}" class="btn-danger" style="text-decoration: none;">Выйти</a>
     </div>
@@ -306,6 +314,7 @@
                         <button type="button" class="status-dropdown__button" id="filterStatusToggle">Все</button>
                         <div class="status-dropdown__options" id="filterStatusOptions">
                             <label><input type="checkbox" class="status-checkbox" value="new">Новая</label>
+                            <label><input type="checkbox" class="status-checkbox" value="accepted">Принял</label>
                             <label><input type="checkbox" class="status-checkbox" value="in-progress">В работе</label>
                             <label><input type="checkbox" class="status-checkbox" value="done">Выполнена</label>
                             <label><input type="checkbox" class="status-checkbox" value="cancelled">Отменена</label>
@@ -332,8 +341,8 @@
                 <tr>
                     <th style="width:60px">ID</th>
                     <th>Задача</th>
-                    <th>Имя клиента</th>
                     <th style="width:120px">Телефон</th>
+                    <th style="width:90px">Время</th>
                     <th>Адрес</th>
                     <th style="width:120px">Вид техники</th>
                     <th style="width:100px">Статус</th>
@@ -363,11 +372,11 @@
     <div class="modal-content">
         <h2>✏️ Редактирование заявки #<span id="editId"></span></h2>
         <div class="field"><label>Описание (только чтение)</label><input type="text" id="editDesc" readonly></div>
-        <div class="field"><label>Имя клиента</label><input type="text" id="editClientName" readonly></div>
         <div class="field"><label>Телефон клиента</label><input type="tel" id="editClientPhone" readonly></div>
         <div class="field"><label>Email клиента</label><input type="email" id="editClientEmail" readonly></div>
         <div class="field"><label>Адрес клиента</label><input type="text" id="editClientAddress" readonly></div>
         <div class="field"><label>Вид техники</label><input type="text" id="editEquipmentType" readonly></div>
+        <div class="field"><label>Время</label><input type="text" id="editVisitTime" readonly></div>
         <div class="field"><label>Статус</label><input type="text" id="editStatus" readonly></div>
         <div class="field"><label>Сумма предоплаты (₽)</label><input type="number" id="prepaymentAmount" step="0.01" placeholder="0"></div>
         <div class="field"><label>Стоимость работ <span class="required-star">*</span></label><input type="number" id="editPrice" required></div>
@@ -378,8 +387,24 @@
         <div class="field"><label>Комментарий</label><textarea id="editComment" rows="3"></textarea></div>
         <div class="field"><label>Договор (1–5 фото)</label><div class="photo-upload-area"><input type="file" id="contractInput" accept="image/*" multiple><div class="photo-previews" id="contractPreviews"></div></div></div>
         <div class="parts-section"><label>Детали (чеки для каждой детали обязательны для закрытия)</label><div id="partsContainer"></div><button type="button" class="add-part-btn" id="addPartBtn">Добавить деталь</button></div>
+        <div class="parts-section">
+            <label>Транспортные <span title="При выезде в дальние районы" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#2f7e9e; color:white; font-size:12px; cursor:help;">i</span></label>
+            <div id="transportContainer"></div>
+            <button type="button" class="add-part-btn" id="addTransportBtn">Добавить транспортные</button>
+        </div>
         <div id="overdueReasonSection" style="display: none;"><div class="field"><label>Причина просрочки (обязательно для просроченных заявок)</label><textarea id="overdueReason" rows="3" placeholder="Укажите причину, почему заявка не выполнена в срок..."></textarea></div></div>
         <div class="modal-actions"><button class="btn-secondary" onclick="closeModal('editModal')">Отмена</button><button class="btn-danger" id="cancelWorkerRequestBtn" style="background: #c03c2b; color: white; border: none; padding: 10px 20px; border-radius: 40px; cursor: pointer;">Отменить заявку</button><button class="btn-primary" id="saveEditBtn">Сохранить изменения</button></div>
+    </div>
+</div>
+
+<div class="modal" id="documentsModal">
+    <div class="modal-content">
+        <h2>📄 Документы</h2>
+        <div style="color:#4a6778; margin-bottom:10px;">Документы доступны только для просмотра, скачивания и печати.</div>
+        <div class="documents-list" id="documentsList"></div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('documentsModal')">Закрыть</button>
+        </div>
     </div>
 </div>
 
@@ -388,12 +413,37 @@
     const currentUserId = parseInt("{{ request.user.id }}") || 0;
     let currentEditId = null;
     let viewMode = 'table'; // 'table' or 'blocks'
+    const statusTextMap = {
+        'new': 'Новая',
+        'accepted': 'Принял',
+        'in-progress': 'В работе',
+        'done': 'Выполнена',
+        'cancelled': 'Отменена'
+    };
 
     let contractFiles = [];
     let existingContractPhotos = [];
     let parts = [];
+    let transportItems = [];
 
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function phoneLinkHtml(phone) {
+        const raw = (phone || '').toString();
+        const digits = raw.replace(/\D/g, '');
+        if (!digits) return '—';
+        const href = digits.length === 11 ? `+${digits}` : digits;
+        return `<a href="tel:${href}" style="color:#2f7e9e; text-decoration:underline;">${escapeHtml(formatPhoneValue(digits) || raw)}</a>`;
+    }
+    function formatPhoneValue(value) {
+        const digits = (value || '').toString().replace(/\D/g, '');
+        if (!digits) return '';
+        const normalized = digits.startsWith('8') ? '7' + digits.slice(1) : (digits.startsWith('9') ? '7' + digits : digits);
+        const core = normalized.slice(1);
+        if (core.length <= 3) return '+7 (' + core;
+        if (core.length <= 6) return '+7 (' + core.slice(0, 3) + ') ' + core.slice(3);
+        if (core.length <= 8) return '+7 (' + core.slice(0, 3) + ') ' + core.slice(3, 6) + '-' + core.slice(6);
+        return '+7 (' + core.slice(0, 3) + ') ' + core.slice(3, 6) + '-' + core.slice(6, 8) + '-' + core.slice(8, 10);
+    }
     function showUserWarning(message, focusEl) {
         alert(message);
         try { if (focusEl) focusEl.focus(); } catch (e) {}
@@ -413,7 +463,8 @@
         options.querySelectorAll('.status-checkbox').forEach(input => {
             input.addEventListener('change', function() {
                 const checked = Array.from(options.querySelectorAll('.status-checkbox:checked')).map(i => i.value);
-                toggle.textContent = checked.length === 0 || checked.length === 4 ? 'Все' : checked.map(v => v === 'new' ? 'Новая' : v === 'in-progress' ? 'В работе' : v === 'done' ? 'Выполнена' : v === 'cancelled' ? 'Отменена' : '').join(', ');
+                const total = options.querySelectorAll('.status-checkbox').length;
+                toggle.textContent = checked.length === 0 || checked.length === total ? 'Все' : checked.map(v => statusTextMap[v] || '').join(', ');
             });
         });
         document.addEventListener('click', function() {
@@ -434,6 +485,14 @@
         document.getElementById('requestsTable').parentElement.style.display = mode === 'table' ? 'block' : 'none';
         document.getElementById('blocksWrapper').style.display = mode === 'blocks' ? 'block' : 'none';
         loadWorkerRequests(); // Reload data when switching views
+    }
+
+    function resetEditModalState() {
+        document.querySelectorAll('#editModal input, #editModal textarea, #editModal select').forEach(el => el.disabled = false);
+        document.getElementById('saveEditBtn').style.display = '';
+        document.getElementById('cancelWorkerRequestBtn').style.display = '';
+        document.getElementById('addPartBtn').style.display = '';
+        document.getElementById('addTransportBtn').style.display = '';
     }
 
     function loadWorkerRequests() {
@@ -473,6 +532,7 @@
             if (r.status !== 'done') activeCount++;
             if (r.status === 'new') newCount++;
             let statusClass = 'status-badge new', statusText = 'Новая';
+            if (r.status === 'accepted') { statusClass = 'status-badge accepted'; statusText = 'Принял'; }
             if (r.status === 'in-progress') { statusClass = 'status-badge in-progress'; statusText = 'В работе'; }
             else if (r.status === 'done') { statusClass = 'status-badge done'; statusText = 'Выполнена'; }
             else if (r.status === 'cancelled') { statusClass = 'status-badge cancelled'; statusText = 'Отменена'; }
@@ -480,8 +540,8 @@
             row.innerHTML = `
                 <td>#${r.id}</td>
                 <td>${escapeHtml(r.description)}</td>
-                <td>${escapeHtml(r.client_name)}</td>
-                <td>${escapeHtml(r.client_phone)}</td>
+                <td>${phoneLinkHtml(r.client_phone)}</td>
+                <td>${r.visit_time || '—'}</td>
                 <td>${escapeHtml(r.client_address || '')}</td>
                 <td>${escapeHtml(r.equipment_type || '')}</td>
                 <td><span class="${statusClass}">${statusText}</span></td>
@@ -492,7 +552,8 @@
                 <td>${r.worker_percent}%</td>
                 <td class="actions">
                     ${r.status !== 'done' && r.status !== 'cancelled' ? 
-                        `<button class="btn-outline" onclick="editRequest(${r.id})">Редактировать</button>
+                        `${r.status === 'new' ? `<button class="btn-outline" onclick="acceptRequest(${r.id}, this)">Принять</button>` : ''}
+                         <button class="btn-outline" onclick="editRequest(${r.id})">Редактировать</button>
                          <button class="btn-solid" onclick="closeRequest(${r.id}, this)">Закрыть✅</button>
                          <button class="btn-danger" onclick="cancelWorkerRequest(${r.id}, this)">Отменить</button>` : 
                         `<button class="btn-outline" onclick="viewRequest(${r.id})">Просмотр</button>`}
@@ -517,6 +578,7 @@
             if (r.status !== 'done') activeCount++;
             if (r.status === 'new') newCount++;
             let statusClass = 'block-status new', statusText = 'Новая';
+            if (r.status === 'accepted') { statusClass = 'block-status accepted'; statusText = 'Принял'; }
             if (r.status === 'in-progress') { statusClass = 'block-status in-progress'; statusText = 'В работе'; }
             else if (r.status === 'done') { statusClass = 'block-status done'; statusText = 'Выполнена'; }
             else if (r.status === 'cancelled') { statusClass = 'block-status cancelled'; statusText = 'Отменена'; }
@@ -534,7 +596,7 @@
             block.className = `request-block ${r.status}`;
             block.innerHTML = `
                 <div class="block-header">
-                    <div class="block-id">#${r.id} • ${created.toLocaleDateString()}</div>
+                    <div class="block-id">#${r.id} • ${r.visit_time || '—'} • ${created.toLocaleDateString()}</div>
                     <div>
                         <div class="${statusClass}">${statusText}</div>
                         ${showAge ? `<div style="margin-top:6px; font-size:12px; color:#4a6778;">⏱ ${ageText}</div>` : ''}
@@ -550,8 +612,8 @@
                         <div class="block-value">${escapeHtml(r.description)}</div>
                     </div>
                     <div class="block-field">
-                        <div class="block-label">Клиент</div>
-                        <div class="block-value">${escapeHtml(r.client_name)} • ${escapeHtml(r.client_phone)}</div>
+                        <div class="block-label">Номер</div>
+                        <div class="block-value">${phoneLinkHtml(r.client_phone)}</div>
                     </div>
                     <div class="block-field">
                         <div class="block-label">Адрес</div>
@@ -561,7 +623,8 @@
                 ${r.status === 'new' ? '<div class="block-alert">⚠️ Перезвоните клиенту в течении 30 минут</div>' : ''}
                 <div class="block-actions">
                     ${r.status !== 'done' && r.status !== 'cancelled' ? 
-                        `<button class="btn-outline" onclick="editRequest(${r.id})">Редактировать</button>
+                        `${r.status === 'new' ? `<button class="btn-outline" onclick="acceptRequest(${r.id}, this)">Принять</button>` : ''}
+                         <button class="btn-outline" onclick="editRequest(${r.id})">Редактировать</button>
                          <button class="btn-solid" onclick="closeRequest(${r.id}, this)">Закрыть✅</button>
                          <button class="btn-danger" onclick="cancelWorkerRequest(${r.id}, this)">Отменить</button>` : 
                         `<button class="btn-outline" onclick="viewRequest(${r.id})">Просмотр</button>`}
@@ -581,6 +644,7 @@
 
     window.editRequest = function(id) {
         currentEditId = id;
+        resetEditModalState();
         fetch(`/edit-request/${id}/`)
             .then(response => response.json())
             .then(data => {
@@ -592,12 +656,12 @@
                 
                 document.getElementById('editId').textContent = data.id;
                 document.getElementById('editDesc').value = data.description || '';
-                document.getElementById('editClientName').value = data.client_name || '';
                 document.getElementById('editClientPhone').value = data.client_phone || '';
                 document.getElementById('editClientEmail').value = data.client_email || '';
                 document.getElementById('editClientAddress').value = data.client_address || '';
                 document.getElementById('editEquipmentType').value = data.equipment_type || '';
-                document.getElementById('editStatus').value = data.status === 'new' ? 'Новая' : data.status === 'in-progress' ? 'В работе' : data.status === 'done' ? 'Выполнена' : data.status === 'cancelled' ? 'Отменена' : '';
+                document.getElementById('editVisitTime').value = data.visit_time || '—';
+                document.getElementById('editStatus').value = statusTextMap[data.status] || '';
                 document.getElementById('editPrice').value = data.price || '';
                 document.getElementById('editComment').value = data.comment || '';
                 document.getElementById('prepaymentAmount').value = data.prepayment_amount || '';
@@ -611,6 +675,11 @@
                     data.parts.forEach(p => { parts.push({ name: p.name, price: p.price, file: null, existingId: p.id, existingPhotoUrl: p.receipt_photo_url }); });
                 } else { parts.push({ name: '', price: '', file: null, existingId: null, existingPhotoUrl: null }); }
                 renderParts();
+                transportItems = [];
+                if (data.transport && data.transport.length) {
+                    data.transport.forEach(t => { transportItems.push({ note: t.note, file: null, existingId: t.id, existingPhotoUrl: t.receipt_photo_url }); });
+                } else { transportItems.push({ note: '', file: null, existingId: null, existingPhotoUrl: null }); }
+                renderTransport();
 
                 const isOverdue = data.is_overdue && data.status !== 'done';
                 const overdueSection = document.getElementById('overdueReasonSection');
@@ -633,17 +702,18 @@
 
     window.viewRequest = function(id) {
         currentEditId = id;
+        resetEditModalState();
         fetch(`/edit-request/${id}/`)
             .then(response => response.json())
             .then(data => {
                 document.getElementById('editId').textContent = data.id;
                 document.getElementById('editDesc').value = data.description || '';
-                document.getElementById('editClientName').value = data.client_name || '';
                 document.getElementById('editClientPhone').value = data.client_phone || '';
                 document.getElementById('editClientEmail').value = data.client_email || '';
                 document.getElementById('editClientAddress').value = data.client_address || '';
                 document.getElementById('editEquipmentType').value = data.equipment_type || '';
-                document.getElementById('editStatus').value = data.status === 'new' ? 'Новая' : data.status === 'in-progress' ? 'В работе' : data.status === 'done' ? 'Выполнена' : data.status === 'cancelled' ? 'Отменена' : '';
+                document.getElementById('editVisitTime').value = data.visit_time || '—';
+                document.getElementById('editStatus').value = statusTextMap[data.status] || '';
                 document.getElementById('editPrice').value = data.price || '';
                 document.getElementById('editComment').value = data.comment || '';
                 document.getElementById('prepaymentAmount').value = data.prepayment_amount || '';
@@ -657,6 +727,11 @@
                     data.parts.forEach(p => { parts.push({ name: p.name, price: p.price, file: null, existingId: p.id, existingPhotoUrl: p.receipt_photo_url }); });
                 } else { parts.push({ name: '', price: '', file: null, existingId: null, existingPhotoUrl: null }); }
                 renderParts();
+                transportItems = [];
+                if (data.transport && data.transport.length) {
+                    data.transport.forEach(t => { transportItems.push({ note: t.note, file: null, existingId: t.id, existingPhotoUrl: t.receipt_photo_url }); });
+                } else { transportItems.push({ note: '', file: null, existingId: null, existingPhotoUrl: null }); }
+                renderTransport();
 
                 const isOverdue = data.is_overdue && data.status !== 'done';
                 const overdueSection = document.getElementById('overdueReasonSection');
@@ -679,6 +754,7 @@
                     document.getElementById('saveEditBtn').style.display = 'none';
                     document.getElementById('cancelWorkerRequestBtn').style.display = 'none';
                     document.getElementById('addPartBtn').style.display = 'none';
+                    document.getElementById('addTransportBtn').style.display = 'none';
                     document.querySelectorAll('.remove-part').forEach(btn => btn.style.display = 'none');
                     document.querySelectorAll('.remove').forEach(btn => btn.style.display = 'none');
                     document.getElementById('contractInput').disabled = true;
@@ -702,6 +778,54 @@
         .catch(err => console.error('Ошибка закрытия:', err))
         .finally(() => { btn.disabled = false; btn.textContent = '✅ закрыть'; });
     };
+
+    window.acceptRequest = function(id, btn) {
+        if (!confirm(`Подтвердить принятие заявки #${id}?`)) return;
+        const initialText = btn ? btn.textContent : 'Принять';
+        if (btn) { btn.disabled = true; btn.textContent = 'Принятие...'; }
+        fetch(`/accept-request/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200 && body.success) {
+                loadWorkerRequests();
+            } else {
+                alert('Ошибка: ' + (body.error || 'Не удалось принять заявку'));
+            }
+        })
+        .catch(err => console.error('Ошибка принятия заявки:', err))
+        .finally(() => { if (btn) { btn.disabled = false; btn.textContent = initialText; } });
+    };
+
+    function renderDocumentsList(documents) {
+        const list = document.getElementById('documentsList');
+        list.innerHTML = '';
+        if (!documents || !documents.length) {
+            list.innerHTML = '<div style="color:#4a6778;">Документы пока не загружены</div>';
+            return;
+        }
+        documents.forEach(doc => {
+            const row = document.createElement('div');
+            row.className = 'document-item';
+            row.innerHTML = `
+                <div>
+                    <div style="font-weight:600; color:#0b2b40;">${escapeHtml(doc.title || 'Документ')}</div>
+                    <div style="font-size:12px; color:#4a6778;">${escapeHtml(doc.filename || '')}</div>
+                </div>
+                <div class="document-actions">
+                    <a class="btn-secondary" href="${doc.file_url}" target="_blank" download>Скачать</a>
+                    <button class="btn-secondary" type="button" onclick="window.open('${doc.file_url}', '_blank')">Печать</button>
+                </div>
+            `;
+            list.appendChild(row);
+        });
+    }
+
+    function loadDocuments() {
+        fetch('/api/documents/')
+            .then(response => response.json())
+            .then(data => renderDocumentsList(data))
+            .catch(err => console.error('Ошибка загрузки документов:', err));
+    }
 
     window.cancelWorkerRequest = function(id, btn) {
         if (!confirm('Вы уверены, что хотите отменить заявку?')) return;
@@ -806,8 +930,51 @@
     }
     window.removeExistingPartPhoto = function(idx) { parts[idx].existingPhotoUrl = null; renderParts(); };
     window.removeNewPartPhoto = function(idx) { parts[idx].file = null; renderParts(); };
+    function renderTransport() {
+        const container = document.getElementById('transportContainer');
+        container.innerHTML = '';
+        transportItems.forEach((item, idx) => {
+            const div = document.createElement('div'); div.className = 'part-row'; div.setAttribute('data-tidx', idx);
+            div.innerHTML = `
+                <div class="part-name"><label>Описание</label><input type="text" value="${escapeHtml(item.note || '')}" placeholder="Например: выезд в пригород" class="transport-note-input"></div>
+                <div class="part-price"></div>
+                <div class="part-receipt"><label>Фото/чек</label><input type="file" class="transport-receipt-input" accept="image/*"><div class="photo-previews transport-receipt-preview"></div></div>
+                <button type="button" class="remove-part remove-transport" data-idx="${idx}">✖</button>
+            `;
+            container.appendChild(div);
+            const previewDiv = div.querySelector('.transport-receipt-preview');
+            if (item.existingPhotoUrl) {
+                const imgDiv = document.createElement('div'); imgDiv.className = 'preview-item';
+                imgDiv.innerHTML = `<img src="${item.existingPhotoUrl}" alt="transport"><span class="remove" onclick="removeExistingTransportPhoto(${idx})">✖</span>`;
+                previewDiv.appendChild(imgDiv);
+            }
+            if (item.file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imgDiv = document.createElement('div'); imgDiv.className = 'preview-item';
+                    imgDiv.innerHTML = `<img src="${e.target.result}" alt="transport"><span class="remove" onclick="removeNewTransportPhoto(${idx})">✖</span>`;
+                    previewDiv.appendChild(imgDiv);
+                };
+                reader.readAsDataURL(item.file);
+            }
+            div.querySelector('.transport-note-input').addEventListener('input', (e) => { transportItems[idx].note = e.target.value; });
+            div.querySelector('.transport-receipt-input').addEventListener('change', (e) => {
+                if (e.target.files.length) { transportItems[idx].file = e.target.files[0]; transportItems[idx].existingPhotoUrl = null; renderTransport(); }
+                e.target.value = '';
+            });
+        });
+        document.querySelectorAll('.remove-transport').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const idx = parseInt(this.getAttribute('data-idx'));
+                if (!isNaN(idx)) { transportItems.splice(idx, 1); renderTransport(); }
+            });
+        });
+    }
+    window.removeExistingTransportPhoto = function(idx) { transportItems[idx].existingPhotoUrl = null; renderTransport(); };
+    window.removeNewTransportPhoto = function(idx) { transportItems[idx].file = null; renderTransport(); };
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
     document.getElementById('addPartBtn').addEventListener('click', function() { parts.push({ name: '', price: '', file: null, existingId: null, existingPhotoUrl: null }); renderParts(); });
+    document.getElementById('addTransportBtn').addEventListener('click', function() { transportItems.push({ note: '', file: null, existingId: null, existingPhotoUrl: null }); renderTransport(); });
 
     function saveWorkerEdit() {
         if (!currentEditId) return Promise.reject(new Error('ID заявки не указан'));
@@ -859,6 +1026,9 @@
                 const partsWithoutFiles = parts.map((part, idx) => ({ name: part.name, price: part.price, existingId: part.existingId }));
                 formData.append('parts_data', JSON.stringify(partsWithoutFiles));
                 parts.forEach((part, idx) => { if (part.file) formData.append(`part_photo_${idx}`, part.file); });
+                const transportWithoutFiles = transportItems.map((item, idx) => ({ note: item.note, existingId: item.existingId }));
+                formData.append('transport_data', JSON.stringify(transportWithoutFiles));
+                transportItems.forEach((item, idx) => { if (item.file) formData.append(`transport_photo_${idx}`, item.file); });
                 return fetch(`/edit-request/${currentEditId}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken }, body: formData })
                     .then(response => {
                         if (!response.ok) {
@@ -937,6 +1107,10 @@
     document.getElementById('filterSearch').addEventListener('input', function() { loadWorkerRequests(); });
     document.getElementById('openFilterPanel').addEventListener('click', openFilterPanel);
     document.getElementById('closeFilterPanel').addEventListener('click', closeFilterPanelWindow);
+    document.getElementById('showDocumentsModal').addEventListener('click', function() {
+        loadDocuments();
+        document.getElementById('documentsModal').classList.add('active');
+    });
     document.getElementById('resetFilters').addEventListener('click', function() {
         document.getElementById('filterDateFrom').value = '';
         document.getElementById('filterDateTo').value = '';
