@@ -17,7 +17,7 @@
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
     .btn-secondary { background: #f5f9fd; border: 1px solid transparent; color: #1a5f7a; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; box-shadow: none; }
     .btn-secondary:hover { background: #e7f0f5; }
-    #showWorkersModal, #showDocumentsModal, #showCancelAmountsModal, #bindMessengersBtn { border: 2px solid #2f7e9e; }
+    #showWorkersModal, #showDocumentsModal, #showCancelAmountsModal, #bindMessengersBtn, #openFilterPanel { border: 2px solid #2f7e9e; }
     .btn-danger { background: #c03c2b; color: white; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; }
     .btn-danger:hover { background: #a02f24; }
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
@@ -41,7 +41,7 @@
     .status-dropdown__options label:last-child { margin-bottom: 0; }
     .status-dropdown__options input[type='checkbox'] { accent-color: #2f7e9e; width: 16px; height: 16px; }
     .status-dropdown__summary { flex: 1; }
-    .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -10px #bac9d4; overflow-x: auto; }
+    .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -10px #bac9d4; overflow: auto; max-height: 72vh; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle; }
     th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 5; }
@@ -380,7 +380,9 @@
         <div class="field">
             <label>Адрес клиента</label>
             <div class="option-row">
-                <input type="text" id="createClientAddress" list="addressOptionsList" placeholder="Выберите или введите адрес">
+                <select id="createClientAddress">
+                    <option value="">Выберите адрес</option>
+                </select>
                 <button type="button" class="btn-secondary" id="addCreateAddressBtn">Добавить</button>
                 <button type="button" class="btn-secondary" id="deleteCreateAddressBtn">Удалить</button>
             </div>
@@ -394,7 +396,9 @@
         <div class="field">
             <label>Вид техники</label>
             <div class="option-row">
-                <input type="text" id="createEquipmentType" list="equipmentOptionsList" placeholder="Выберите или введите вид техники">
+                <select id="createEquipmentType">
+                    <option value="">Выберите вид техники</option>
+                </select>
                 <button type="button" class="btn-secondary" id="addCreateEquipmentBtn">Добавить</button>
                 <button type="button" class="btn-secondary" id="deleteCreateEquipmentBtn">Удалить</button>
             </div>
@@ -447,7 +451,9 @@
         <div class="field">
             <label>Адрес клиента</label>
             <div class="option-row">
-                <input type="text" id="adminClientAddress" list="addressOptionsList" placeholder="Выберите или введите адрес">
+                <select id="adminClientAddress">
+                    <option value="">Выберите адрес</option>
+                </select>
                 <button type="button" class="btn-secondary" id="addAdminAddressBtn">Добавить</button>
                 <button type="button" class="btn-secondary" id="deleteAdminAddressBtn">Удалить</button>
             </div>
@@ -461,7 +467,9 @@
         <div class="field">
             <label>Вид техники</label>
             <div class="option-row">
-                <input type="text" id="adminEquipmentType" list="equipmentOptionsList" placeholder="Выберите или введите вид техники">
+                <select id="adminEquipmentType">
+                    <option value="">Выберите вид техники</option>
+                </select>
                 <button type="button" class="btn-secondary" id="addAdminEquipmentBtn">Добавить</button>
                 <button type="button" class="btn-secondary" id="deleteAdminEquipmentBtn">Удалить</button>
             </div>
@@ -498,9 +506,6 @@
         <img id="photoViewerImg" src="" style="width:100%; height:auto; border-radius:12px; margin-top:10px;">
     </div>
 </div>
-<datalist id="equipmentOptionsList"></datalist>
-<datalist id="addressOptionsList"></datalist>
-
 <script>
     const csrftoken = '{{ csrf_token }}';
     const currentUserId = parseInt("{{ request.user.id }}") || 0;
@@ -534,19 +539,15 @@
         return true;
     }
     function renderSelectOptions(selectId, options, placeholder) {
-        const field = document.getElementById(selectId);
-        if (!field) return;
-        const currentValue = normalizeOptionValue(field.value);
-        const hasExact = options.some(opt => opt.toLowerCase() === currentValue.toLowerCase());
-        if (currentValue && !hasExact) options.push(currentValue);
-        options.sort((a, b) => a.localeCompare(b, 'ru'));
-        const listId = field.getAttribute('list');
-        if (listId) {
-            const datalist = document.getElementById(listId);
-            if (datalist) {
-                datalist.innerHTML = options.map(opt => `<option value="${escapeHtml(opt)}"></option>`).join('');
-            }
-        }
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const currentValue = normalizeOptionValue(select.value);
+        let html = `<option value="">${placeholder}</option>`;
+        options.forEach(opt => {
+            const selected = currentValue && opt.toLowerCase() === currentValue.toLowerCase() ? 'selected' : '';
+            html += `<option value="${escapeHtml(opt)}" ${selected}>${escapeHtml(opt)}</option>`;
+        });
+        select.innerHTML = html;
     }
     function syncOptionSelects() {
         renderSelectOptions('createEquipmentType', equipmentOptions, 'Выберите вид техники');
@@ -672,10 +673,23 @@
                 }
                 container.innerHTML = items.map(item => `
                     <div style="display:grid; grid-template-columns: 1fr 180px; gap:10px; align-items:center; padding:10px 12px; border:1px solid #d9e5ef; border-radius:12px; background:#f8fafc;">
-                        <div style="font-weight:600; color:#1a4b5f;">${escapeHtml(item.equipment_type || '')}</div>
+                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                            <span style="font-weight:600; color:#1a4b5f;">${escapeHtml(item.equipment_type || '')}</span>
+                            <button type="button" class="delete-tech-item-btn" data-tech="${escapeHtml(item.equipment_type || '')}" style="border:none; background:#ffeaea; color:#c03c2b; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:16px; line-height:1;">×</button>
+                        </div>
                         <input type="number" min="0" step="1" class="cancel-amount-input" data-equipment-type="${escapeHtml(item.equipment_type || '')}" value="${escapeHtml(item.cancel_keep_amount || '750')}" style="padding:8px 10px; border:1px solid #cbdae7; border-radius:12px;">
                     </div>
                 `).join('');
+                container.querySelectorAll('.delete-tech-item-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const tech = this.dataset.tech || '';
+                        if (!tech) return;
+                        if (!confirm(`Удалить технику «${tech}»?`)) return;
+                        deleteOptionFromGlobal('equipment', tech)
+                            .then(() => Promise.all([loadRequestOptions(), loadCancelAmountSettings()]))
+                            .catch(err => showAppAlert('Ошибка: ' + (err.message || 'Не удалось удалить технику')));
+                    });
+                });
             })
             .catch(err => {
                 console.error('Ошибка загрузки остатков по технике:', err);
@@ -693,19 +707,6 @@
             .then(() => Promise.all([loadRequestOptions(), loadCancelAmountSettings()]))
             .then(() => { if (input) input.value = ''; })
             .catch(err => showAppAlert('Ошибка: ' + (err.message || 'Не удалось добавить технику')));
-    }
-    function deleteTechniqueFromSettings() {
-        const input = document.getElementById('cancelAmountNewTechnique');
-        const value = normalizeOptionValue(input ? input.value : '');
-        if (!value) {
-            showAppAlert('Введите или выберите технику для удаления');
-            return;
-        }
-        if (!confirm(`Удалить технику «${value}»?`)) return;
-        deleteOptionFromGlobal('equipment', value)
-            .then(() => Promise.all([loadRequestOptions(), loadCancelAmountSettings()]))
-            .then(() => { if (input) input.value = ''; })
-            .catch(err => showAppAlert('Ошибка: ' + (err.message || 'Не удалось удалить технику')));
     }
     function saveCancelAmountSettings() {
         const inputs = document.querySelectorAll('.cancel-amount-input');
@@ -1529,8 +1530,6 @@
     }
     const addTechniqueSettingsBtn = document.getElementById('addTechniqueSettingsBtn');
     if (addTechniqueSettingsBtn) addTechniqueSettingsBtn.addEventListener('click', addTechniqueFromSettings);
-    const deleteTechniqueSettingsBtn = document.getElementById('deleteTechniqueSettingsBtn');
-    if (deleteTechniqueSettingsBtn) deleteTechniqueSettingsBtn.addEventListener('click', deleteTechniqueFromSettings);
     document.getElementById('uploadDocumentBtn').addEventListener('click', function() {
         const title = (document.getElementById('documentTitle').value || '').trim();
         const fileInput = document.getElementById('documentFile');
@@ -1694,9 +1693,9 @@
             У мастера остаётся указанная сумма по технике, всё сверх неё относится к администратору.
         </div>
         <div style="display:grid; grid-template-columns: 1fr auto auto; gap:10px; margin-bottom:12px;">
-            <input type="text" id="cancelAmountNewTechnique" list="equipmentOptionsList" placeholder="Введите технику для добавления/удаления" style="padding:10px 12px; border:1px solid #cbdae7; border-radius:12px;">
+            <input type="text" id="cancelAmountNewTechnique" placeholder="Введите технику для добавления" style="padding:10px 12px; border:1px solid #cbdae7; border-radius:12px;">
             <button class="btn-secondary" id="addTechniqueSettingsBtn" type="button">Добавить технику</button>
-            <button class="btn-secondary" id="deleteTechniqueSettingsBtn" type="button">Удалить технику</button>
+            <div></div>
         </div>
         <div id="cancelAmountSettingsList" style="display:grid; gap:10px;"></div>
         <div class="modal-actions">
@@ -1763,4 +1762,46 @@
         </form>
     </div>
 </div>
+<script>
+// Резервная инициализация ключевых кнопок и первой загрузки заявок.
+(function () {
+    function safeBind(id, handler) {
+        const el = document.getElementById(id);
+        if (!el || el.dataset.fallbackBound) return;
+        el.dataset.fallbackBound = '1';
+        el.addEventListener('click', handler);
+    }
+    function initFallback() {
+        safeBind('showWorkersModal', function () {
+            try { if (typeof loadWorkers === 'function') loadWorkers(); } catch (e) {}
+            const modal = document.getElementById('workersModal');
+            if (modal) modal.classList.add('active');
+        });
+        safeBind('bindMessengersBtn', function () {
+            const modal = document.getElementById('bindModal');
+            if (modal) modal.classList.add('active');
+            try { if (typeof initAdminMessengerBindings === 'function') initAdminMessengerBindings(); } catch (e) {}
+        });
+        if (!window.__adminInitialLoaded) {
+            window.__adminInitialLoaded = true;
+            try {
+                if (typeof loadRequestOptions === 'function') {
+                    loadRequestOptions().finally(function () {
+                        if (typeof loadRequests === 'function') loadRequests();
+                    });
+                } else if (typeof loadRequests === 'function') {
+                    loadRequests();
+                }
+            } catch (e) {
+                console.error('Fallback init error:', e);
+            }
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFallback, { once: true });
+    } else {
+        initFallback();
+    }
+})();
+</script>
 {% endblock %}

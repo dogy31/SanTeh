@@ -25,7 +25,7 @@
     .status-dropdown__options label { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; color: #2c5770; cursor: pointer; }
     .status-dropdown__options label:last-child { margin-bottom: 0; }
     .status-dropdown__options input[type='checkbox'] { accent-color: #2f7e9e; width: 16px; height: 16px; }
-    .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -1 0px #bac9d4; overflow-x: auto; }
+    .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -1 0px #bac9d4; overflow: auto; max-height: 72vh; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle; }
     th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 5; }
@@ -49,7 +49,7 @@
     .btn-secondary { background: #f5f9fd; border: 1px solid transparent; color: #1a5f7a; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; box-shadow: none; }
     .btn-secondary:hover { background: #e7f0f5; }
     .btn-primary { background: #2f7e9e; color: white; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
-    #showEquipmentModal, #showDocumentsModal, #bindMessengersBtn { border: 2px solid #2f7e9e; background: white; color: #2f7e9e; }
+    #showEquipmentModal, #showDocumentsModal, #bindMessengersBtn, #openFilterPanel { border: 2px solid #2f7e9e; background: white; color: #2f7e9e; }
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
     .view-toggle-row { display: flex; justify-content: flex-start; gap: 10px; align-items: center; margin: 10px; }
     .filter-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; margin: 12px; }
@@ -81,7 +81,7 @@
     .modal-content h2 { font-size: 28px; margin-bottom: 20px; }
     .field { margin-bottom: 16px; }
     .field label { display: block; font-weight: 500; margin-bottom: 4px; }
-    .field input, .field select, .field textarea { width: 100%; padding: 10px 14px; border: 1px solid #cbdae7; border-radius: 20px; font-size: 15px; }
+    .field input, .field select, .field textarea {padding: 10px 14px; border: 1px solid #cbdae7; border-radius: 20px; font-size: 15px; }
     .field input[readonly] { background: #f0f5fa; color: #2b546b; cursor: default; border-color: #d0dee9; }
     .photo-upload-area { border: 2px dashed #acc7db; border-radius: 24px; padding: 20px; text-align: center; margin: 15px 0; background: #f4fafd; }
     .photo-previews { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
