@@ -55,7 +55,8 @@ def normalize_phone(phone):
 
 
 def compose_full_address(base_address, house_number='', entrance='', floor='', apartment=''):
-    base = (base_address or '').strip()
+    # Нормализуем базу, чтобы не дублировать "д. / под. / эт. / кв." при повторном сохранении.
+    base = extract_base_address(base_address)
     parts = [base] if base else []
     if house_number:
         parts.append(f"д. {house_number.strip()}")
