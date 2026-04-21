@@ -17,7 +17,7 @@
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
     .btn-secondary { background: #f5f9fd; border: 1px solid transparent; color: #1a5f7a; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; box-shadow: none; }
     .btn-secondary:hover { background: #e7f0f5; }
-    #showWorkersModal, #bindMessengersBtn { border: 2px solid #2f7e9e; }
+    #showWorkersModal, #showDocumentsModal, #showCancelAmountsModal, #bindMessengersBtn { border: 2px solid #2f7e9e; }
     .btn-danger { background: #c03c2b; color: white; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; }
     .btn-danger:hover { background: #a02f24; }
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
@@ -44,7 +44,7 @@
     .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -10px #bac9d4; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle; }
-    th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; }
+    th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 5; }
     tr.overdue { background-color: #ffefed; }
     .status { display: inline-block; padding: 5px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; white-space: nowrap; }
     .status.new { background: #e1edfb; color: #1b5f8c; }
@@ -262,6 +262,7 @@
             <button class="btn-primary btn-large" id="showCreateModal">Новая заявка</button>
             <button class="btn-secondary" id="showWorkersModal">Мастера</button>
             <button class="btn-secondary" id="showDocumentsModal">Документы</button>
+            <button class="btn-secondary" id="showCancelAmountsModal">Остатки по технике</button>
             <button class="btn-secondary" id="bindMessengersBtn">Мессенджеры</button>
             <a href="{% url 'logout' %}" class="btn-danger" style="text-decoration: none;">Выйти</a>
         </div>
@@ -327,15 +328,15 @@
                     <th style="width:100px">Статус</th>
                     <th style="width:90px">Цена (₽)</th>
                     <th style="width:90px">Себестоимость (₽)</th>
-                    <th style="width:90px">Чистые (₽)</th>
+                    <th style="width:90px">Чистая сумма (₽)</th>
                     <th style="width:90px">ЗП мастера (₽)</th>
                     <th style="width:90px">Процент (%)</th>
-                    <th style="width:90px">Остается у менеджера</th>
+                    <th style="width:90px">Сумма сдачи денег</th>
                     <th style="width:100px">Деньги сданы</th>
                     <th style="width:120px">Предоплата (₽)</th>
                     <th>Рабочий</th>
                     <th style="width:110px">Дата создания</th>
-                    <th style="width:110px">Дедлайн</th>
+                    <th style="width:110px">В работе до</th>
                     <th style="width:70px">Детали</th>
                     <th style="width:100px"></th>
                     </tr>
@@ -364,6 +365,7 @@
                     <option value="">Выберите адрес</option>
                 </select>
                 <button type="button" class="btn-secondary" id="addCreateAddressBtn">Добавить</button>
+                <button type="button" class="btn-secondary" id="deleteCreateAddressBtn">Удалить</button>
             </div>
             <div class="field-inline-row">
                 <input type="text" id="createHouseNumber" placeholder="Дом">
@@ -379,6 +381,7 @@
                     <option value="">Выберите вид техники</option>
                 </select>
                 <button type="button" class="btn-secondary" id="addCreateEquipmentBtn">Добавить</button>
+                <button type="button" class="btn-secondary" id="deleteCreateEquipmentBtn">Удалить</button>
             </div>
         </div>
         <div class="field"><label>Назначить рабочего</label>
@@ -390,7 +393,7 @@
         </div>
         <div class="field"><label>Процент рабочего (%)</label><input type="number" id="createWorkerPercent" value="50" min="0" max="100"></div>
         <div class="field"><label>Время</label><input type="time" id="createVisitTime"></div>
-        <div class="field"><label>Дата выполнения (дедлайн)</label><input type="date" id="createDeadlineDate" required></div>
+        <div class="field"><label>В работе до</label><input type="date" id="createDeadlineDate" required></div>
         <div class="modal-actions">
             <button class="btn-secondary" onclick="closeModal('createModal')">Отмена</button>
             <button class="btn-primary" id="saveCreateBtn">Создать</button>
@@ -403,15 +406,17 @@
     <div class="modal-content">
         <h2>📄 Детали заявки #<span id="detailsId"></span></h2>
         <div class="field"><label>Договор</label><div class="photo-gallery" id="detailsContract"></div></div>
-        <div class="field"><label>Детали и чеки</label><div id="detailsPartsList" class="parts-list"></div></div>
+        <div class="field"><label>Фото чека</label><div id="detailsPartsList" class="parts-list"></div></div>
         <div class="field"><label>Транспортные</label><div id="detailsTransportList" class="parts-list"></div></div>
-        <div class="field"><label>Изначальная сумма (₽)</label><div id="detailsPrice">—</div></div>
+        <div class="field"><label>Общая сумма (₽)</label><div id="detailsPrice">—</div></div>
         <div class="field"><label>Предоплата (₽)</label><div id="detailsPrepayment">—</div></div>
         <div class="field"><label>Себестоимость (₽)</label><div id="detailsCostPrice">—</div></div>
-        <div class="field"><label>Чистые (₽)</label><div id="detailsNetProfit">—</div></div>
+        <div class="field"><label>Чистая сумма (₽)</label><div id="detailsNetProfit">—</div></div>
         <div class="field"><label>ЗП мастера (₽)</label><div id="detailsWorkerSalary">—</div></div>
-        <div class="field"><label>Остаётся у менеджера (₽)</label><div id="detailsAdminProfit">—</div></div>
+        <div class="field"><label>Сумма сдачи денег (₽)</label><div id="detailsAdminProfit">—</div></div>
         <div class="field"><label>Процент мастера (%)</label><div id="detailsWorkerPercent">—</div></div>
+        <div class="field"><label>Комментарий</label><div id="detailsComment" style="background: #f9fafc; padding: 10px; border-radius: 12px;">—</div></div>
+        <div class="field"><label>Проделаные работы</label><div id="detailsPerformedWork" style="background: #f9fafc; padding: 10px; border-radius: 12px;">—</div></div>
         <div class="field"><label>Причина просрочки</label><div id="detailsOverdueReason" style="background: #f9fafc; padding: 10px; border-radius: 12px;"></div></div>
         <div class="modal-actions"><button class="btn-secondary" onclick="closeModal('detailsModal')">Закрыть</button></div>
     </div>
@@ -431,6 +436,7 @@
                     <option value="">Выберите адрес</option>
                 </select>
                 <button type="button" class="btn-secondary" id="addAdminAddressBtn">Добавить</button>
+                <button type="button" class="btn-secondary" id="deleteAdminAddressBtn">Удалить</button>
             </div>
             <div class="field-inline-row">
                 <input type="text" id="adminHouseNumber" placeholder="Дом">
@@ -446,22 +452,24 @@
                     <option value="">Выберите вид техники</option>
                 </select>
                 <button type="button" class="btn-secondary" id="addAdminEquipmentBtn">Добавить</button>
+                <button type="button" class="btn-secondary" id="deleteAdminEquipmentBtn">Удалить</button>
             </div>
         </div>
         <div class="field"><label>Назначить рабочего</label><select id="adminWorker"><option value="">—</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
         <div class="field"><label>Процент рабочего (%)</label><input type="number" id="adminWorkerPercent" min="0" max="100" step="1"></div>
         <div class="field"><label>Время</label><input type="time" id="adminVisitTime"></div>
-        <div class="field"><label>Дата выполнения (дедлайн)</label><input type="date" id="adminDeadlineDate"></div>
+        <div class="field"><label>В работе до</label><input type="date" id="adminDeadlineDate"></div>
         <div class="field"><label>Статус</label><select id="adminStatus"><option value="new">Новая</option><option value="accepted">Принял</option><option value="in-progress">В работе</option><option value="done">Выполнена</option></select></div>
         <div class="field"><label>Цена</label><input type="number" id="adminPrice"></div>
         <div class="field"><label>Комментарий</label><textarea id="adminComment"></textarea></div>
+        <div class="field"><label>Проделаные работы</label><textarea id="adminPerformedWork"></textarea></div>
         <div class="field"><label>Предоплата (₽)</label><input type="text" id="adminPrepayment" readonly style="background:#f0f5fa;"></div>
         <div class="field"><label>Себестоимость (₽)</label><input type="text" id="adminCostPrice" readonly style="background:#f0f5fa;"></div>
-        <div class="field"><label>Чистые (₽)</label><input type="text" id="adminNetProfit" readonly style="background:#f0f5fa;"></div>
+        <div class="field"><label>Чистая сумма (₽)</label><input type="text" id="adminNetProfit" readonly style="background:#f0f5fa;"></div>
         <div class="field"><label>ЗП Мастера (₽)</label><input type="text" id="adminWorkerSalary" readonly style="background:#f0f5fa;"></div>
-        <div class="field"><label>Остаётся у менеджера (₽)</label><input type="text" id="adminAdminProfit" readonly style="background:#f0f5fa;"></div>
+        <div class="field"><label>Сумма сдачи денег (₽)</label><input type="text" id="adminAdminProfit" readonly style="background:#f0f5fa;"></div>
         <div class="field"><label>Договор</label><div class="photo-gallery" id="adminContractGallery"></div></div>
-        <div class="field"><label>Детали (чеки)</label><div id="adminPartsList" class="parts-list"></div></div>
+        <div class="field"><label>Фото чека</label><div id="adminPartsList" class="parts-list"></div></div>
         <div class="field"><label>Транспортные</label><div id="adminTransportList" class="parts-list"></div></div>
         <div class="field" id="adminOverdueReasonField"><label>Причина просрочки</label><textarea id="adminOverdueReason" readonly rows="3" style="background:#f0f5fa;"></textarea></div>
         <div class="modal-actions">
@@ -551,8 +559,73 @@
         const value = prompt(message);
         if (value === null) return;
         if (!addFn(value, targetId)) {
-            alert('Введите непустое значение');
+            showAppAlert('Введите непустое значение');
         }
+    }
+    function saveOptionToGlobal(type, value) {
+        const normalized = normalizeOptionValue(value);
+        if (!normalized) return Promise.reject(new Error('Пустое значение'));
+        const formData = new FormData();
+        formData.append('type', type);
+        formData.append('value', normalized);
+        return fetch('/api/request-options/add/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        }).then(response => response.json().then(data => ({ status: response.status, body: data })))
+          .then(({ status, body }) => {
+              if (status !== 200 || !body.success) {
+                  throw new Error(body.error || 'Не удалось добавить');
+              }
+              return normalized;
+          });
+    }
+    function deleteOptionFromGlobal(type, value) {
+        const normalized = normalizeOptionValue(value);
+        if (!normalized) return Promise.reject(new Error('Пустое значение'));
+        const formData = new FormData();
+        formData.append('type', type);
+        formData.append('value', normalized);
+        return fetch('/api/request-options/delete/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        }).then(response => response.json().then(data => ({ status: response.status, body: data })))
+          .then(({ status, body }) => {
+              if (status !== 200 || !body.success) {
+                  throw new Error(body.error || 'Не удалось удалить');
+              }
+              return normalized;
+          });
+    }
+    function askAndSaveOption(message, type, targetId) {
+        const value = prompt(message);
+        if (value === null) return;
+        const normalized = normalizeOptionValue(value);
+        if (!normalized) {
+            showAppAlert('Введите непустое значение');
+            return;
+        }
+        saveOptionToGlobal(type, normalized)
+            .then(() => loadRequestOptions())
+            .then(() => {
+                const target = document.getElementById(targetId);
+                if (target) target.value = normalized;
+            })
+            .catch(err => showAppAlert('Ошибка: ' + (err.message || 'Не удалось добавить значение')));
+    }
+    function deleteSelectedOption(type, selectId) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const value = normalizeOptionValue(select.value);
+        if (!value) {
+            showAppAlert('Сначала выберите значение для удаления');
+            return;
+        }
+        if (!confirm(`Удалить значение «${value}» из глобального списка?`)) return;
+        deleteOptionFromGlobal(type, value)
+            .then(() => loadRequestOptions())
+            .catch(err => showAppAlert('Ошибка: ' + (err.message || 'Не удалось удалить значение')));
     }
     function loadRequestOptions() {
         return fetch('/api/request-options/')
@@ -569,8 +642,67 @@
                 syncOptionSelects();
             });
     }
+    function loadCancelAmountSettings() {
+        return fetch('/api/cancel-amount-settings/')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('cancelAmountSettingsList');
+                if (!container) return;
+                const items = Array.isArray(data.items) ? data.items : [];
+                if (!items.length) {
+                    container.innerHTML = '<div style="color:#4a6778;">Нет данных по технике</div>';
+                    return;
+                }
+                container.innerHTML = items.map(item => `
+                    <div style="display:grid; grid-template-columns: 1fr 180px; gap:10px; align-items:center; padding:10px 12px; border:1px solid #d9e5ef; border-radius:12px; background:#f8fafc;">
+                        <div style="font-weight:600; color:#1a4b5f;">${escapeHtml(item.equipment_type || '')}</div>
+                        <input type="number" min="0" step="1" class="cancel-amount-input" data-equipment-type="${escapeHtml(item.equipment_type || '')}" value="${escapeHtml(item.cancel_keep_amount || '750')}" style="padding:8px 10px; border:1px solid #cbdae7; border-radius:12px;">
+                    </div>
+                `).join('');
+            })
+            .catch(err => {
+                console.error('Ошибка загрузки остатков по технике:', err);
+                showAppAlert('Не удалось загрузить остатки по технике');
+            });
+    }
+    function saveCancelAmountSettings() {
+        const inputs = document.querySelectorAll('.cancel-amount-input');
+        const items = [];
+        for (const input of inputs) {
+            const amount = Number(input.value);
+            if (!Number.isFinite(amount) || amount < 0) {
+                showAppAlert('Сумма остатка должна быть числом от 0 и выше');
+                input.focus();
+                return Promise.reject(new Error('validation'));
+            }
+            items.push({
+                equipment_type: input.dataset.equipmentType || '',
+                cancel_keep_amount: amount
+            });
+        }
+        const formData = new FormData();
+        formData.append('items_json', JSON.stringify(items));
+        return fetch('/api/cancel-amount-settings/update/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        })
+        .then(response => response.json().then(data => ({ status: response.status, body: data })))
+        .then(({ status, body }) => {
+            if (status === 200 && body.success) {
+                showAppAlert('Остатки по технике сохранены');
+                closeModal('cancelAmountsModal');
+                return;
+            }
+            throw new Error(body.error || 'Не удалось сохранить остатки');
+        })
+        .catch(err => {
+            if (err.message !== 'validation') showAppAlert('Ошибка: ' + err.message);
+            throw err;
+        });
+    }
     function showUserWarning(message, focusEl) {
-        alert(message);
+        showAppAlert(message);
         try { if (focusEl) focusEl.focus(); } catch (e) {}
     }
 
@@ -739,7 +871,10 @@
             block.className = `request-block ${r.status}`;
             block.innerHTML = `
                 <div class="block-header">
-                    <div class="block-id">#${r.id} • ${r.visit_time || '—'} • ${created.toLocaleDateString()}</div>
+                    <div>
+                        <div class="block-id">#${r.id} • ${created.toLocaleDateString()}</div>
+                        <div class="block-label">~Время~: ${r.visit_time || '—'}</div>
+                    </div>
                     <div class="${statusClass}">${statusText}</div>
                 </div>
                 <div class="block-content">
@@ -775,7 +910,7 @@
                         <div class="block-label">Дата создания</div>
                         <div class="block-value">${created.toLocaleDateString()}</div>
                     </div>
-                    ${r.deadline_date ? `<div class="block-field"><div class="block-label">Дедлайн</div><div class="block-value">${new Date(r.deadline_date).toLocaleDateString()}</div></div>` : ''}
+                    ${r.deadline_date ? `<div class="block-field"><div class="block-label">В работе до</div><div class="block-value">${new Date(r.deadline_date).toLocaleDateString()}</div></div>` : ''}
                 </div>
                 ${daysSinceCreated >= 2 && r.status !== 'done' ? `<div class="block-old">⏰ Уже ${daysSinceCreated} дней в работе</div>` : ''}
                 <div class="block-actions">
@@ -807,7 +942,7 @@
             if (newPercentText === null) return;
             const newPercent = parseInt(newPercentText, 10);
             if (isNaN(newPercent) || newPercent < 0 || newPercent > 100) {
-                alert('Процент должен быть числом от 0 до 100');
+                showAppAlert('Процент должен быть числом от 0 до 100');
                 return;
             }
             fetch(`/update-worker-percent/${id}/`, {
@@ -820,7 +955,7 @@
                 if (data.success) {
                     loadRequests();
                 } else {
-                    alert('Ошибка: ' + (data.error || 'неизвестная ошибка'));
+                    showAppAlert('Ошибка: ' + (data.error || 'неизвестная ошибка'));
                 }
             })
             .catch(err => console.error('Ошибка обновления процента:', err));
@@ -878,6 +1013,8 @@
                 document.getElementById('detailsWorkerSalary').innerHTML = data.worker_salary ? data.worker_salary + ' ₽' : '—';
                 document.getElementById('detailsAdminProfit').innerHTML = data.admin_profit !== null && data.admin_profit !== undefined ? data.admin_profit + ' ₽' : '—';
                 document.getElementById('detailsWorkerPercent').innerHTML = data.worker_percent || '50';
+                document.getElementById('detailsComment').innerHTML = data.comment ? escapeHtml(data.comment) : '—';
+                document.getElementById('detailsPerformedWork').innerHTML = data.performed_work ? escapeHtml(data.performed_work) : '—';
                 document.getElementById('detailsOverdueReason').innerHTML = data.overdue_reason ? escapeHtml(data.overdue_reason) : 'не указана';
                 document.getElementById('detailsId').textContent = id;
                 document.getElementById('detailsModal').classList.add('active');
@@ -901,6 +1038,7 @@
                 document.getElementById('adminApartment').value = data.apartment || '';
                 document.getElementById('adminPrice').value = data.price || '';
                 document.getElementById('adminComment').value = data.comment || '';
+                document.getElementById('adminPerformedWork').value = data.performed_work || '';
                 document.getElementById('adminDeadlineDate').value = data.deadline_date || '';
                 document.getElementById('adminVisitTime').value = data.visit_time || '';
                 document.getElementById('adminStatus').value = data.status || '';
@@ -982,6 +1120,7 @@
         formData.append('equipment_type', document.getElementById('adminEquipmentType').value);
         formData.append('price', document.getElementById('adminPrice').value);
         formData.append('comment', document.getElementById('adminComment').value);
+        formData.append('performed_work', document.getElementById('adminPerformedWork').value);
         formData.append('prepayment_amount', document.getElementById('adminPrepayment').value);
         formData.append('deadline_date', document.getElementById('adminDeadlineDate').value);
         formData.append('visit_time', document.getElementById('adminVisitTime').value);
@@ -1004,7 +1143,7 @@
             return;
         }
         saveAdminEdit(id)
-        .then(data => { if (data.success) { closeModal('editModalAdmin'); loadRequests(); alert('Изменения сохранены'); } else alert('Ошибка сохранения: ' + (data.error || 'неизвестная ошибка')); })
+        .then(data => { if (data.success) { closeModal('editModalAdmin'); loadRequests(); showAppAlert('Изменения сохранены'); } else showAppAlert('Ошибка сохранения: ' + (data.error || 'неизвестная ошибка')); })
         .catch(err => console.error('Ошибка сохранения:', err))
         .finally(() => { btn.disabled = false; btn.textContent = 'Сохранить'; });
     });
@@ -1014,7 +1153,7 @@
         if (!id || !confirm('Вы уверены, что хотите отменить эту заявку?')) return;
         const comment = (prompt('Комментарий (обязательно при отмене):') || '').trim();
         if (!comment) {
-            alert('Комментарий обязателен при отмене заявки');
+            showAppAlert('Комментарий обязателен при отмене заявки');
             return;
         }
         document.getElementById('adminComment').value = comment;
@@ -1033,14 +1172,14 @@
             if (data.success) {
                 closeModal('editModalAdmin');
                 loadRequests();
-                alert('Изменения сохранены и заявка отменена');
+                showAppAlert('Изменения сохранены и заявка отменена');
             } else {
                 throw new Error(data.error || 'Ошибка отмены');
             }
         })
         .catch(err => {
             console.error('Ошибка сохранения или отмены:', err);
-            alert(err.message || 'Ошибка сохранения или отмены');
+            showAppAlert(err.message || 'Ошибка сохранения или отмены');
         })
         .finally(() => { btn.disabled = false; btn.textContent = 'Отменить заявку'; });
     });
@@ -1048,7 +1187,7 @@
     window.cancelRequest = function(id, btn) {
         if (!confirm('Вы уверены, что хотите отменить заявку?')) return;
         const comment = (prompt('Комментарий (обязательно при отмене):') || '').trim();
-        if (!comment) { alert('Комментарий обязателен при отмене заявки'); return; }
+        if (!comment) { showAppAlert('Комментарий обязателен при отмене заявки'); return; }
         const initialText = btn ? btn.textContent : 'Отменить';
         if (btn) { btn.disabled = true; btn.textContent = 'Отмена...'; }
         fetch(`/cancel-request/${id}/`, {
@@ -1061,9 +1200,9 @@
             if (status === 200 && body.success) {
                 showBrowserNotification('🚫 Заявка отменена', `Заявка #${id} успешно отменена`);
                 loadRequests();
-                alert('Заявка отменена');
+                showAppAlert('Заявка отменена');
             }
-            else alert('Ошибка: ' + (body.error || 'Не удалось отменить заявку'));
+            else showAppAlert('Ошибка: ' + (body.error || 'Не удалось отменить заявку'));
         })
         .catch(err => console.error('Ошибка отмены:', err))
         .finally(() => {
@@ -1087,14 +1226,14 @@
             if (status === 200 && body.success) {
                 closeModal('editModalAdmin');
                 loadRequests();
-                alert(`Заявка #${id} удалена`);
+                showAppAlert(`Заявка #${id} удалена`);
             } else {
-                alert('Ошибка: ' + (body.error || 'Не удалось удалить заявку'));
+                showAppAlert('Ошибка: ' + (body.error || 'Не удалось удалить заявку'));
             }
         })
         .catch(err => {
             console.error('Ошибка удаления заявки:', err);
-            alert('Не удалось удалить заявку');
+            showAppAlert('Не удалось удалить заявку');
         })
         .finally(() => {
             if (btn) {
@@ -1117,12 +1256,12 @@
             if (status === 200 && body.success) {
                 loadRequests();
             } else {
-                alert('Ошибка: ' + (body.error || 'Не удалось принять заявку'));
+                showAppAlert('Ошибка: ' + (body.error || 'Не удалось принять заявку'));
             }
         })
         .catch(err => {
             console.error('Ошибка принятия заявки:', err);
-            alert('Не удалось принять заявку');
+            showAppAlert('Не удалось принять заявку');
         })
         .finally(() => {
             if (btn) {
@@ -1187,7 +1326,7 @@
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 200 && body.success) loadDocuments();
-            else alert('Ошибка: ' + (body.error || 'Не удалось удалить документ'));
+            else showAppAlert('Ошибка: ' + (body.error || 'Не удалось удалить документ'));
         })
         .catch(err => console.error('Ошибка удаления документа:', err));
     };
@@ -1226,7 +1365,7 @@
         }
         const deadlineDate = deadlineEl.value;
         if (!deadlineDate) {
-            showUserWarning('Заполните дату выполнения (дедлайн)', deadlineEl);
+            showUserWarning('Заполните поле «В работе до»', deadlineEl);
             btn.disabled = false; btn.textContent = 'Создать';
             return;
         }
@@ -1308,27 +1447,47 @@
     window.onclick = function(event) { if (event.target.classList.contains('modal')) event.target.classList.remove('active'); };
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
     document.getElementById('addCreateEquipmentBtn').addEventListener('click', function() {
-        askAndAddOption('Введите новый вид техники', addEquipmentOption, 'createEquipmentType');
+        askAndSaveOption('Введите новый вид техники', 'equipment', 'createEquipmentType');
     });
     document.getElementById('addAdminEquipmentBtn').addEventListener('click', function() {
-        askAndAddOption('Введите новый вид техники', addEquipmentOption, 'adminEquipmentType');
+        askAndSaveOption('Введите новый вид техники', 'equipment', 'adminEquipmentType');
     });
     document.getElementById('addCreateAddressBtn').addEventListener('click', function() {
-        askAndAddOption('Введите базовый адрес (улица/населённый пункт)', addAddressOption, 'createClientAddress');
+        askAndSaveOption('Введите базовый адрес (улица/населённый пункт)', 'address', 'createClientAddress');
     });
     document.getElementById('addAdminAddressBtn').addEventListener('click', function() {
-        askAndAddOption('Введите базовый адрес (улица/населённый пункт)', addAddressOption, 'adminClientAddress');
+        askAndSaveOption('Введите базовый адрес (улица/населённый пункт)', 'address', 'adminClientAddress');
+    });
+    document.getElementById('deleteCreateEquipmentBtn').addEventListener('click', function() {
+        deleteSelectedOption('equipment', 'createEquipmentType');
+    });
+    document.getElementById('deleteAdminEquipmentBtn').addEventListener('click', function() {
+        deleteSelectedOption('equipment', 'adminEquipmentType');
+    });
+    document.getElementById('deleteCreateAddressBtn').addEventListener('click', function() {
+        deleteSelectedOption('address', 'createClientAddress');
+    });
+    document.getElementById('deleteAdminAddressBtn').addEventListener('click', function() {
+        deleteSelectedOption('address', 'adminClientAddress');
     });
     document.getElementById('showDocumentsModal').addEventListener('click', function() {
         loadDocuments();
         document.getElementById('documentsModal').classList.add('active');
     });
+    document.getElementById('showCancelAmountsModal').addEventListener('click', function() {
+        loadCancelAmountSettings().then(() => {
+            document.getElementById('cancelAmountsModal').classList.add('active');
+        });
+    });
+    document.getElementById('saveCancelAmountsBtn').addEventListener('click', function() {
+        saveCancelAmountSettings().catch(() => {});
+    });
     document.getElementById('uploadDocumentBtn').addEventListener('click', function() {
         const title = (document.getElementById('documentTitle').value || '').trim();
         const fileInput = document.getElementById('documentFile');
         const file = fileInput.files && fileInput.files[0];
-        if (!title) { alert('Введите название документа'); return; }
-        if (!file) { alert('Выберите файл документа'); return; }
+        if (!title) { showAppAlert('Введите название документа'); return; }
+        if (!file) { showAppAlert('Выберите файл документа'); return; }
         const formData = new FormData();
         formData.append('title', title);
         formData.append('file', file);
@@ -1344,7 +1503,7 @@
                 fileInput.value = '';
                 loadDocuments();
             } else {
-                alert('Ошибка: ' + (body.error || 'Не удалось загрузить документ'));
+                showAppAlert('Ошибка: ' + (body.error || 'Не удалось загрузить документ'));
             }
         })
         .catch(err => console.error('Ошибка загрузки документа:', err));
@@ -1364,10 +1523,17 @@
         workers.forEach(w => {
             const workerBlock = document.createElement('div');
             workerBlock.style.cssText = 'background: #f8fafc; border-radius: 16px; padding: 16px; border-left: 4px solid #2f7e9e;';
+            const equipmentList = Array.isArray(w.equipment_types) && w.equipment_types.length
+                ? w.equipment_types.map(item => `<div style="margin-bottom: 4px;">• ${escapeHtml(item)}</div>`).join('')
+                : '<div>—</div>';
             workerBlock.innerHTML = `
                 <div style="font-size: 16px; font-weight: 600; color: #0b2b40; margin-bottom: 8px;">${escapeHtml(w.first_name || 'Мастер')}</div>
                 <div style="font-size: 14px; color: #4a6778;">
                     <div style="margin-bottom: 6px;">📞 ${escapeHtml(w.phone || '—')}</div>
+                    <div style="margin-top: 10px;">
+                        <div style="font-weight: 600; color: #1a4b5f; margin-bottom: 6px;">Техника мастера:</div>
+                        ${equipmentList}
+                    </div>
                 </div>
                 <div style="margin-top: 12px;">
                     <button class="btn-danger worker-delete-btn" data-worker-id="${w.id}" data-worker-name="${escapeHtml(w.first_name || 'Мастер')}">Удалить мастера</button>
@@ -1393,12 +1559,12 @@
                     if (status === 200 && body.success) {
                         loadWorkers();
                     } else {
-                        alert('Ошибка: ' + (body.error || 'Не удалось удалить мастера'));
+                        showAppAlert('Ошибка: ' + (body.error || 'Не удалось удалить мастера'));
                     }
                 })
                 .catch(err => {
                     console.error('Ошибка удаления мастера:', err);
-                    alert('Не удалось удалить мастера');
+                    showAppAlert('Не удалось удалить мастера');
                 })
                 .finally(() => {
                     this.disabled = false;
@@ -1408,17 +1574,21 @@
         });
     }
 
-    document.getElementById('showWorkersModal').addEventListener('click', function() {
-        loadWorkers();
-        document.getElementById('workersModal').classList.add('active');
-    });
+    const showWorkersModalBtn = document.getElementById('showWorkersModal');
+    if (showWorkersModalBtn) {
+        showWorkersModalBtn.addEventListener('click', function() {
+            loadWorkers();
+            document.getElementById('workersModal').classList.add('active');
+        });
+    }
 
     // Привязка мессенджеров
-    document.addEventListener('DOMContentLoaded', function() {
-        const bindMessengersBtn = document.getElementById('bindMessengersBtn');
-        if (bindMessengersBtn) {
-            bindMessengersBtn.addEventListener('click', function() { document.getElementById('bindModal').classList.add('active'); });
-        }
+    const bindMessengersBtn = document.getElementById('bindMessengersBtn');
+    if (bindMessengersBtn) {
+        bindMessengersBtn.addEventListener('click', function() {
+            document.getElementById('bindModal').classList.add('active');
+        });
+    }
         const tgCodeBtn = document.getElementById('generateTgCodeBtn');
         if (tgCodeBtn) tgCodeBtn.addEventListener('click', function() {
             fetch('/generate-tg-code/', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken}, body: JSON.stringify({user_id: currentUserId}) })
@@ -1437,14 +1607,28 @@
                 e.preventDefault();
                 const formData = new FormData(this);
                 fetch('/bind-messengers/', { method: 'POST', headers: {'X-CSRFToken': csrftoken}, body: formData })
-                .then(r=>r.json()).then(data=>{ if (data.success) { alert('Мессенджеры привязаны!'); document.getElementById('bindModal').classList.remove('active'); } else alert('Ошибка: ' + data.error); });
+                .then(r=>r.json()).then(data=>{ if (data.success) { showAppAlert('Мессенджеры привязаны!'); document.getElementById('bindModal').classList.remove('active'); } else showAppAlert('Ошибка: ' + data.error); });
             });
         }
-    });
 
     // Push notifications инициализируются в push-notifications.js
 
 </script>
+
+<!-- Модальное окно остатков по технике при отмене -->
+<div class="modal" id="cancelAmountsModal">
+    <div class="modal-content">
+        <h2>💰 Остатки по технике (при отмене)</h2>
+        <div style="color:#4a6778; margin-bottom:12px;">
+            У мастера остаётся указанная сумма по технике, всё сверх неё относится к администратору.
+        </div>
+        <div id="cancelAmountSettingsList" style="display:grid; gap:10px;"></div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('cancelAmountsModal')">Отмена</button>
+            <button class="btn-primary" id="saveCancelAmountsBtn">Сохранить</button>
+        </div>
+    </div>
+</div>
 
 <!-- Модальное окно списка рабочих -->
 <div class="modal" id="workersModal">

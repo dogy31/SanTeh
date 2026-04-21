@@ -29,10 +29,12 @@ function showBrowserNotification(title, text) {
             });
         } catch(e) {
             console.error('Ошибка создания уведомления:', e);
-            alert(`${title}\n${text}`);
+            if (window.showAppAlert) window.showAppAlert(`${title}\n${text}`);
+            else alert(`${title}\n${text}`);
         }
     } else if ('Notification' in window) {
-        alert(`${title}\n${text}`);
+        if (window.showAppAlert) window.showAppAlert(`${title}\n${text}`);
+        else alert(`${title}\n${text}`);
     }
 }
 

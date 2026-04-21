@@ -24,6 +24,18 @@ import decimal
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_EQUIPMENT_TYPES = [
+    'См - Cтиральные машины',
+    'ПМ - Посудомоечные машины',
+    'Хд - Холодильники',
+    'Вд - Водонагреватели',
+    'Дш - Духовые шкафы',
+    'ВП - Варочные панель',
+    'Тв - Телевизоры',
+    'Км - Кофемашины',
+    'Пром - Промышленная техника',
+]
+
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 
@@ -76,6 +88,39 @@ def save_request_options(equipment_type='', base_address=''):
     base = (base_address or '').strip()
     if base:
         AddressBaseOption.objects.get_or_create(value=base)
+
+
+def ensure_default_equipment_options():
+    for item in DEFAULT_EQUIPMENT_TYPES:
+        EquipmentTypeOption.objects.get_or_create(value=item)
+
+
+def get_equipment_options():
+    ensure_default_equipment_options()
+    return list(EquipmentTypeOption.objects.values_list('value', flat=True))
+
+
+def get_cancel_keep_amount_for_equipment(equipment_type):
+    normalized = (equipment_type or '').strip()
+    if not normalized:
+        return float(decimal.Decimal('750'))
+    option = EquipmentTypeOption.objects.filter(value__iexact=normalized).first()
+    if option and option.cancel_keep_amount is not None:
+        return float(option.cancel_keep_amount)
+    return float(decimal.Decimal('750'))
+
+
+def calc_cancelled_split(price_value, equipment_type):
+    price = float(price_value) if price_value else 0
+    keep_amount = get_cancel_keep_amount_for_equipment(equipment_type)
+    worker_salary = min(price, keep_amount)
+    admin_profit = max(price - worker_salary, 0)
+    return {
+        'cost_price': 0,
+        'net_profit': price,
+        'worker_salary': worker_salary,
+        'admin_profit': admin_profit,
+    }
 tg_bot_path = os.path.join(project_root, 'Messenger_bot')
 if tg_bot_path not in sys.path:
     sys.path.append(tg_bot_path)
@@ -95,6 +140,14 @@ from datetime import datetime, timedelta
 import decimal
 
 def register(request):
+    def register_context(**extra):
+        ctx = {
+            'max_enabled': bool(MAX_TOKEN),
+            'worker_equipment_choices': sorted(get_equipment_options(), key=lambda x: x.lower()),
+        }
+        ctx.update(extra)
+        return ctx
+
     if request.method == 'POST':
         name = request.POST.get('name')
         phone = normalize_phone(request.POST.get('phone'))
@@ -104,19 +157,20 @@ def register(request):
         tg_token = request.POST.get('tg_token')
         max_token = request.POST.get('max_token')
         messengers = request.POST.getlist('messengers')
+        worker_equipment_types = request.POST.getlist('worker_equipment_types')
 
         if not name or not phone or not password or not password2:
-            return render(request, 'main/register.html', {'error': 'Заполните все обязательные поля'})
+            return render(request, 'main/register.html', register_context(error='Заполните все обязательные поля'))
         if len(phone) != 11:
-            return render(request, 'main/register.html', {'error': 'Введите корректный номер телефона'})
+            return render(request, 'main/register.html', register_context(error='Введите корректный номер телефона'))
         
         if password != password2:
-            return render(request, 'main/register.html', {'error': 'Пароли не совпадают'})
+            return render(request, 'main/register.html', register_context(error='Пароли не совпадают'))
 
         if 'telegram' in messengers and not tg_token:
-            return render(request, 'main/register.html', {'error': 'Если вы выбрали Telegram, то получите код'})
+            return render(request, 'main/register.html', register_context(error='Если вы выбрали Telegram, то получите код'))
         if 'max' in messengers and not max_token:
-            return render(request, 'main/register.html', {'error': 'Если вы выбрали MAX, то получите код'})
+            return render(request, 'main/register.html', register_context(error='Если вы выбрали MAX, то получите код'))
 
         tg_id = None
         max_id = None
@@ -124,20 +178,22 @@ def register(request):
             if 'telegram' in messengers:
                 tg_link = tg_database.get_telegram(tg_token)
                 if not tg_link or not tg_link[0]:
-                    return render(request, 'main/register.html', {'error': 'Telegram не привязан: отправьте код боту'})
+                    return render(request, 'main/register.html', register_context(error='Telegram не привязан: отправьте код боту'))
                 tg_id = str(tg_link[0])
             if 'max' in messengers:
                 max_link = tg_database.get_max(max_token)
                 if not max_link or not max_link[0]:
-                    return render(request, 'main/register.html', {'error': 'MAX не привязан: отправьте код боту'})
+                    return render(request, 'main/register.html', register_context(error='MAX не привязан: отправьте код боту'))
                 max_id = str(max_link[0])
 
         if User.objects.filter(username=phone).exists():
-            return render(request, 'main/register.html', {'error': 'Пользователь с таким номером телефона уже существует'})
+            return render(request, 'main/register.html', register_context(error='Пользователь с таким номером телефона уже существует'))
         user = User.objects.create_user(username=phone, email=phone, password=password, first_name=name)
-        Profile.objects.create(user=user, phone=phone, role=role, tg_code=tg_id, max_code=max_id)
+        profile = Profile(user=user, phone=phone, role=role, tg_code=tg_id, max_code=max_id)
+        profile.set_worker_equipment_values(worker_equipment_types)
+        profile.save()
         return redirect('login')
-    return render(request, 'main/register.html', {'max_enabled': bool(MAX_TOKEN)})
+    return render(request, 'main/register.html', register_context())
 
 def login_view(request):
     if request.method == 'POST':
@@ -211,6 +267,7 @@ def reset_password(request):
 def admin_dashboard(request):
     if request.user.profile.role != 'admin':
         return redirect('worker_dashboard')
+    ensure_default_equipment_options()
     workers = User.objects.filter(profile__role='worker')
     return render(request, 'main/admin.html', {'workers': workers, 'max_enabled': bool(MAX_TOKEN)})
 
@@ -218,7 +275,15 @@ def admin_dashboard(request):
 def worker_dashboard(request):
     if request.user.profile.role != 'worker':
         return redirect('admin_dashboard')
-    return render(request, 'main/worker.html', {'max_enabled': bool(MAX_TOKEN)})
+    return render(
+        request,
+        'main/worker.html',
+        {
+            'max_enabled': bool(MAX_TOKEN),
+            'worker_equipment_choices': sorted(get_equipment_options(), key=lambda x: x.lower()),
+            'selected_worker_equipment': request.user.profile.get_worker_equipment_values(),
+        }
+    )
 
 def _json_image_error(exc: Exception):
     if isinstance(exc, FileTooLargeError):
@@ -362,6 +427,8 @@ def edit_request(request, pk):
             req.price = price if price else None
         if 'comment' in request.POST:
             req.comment = request.POST.get('comment', req.comment)
+        if 'performed_work' in request.POST:
+            req.performed_work = request.POST.get('performed_work', req.performed_work)
         if 'overdue_reason' in request.POST:
             req.overdue_reason = request.POST.get('overdue_reason', req.overdue_reason)
         if 'status' in request.POST:
@@ -578,6 +645,7 @@ def edit_request(request, pk):
         'equipment_type': req.equipment_type,
         'price': str(req.price) if req.price else None,
         'comment': req.comment,
+        'performed_work': req.performed_work,
         'photos': [{'id': p.id, 'image': p.image.url, 'photo_type': p.photo_type} for p in req.photos.all()],
         'status': req.status,
         'parts': parts_data,
@@ -656,10 +724,11 @@ def close_request(request, pk):
 def view_request(request, pk):
     req = get_object_or_404(Request, pk=pk)
     if req.status == 'cancelled':
-        cost_price = 0
-        net_profit = float(req.price) if req.price else 0
-        worker_salary = float(req.price) if req.price else 0
-        admin_profit = 0
+        cancelled = calc_cancelled_split(req.price, req.equipment_type)
+        cost_price = cancelled['cost_price']
+        net_profit = cancelled['net_profit']
+        worker_salary = cancelled['worker_salary']
+        admin_profit = cancelled['admin_profit']
     else:
         cost_price = sum(float(part.price) for part in req.parts.all() if part.price)
         net_profit = None
@@ -689,6 +758,7 @@ def view_request(request, pk):
         'prepayment_amount': str(req.prepayment_amount) if req.prepayment_amount else None,
         'created_date': req.created_date.strftime('%d.%m.%Y %H:%M'),
         'comment': req.comment,
+        'performed_work': req.performed_work,
         'worker': req.assigned_to.first_name if req.assigned_to else '',
         'photos': [{'image': p.image.url, 'photo_type': p.photo_type} for p in req.photos.all()],
         'parts': [{'id': p.id, 'name': p.name, 'price': str(p.price) if p.price else None, 'receipt_photo_url': p.receipt_photo.url if p.receipt_photo else None} for p in req.parts.all()],
@@ -749,11 +819,11 @@ def get_requests(request):
     data = []
     for r in requests:
         if r.status == 'cancelled':
-            # При отмене: все деньги остаются у мастера, без расчётов
-            cost_price = 0
-            net_profit = float(r.price) if r.price else 0
-            worker_salary = float(r.price) if r.price else 0
-            admin_profit = 0
+            cancelled = calc_cancelled_split(r.price, r.equipment_type)
+            cost_price = cancelled['cost_price']
+            net_profit = cancelled['net_profit']
+            worker_salary = cancelled['worker_salary']
+            admin_profit = cancelled['admin_profit']
         else:
             cost_price = sum(float(part.price) for part in r.parts.all() if part.price)
             net_profit = float(r.price) - cost_price if r.price else 0
@@ -824,9 +894,10 @@ def get_worker_requests(request):
     for r in requests:
         # Расчёт себестоимости, чистой прибыли и зарплаты рабочего
         if r.status == 'cancelled':
-            cost_price = 0
-            net_profit = float(r.price) if r.price else 0
-            worker_salary = float(r.price) if r.price else 0
+            cancelled = calc_cancelled_split(r.price, r.equipment_type)
+            cost_price = cancelled['cost_price']
+            net_profit = cancelled['net_profit']
+            worker_salary = cancelled['worker_salary']
         else:
             cost_price = sum(float(part.price) for part in r.parts.all() if part.price)
             net_profit = float(r.price) - cost_price if r.price else 0
@@ -851,6 +922,7 @@ def get_worker_requests(request):
             'prepayment_amount': str(r.prepayment_amount) if r.prepayment_amount else None,
             'worker_name': r.assigned_to.first_name if r.assigned_to else '',
             'created_date': r.created_date.isoformat(),
+            'deadline_date': r.deadline_date.isoformat() if r.deadline_date else None,
             'visit_time': r.visit_time.isoformat(timespec='minutes') if r.visit_time else '',
             'photos': [{'image': p.image.url, 'photo_type': p.photo_type} for p in r.photos.all()],
             'transport': [{'id': t.id, 'note': t.note, 'receipt_photo_url': t.receipt_photo.url if t.receipt_photo else None} for t in r.transport_expenses.all()],
@@ -866,16 +938,38 @@ def get_worker_requests(request):
 def get_workers(request):
     if request.user.profile.role != 'admin':
         return JsonResponse({'error': 'permission denied'}, status=403)
-    workers = User.objects.filter(profile__role='worker').values('id', 'first_name', 'username', 'email', 'profile__phone')
-    data = [{'id': w['id'], 'first_name': w['first_name'], 'phone': w['profile__phone'], 'email': w['email']} for w in workers]
+    workers = User.objects.filter(profile__role='worker').select_related('profile')
+    data = []
+    for worker in workers:
+        profile = worker.profile
+        data.append({
+            'id': worker.id,
+            'first_name': worker.first_name,
+            'phone': profile.phone,
+            'email': worker.email,
+            'equipment_types': profile.get_worker_equipment_labels(),
+        })
     return JsonResponse(data, safe=False)
+
+
+@login_required
+def update_worker_equipment_types(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    if request.user.profile.role != 'worker':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    equipment_types = request.POST.getlist('worker_equipment_types')
+    profile = request.user.profile
+    profile.set_worker_equipment_values(equipment_types)
+    profile.save(update_fields=['worker_equipment_types'])
+    return JsonResponse({'success': True, 'equipment_types': profile.get_worker_equipment_labels()})
 
 
 @login_required
 def get_request_options(request):
     if request.user.profile.role != 'admin':
         return JsonResponse({'error': 'permission denied'}, status=403)
-    equipment_types = set(EquipmentTypeOption.objects.values_list('value', flat=True))
+    equipment_types = set(get_equipment_options())
     equipment_types.update(Request.objects.exclude(equipment_type='').values_list('equipment_type', flat=True).distinct())
     address_bases = set(AddressBaseOption.objects.values_list('value', flat=True))
     address_bases.update([
@@ -885,6 +979,93 @@ def get_request_options(request):
         'equipment_types': sorted([item for item in equipment_types if item], key=lambda x: x.lower()),
         'address_bases': sorted([item for item in address_bases if item], key=lambda x: x.lower()),
     })
+
+
+@login_required
+def add_request_option(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    option_type = (request.POST.get('type') or '').strip()
+    value = (request.POST.get('value') or '').strip()
+    if not value:
+        return JsonResponse({'error': 'Пустое значение'}, status=400)
+    if option_type == 'equipment':
+        EquipmentTypeOption.objects.get_or_create(value=value)
+    elif option_type == 'address':
+        AddressBaseOption.objects.get_or_create(value=value)
+    else:
+        return JsonResponse({'error': 'Неверный тип справочника'}, status=400)
+    return JsonResponse({'success': True})
+
+
+@login_required
+def delete_request_option(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    option_type = (request.POST.get('type') or '').strip()
+    value = (request.POST.get('value') or '').strip()
+    if not value:
+        return JsonResponse({'error': 'Пустое значение'}, status=400)
+    if option_type == 'equipment':
+        EquipmentTypeOption.objects.filter(value=value).delete()
+    elif option_type == 'address':
+        AddressBaseOption.objects.filter(value=value).delete()
+    else:
+        return JsonResponse({'error': 'Неверный тип справочника'}, status=400)
+    return JsonResponse({'success': True})
+
+
+@login_required
+def get_cancel_amount_settings(request):
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    ensure_default_equipment_options()
+    for used in Request.objects.exclude(equipment_type='').values_list('equipment_type', flat=True).distinct():
+        normalized = (used or '').strip()
+        if normalized:
+            EquipmentTypeOption.objects.get_or_create(value=normalized)
+    rows = EquipmentTypeOption.objects.all().order_by('value')
+    data = [{
+        'equipment_type': row.value,
+        'cancel_keep_amount': str(row.cancel_keep_amount if row.cancel_keep_amount is not None else decimal.Decimal('750')),
+    } for row in rows]
+    return JsonResponse({'items': data})
+
+
+@login_required
+def update_cancel_amount_settings(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    raw_items = request.POST.get('items_json') or '[]'
+    try:
+        items = json.loads(raw_items)
+    except Exception:
+        return JsonResponse({'error': 'Неверный формат данных'}, status=400)
+    if not isinstance(items, list):
+        return JsonResponse({'error': 'Неверный формат данных'}, status=400)
+    with transaction.atomic():
+        for row in items:
+            if not isinstance(row, dict):
+                continue
+            equipment_type = (row.get('equipment_type') or '').strip()
+            if not equipment_type:
+                continue
+            try:
+                amount = decimal.Decimal(str(row.get('cancel_keep_amount') or '0'))
+            except Exception:
+                return JsonResponse({'error': f'Некорректная сумма для "{equipment_type}"'}, status=400)
+            if amount < 0:
+                return JsonResponse({'error': f'Сумма не может быть отрицательной для "{equipment_type}"'}, status=400)
+            option, _ = EquipmentTypeOption.objects.get_or_create(value=equipment_type)
+            option.cancel_keep_amount = amount
+            option.save(update_fields=['cancel_keep_amount'])
+    return JsonResponse({'success': True})
 
 
 @login_required

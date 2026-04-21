@@ -21,6 +21,10 @@ urlpatterns = [
     path('api/worker-requests/', views.get_worker_requests, name='api_worker_requests'),
     path('api/workers/', views.get_workers, name='api_workers'),
     path('api/request-options/', views.get_request_options, name='api_request_options'),
+    path('api/request-options/add/', views.add_request_option, name='api_request_option_add'),
+    path('api/request-options/delete/', views.delete_request_option, name='api_request_option_delete'),
+    path('api/cancel-amount-settings/', views.get_cancel_amount_settings, name='api_cancel_amount_settings'),
+    path('api/cancel-amount-settings/update/', views.update_cancel_amount_settings, name='api_cancel_amount_settings_update'),
     path('api/documents/', views.get_documents, name='api_documents'),
     path('upload-document/', views.upload_document, name='upload_document'),
     path('delete-document/<int:pk>/', views.delete_document, name='delete_document'),
@@ -29,5 +33,6 @@ urlpatterns = [
     path('generate-tg-code/', views.generate_tg_code, name='generate_tg_code'),
     path('generate-max-code/', views.generate_max_code, name='generate_max_code'),
     path('bind-messengers/', views.bind_messengers, name='bind_messengers'),
+    path('update-worker-equipment-types/', views.update_worker_equipment_types, name='update_worker_equipment_types'),
     path('update-worker-percent/<int:pk>/', views.update_worker_percent, name='update_worker_percent'),
 ]

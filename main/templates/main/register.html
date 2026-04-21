@@ -56,6 +56,17 @@
                 <input type="hidden" id="maxTokenInput" name="max_token" value="">
                 <div id="maxHint" style="font-size:13px; color:#4f7e96; margin-top:8px;">Нажмите «Сгенерировать код», скопируйте код и отправьте его MAX боту. После успешной привязки завершите регистрацию.</div>
             </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 14px; font-weight: 500; color: #1a4b5f; margin-bottom: 8px;">🧰 Виды техники, которые вы ремонтируете <span style="color:#4a6778; font-weight:400;">(необязательно)</span></label>
+                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; padding: 12px; background: #f8fafc; border: 1px solid #d8e5ef; border-radius: 14px;">
+                    {% for option in worker_equipment_choices %}
+                    <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: #1a4b5f;">
+                        <input type="checkbox" name="worker_equipment_types" value="{{ option }}" style="margin-top: 2px; accent-color: #2f7e9e;">
+                        <span>{{ option }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
             <button type="submit" style="background: #2f7e9e; color: white; border: none; padding: 14px 20px; width: 100%; border-radius: 40px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 8px 18px -6px #2f7e9e80;">Зарегистрироваться</button>
             {% if error %}<div style="color: #c03c2b; text-align: center; margin-top: 12px;">{{ error }}</div>{% endif %}
         </form>

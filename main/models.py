@@ -11,9 +11,46 @@ class Profile(models.Model):
     role = models.CharField('Роль', max_length=10, choices=ROLE_CHOICES, default='worker')
     tg_code = models.CharField('Код из Telegram', max_length=10, blank=True, null=True)
     max_code = models.CharField('Код из MAX', max_length=10, blank=True, null=True)
+    worker_equipment_types = models.TextField('Виды техники мастера', blank=True, default='')
 
     def __str__(self):
         return f"{self.user.username} - {self.role}"
+
+    def get_worker_equipment_values(self):
+        if not self.worker_equipment_types:
+            return []
+        # Поддержка старого формата с кодами для обратной совместимости.
+        legacy_map = {
+            'SM': 'См - Cтиральные машины',
+            'PM': 'ПМ - Посудомоечные машины',
+            'HD': 'Хд - Холодильники',
+            'VD': 'Вд - Водонагреватели',
+            'DSH': 'Дш - Духовые шкафы',
+            'VP': 'ВП - Варочные панель',
+            'TV': 'Тв - Телевизоры',
+            'KM': 'Км - Кофемашины',
+            'PROM': 'Пром - Промышленная техника',
+        }
+        values = []
+        for raw in self.worker_equipment_types.split(','):
+            item = raw.strip()
+            if not item:
+                continue
+            normalized = legacy_map.get(item, item)
+            if normalized not in values:
+                values.append(normalized)
+        return values
+
+    def set_worker_equipment_values(self, values):
+        clean = []
+        for value in (values or []):
+            item = (value or '').strip()
+            if item and item not in clean:
+                clean.append(item)
+        self.worker_equipment_types = ','.join(clean)
+
+    def get_worker_equipment_labels(self):
+        return self.get_worker_equipment_values()
 
 class Request(models.Model):
     STATUS_CHOICES = (
@@ -40,6 +77,7 @@ class Request(models.Model):
     status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='new')
     price = models.DecimalField('Цена', max_digits=10, decimal_places=2, null=True, blank=True)
     comment = models.TextField('Комментарий рабочего', blank=True)
+    performed_work = models.TextField('Проделаные работы', blank=True, default='')
     money_delivered = models.BooleanField('Деньги сданы', default=False)
     overdue_reason = models.TextField('Причина просрочки', blank=True, default='')
     prepayment_amount = models.DecimalField('Сумма предоплаты', max_digits=10, decimal_places=2, null=True, blank=True, default=0)
@@ -51,6 +89,7 @@ class Request(models.Model):
 
 class EquipmentTypeOption(models.Model):
     value = models.CharField('Вид техники', max_length=100, unique=True)
+    cancel_keep_amount = models.DecimalField('Остаток мастеру при отмене', max_digits=10, decimal_places=2, default=750)
     created_at = models.DateTimeField('Дата создания', auto_now_add=True)
 
     class Meta:

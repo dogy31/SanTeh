@@ -7,10 +7,135 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
         body { background: #eef2f5; }
+        .system-dialog-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .system-dialog-overlay.active { display: flex; }
+        .system-dialog {
+            width: min(100%, 460px);
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.22);
+            padding: 22px;
+        }
+        .system-dialog__title { font-size: 20px; font-weight: 700; color: #0b2b40; margin-bottom: 10px; }
+        .system-dialog__message { color: #1f4c62; white-space: pre-wrap; line-height: 1.4; margin-bottom: 16px; }
+        .system-dialog__actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .system-dialog__btn {
+            border: 1px solid #2f7e9e;
+            background: white;
+            color: #1d5f7a;
+            border-radius: 24px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .system-dialog__btn--primary {
+            background: #2f7e9e;
+            color: white;
+            border-color: #2f7e9e;
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
     {% block content %}{% endblock %}
+    <div id="systemDialogOverlay" class="system-dialog-overlay">
+        <div class="system-dialog">
+            <div class="system-dialog__title">Уведомление</div>
+            <div id="systemDialogMessage" class="system-dialog__message"></div>
+            <div class="system-dialog__actions">
+                <button type="button" id="systemDialogCancelBtn" class="system-dialog__btn">Отмена</button>
+                <button type="button" id="systemDialogOkBtn" class="system-dialog__btn system-dialog__btn--primary">ОК</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const overlay = document.getElementById('systemDialogOverlay');
+            const messageEl = document.getElementById('systemDialogMessage');
+            const okBtn = document.getElementById('systemDialogOkBtn');
+            const cancelBtn = document.getElementById('systemDialogCancelBtn');
+            let alertStatePushed = false;
+
+            function closeSystemDialog(fromBack) {
+                if (!overlay.classList.contains('active')) return;
+                overlay.classList.remove('active');
+                if (!fromBack && alertStatePushed) {
+                    alertStatePushed = false;
+                    history.back();
+                } else if (fromBack) {
+                    alertStatePushed = false;
+                }
+            }
+
+            window.showAppAlert = function (message) {
+                if (!overlay || !messageEl) return;
+                messageEl.textContent = String(message || '');
+                if (!overlay.classList.contains('active')) {
+                    overlay.classList.add('active');
+                    history.pushState({ appDialog: true }, '', location.href);
+                    alertStatePushed = true;
+                }
+            };
+
+            if (okBtn) okBtn.addEventListener('click', function () { closeSystemDialog(false); });
+            if (cancelBtn) cancelBtn.addEventListener('click', function () { closeSystemDialog(false); });
+            if (overlay) {
+                overlay.addEventListener('click', function (e) {
+                    if (e.target === overlay) closeSystemDialog(false);
+                });
+            }
+
+            let suppressPopConsume = false;
+            function closeTopAppModal() {
+                const opened = Array.from(document.querySelectorAll('.modal.active'));
+                if (!opened.length) return false;
+                const top = opened[opened.length - 1];
+                top.classList.remove('active');
+                top.dataset.historyPushed = '';
+                return true;
+            }
+
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
+                    const el = mutation.target;
+                    if (!(el instanceof HTMLElement) || !el.classList.contains('modal')) return;
+                    if (el.classList.contains('active')) {
+                        if (!el.dataset.historyPushed) {
+                            el.dataset.historyPushed = '1';
+                            history.pushState({ appModal: el.id || 'modal' }, '', location.href);
+                        }
+                    } else if (el.dataset.historyPushed && !suppressPopConsume) {
+                        el.dataset.historyPushed = '';
+                        history.back();
+                    }
+                });
+            });
+            document.querySelectorAll('.modal').forEach(function (modal) {
+                observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+            });
+
+            window.addEventListener('popstate', function () {
+                if (overlay.classList.contains('active')) {
+                    closeSystemDialog(true);
+                    return;
+                }
+                suppressPopConsume = true;
+                const closed = closeTopAppModal();
+                suppressPopConsume = false;
+                if (closed) {
+                    return;
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

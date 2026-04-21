@@ -28,7 +28,7 @@
     .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -1 0px #bac9d4; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle; }
-    th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; }
+    th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 5; }
     tbody tr:nth-child(even) { background-color: #f9fafb; }
     tbody tr:hover { background-color: #f1f5f9; }
     .status-badge { display: inline-block; padding: 5px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; white-space: nowrap; }
@@ -48,7 +48,7 @@
     .btn-secondary { background: #f5f9fd; border: 1px solid transparent; color: #1a5f7a; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; box-shadow: none; }
     .btn-secondary:hover { background: #e7f0f5; }
     .btn-primary { background: #2f7e9e; color: white; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
-    #bindMessengersBtn { border: 2px solid #2f7e9e; background: white; color: #2f7e9e; }
+    #showDocumentsModal, #bindMessengersBtn { border: 2px solid #2f7e9e; background: white; color: #2f7e9e; }
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
     .view-toggle-row { display: flex; justify-content: flex-start; gap: 10px; align-items: center; margin: 10px; }
     .filter-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; margin: 12px; }
@@ -286,6 +286,7 @@
             </div>
         </div>
         <div class="stats"><span id="activeCount">0</span> активных</div>
+        <button id="showEquipmentModal" class="btn-secondary">Моя техника</button>
         <button id="showDocumentsModal" class="btn-secondary">Документы</button>
         <button id="bindMessengersBtn" class="btn-primary">Привязать мессенджеры</button>
         <a href="{% url 'logout' %}" class="btn-danger" style="text-decoration: none;">Выйти</a>
@@ -348,9 +349,10 @@
                     <th style="width:100px">Статус</th>
                     <th style="width:90px">Цена (₽)</th>
                     <th style="width:90px">Себестоимость (₽)</th>
-                    <th style="width:90px">Чистые (₽)</th>
+                    <th style="width:90px">Чистая сумма (₽)</th>
                     <th style="width:90px">ЗП мастера (₽)</th>
                     <th style="width:100px">% мастера</th>
+                    <th style="width:110px">В работе до</th>
                     <th style="width:140px">Действия</th>
                 </tr>
             </thead>
@@ -377,16 +379,18 @@
         <div class="field"><label>Адрес клиента</label><input type="text" id="editClientAddress" readonly></div>
         <div class="field"><label>Вид техники</label><input type="text" id="editEquipmentType" readonly></div>
         <div class="field"><label>Время</label><input type="text" id="editVisitTime" readonly></div>
+        <div class="field"><label>В работе до</label><input type="text" id="editDeadlineDate" readonly></div>
         <div class="field"><label>Статус</label><input type="text" id="editStatus" readonly></div>
         <div class="field"><label>Сумма предоплаты (₽)</label><input type="number" id="prepaymentAmount" step="0.01" placeholder="0"></div>
         <div class="field"><label>Стоимость работ <span class="required-star">*</span></label><input type="number" id="editPrice" required></div>
         <div class="field"><label>Себестоимость (₽)</label><input type="text" id="editCostPrice" readonly></div>
-        <div class="field"><label>Чистые (₽)</label><input type="text" id="editNetProfit" readonly></div>
+        <div class="field"><label>Чистая сумма (₽)</label><input type="text" id="editNetProfit" readonly></div>
         <div class="field"><label>ЗП мастера (₽)</label><input type="text" id="editWorkerSalary" readonly></div>
         <div class="field"><label>% мастера</label><input type="text" id="editWorkerPercent" readonly></div>
         <div class="field"><label>Комментарий</label><textarea id="editComment" rows="3"></textarea></div>
+        <div class="field"><label>Проделаные работы</label><textarea id="editPerformedWork" rows="3"></textarea></div>
         <div class="field"><label>Договор (1–5 фото)</label><div class="photo-upload-area"><input type="file" id="contractInput" accept="image/*" multiple><div class="photo-previews" id="contractPreviews"></div></div></div>
-        <div class="parts-section"><label>Детали (чеки для каждой детали обязательны для закрытия)</label><div id="partsContainer"></div><button type="button" class="add-part-btn" id="addPartBtn">Добавить деталь</button></div>
+        <div class="parts-section"><label>Фото чека (для каждой детали обязательно для закрытия)</label><div id="partsContainer"></div><button type="button" class="add-part-btn" id="addPartBtn">Добавить деталь</button></div>
         <div class="parts-section">
             <label>Транспортные <span title="При выезде в дальние районы" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#2f7e9e; color:white; font-size:12px; cursor:help;">i</span></label>
             <div id="transportContainer"></div>
@@ -445,7 +449,7 @@
         return '+7 (' + core.slice(0, 3) + ') ' + core.slice(3, 6) + '-' + core.slice(6, 8) + '-' + core.slice(8, 10);
     }
     function showUserWarning(message, focusEl) {
-        alert(message);
+        showAppAlert(message);
         try { if (focusEl) focusEl.focus(); } catch (e) {}
     }
 
@@ -537,6 +541,7 @@
             else if (r.status === 'done') { statusClass = 'status-badge done'; statusText = 'Выполнена'; }
             else if (r.status === 'cancelled') { statusClass = 'status-badge cancelled'; statusText = 'Отменена'; }
             const row = document.createElement('tr');
+            const deadlineDate = r.deadline_date ? new Date(r.deadline_date) : null;
             row.innerHTML = `
                 <td>#${r.id}</td>
                 <td>${escapeHtml(r.description)}</td>
@@ -550,6 +555,7 @@
                 <td class="price">${r.net_profit ? r.net_profit + ' ₽' : '—'}</td>
                 <td class="price">${r.worker_salary ? r.worker_salary + ' ₽' : '—'}</td>
                 <td>${r.worker_percent}%</td>
+                <td>${deadlineDate ? deadlineDate.toLocaleDateString() : '—'}</td>
                 <td class="actions">
                     ${r.status !== 'done' && r.status !== 'cancelled' ? 
                         `${r.status === 'new' ? `<button class="btn-outline" onclick="acceptRequest(${r.id}, this)">Принять</button>` : ''}
@@ -596,7 +602,10 @@
             block.className = `request-block ${r.status}`;
             block.innerHTML = `
                 <div class="block-header">
-                    <div class="block-id">#${r.id} • ${r.visit_time || '—'} • ${created.toLocaleDateString()}</div>
+                    <div>
+                        <div class="block-id">#${r.id} • ${created.toLocaleDateString()}</div>
+                        <div class="block-label">~Время~: ${r.visit_time || '—'}</div>
+                    </div>
                     <div>
                         <div class="${statusClass}">${statusText}</div>
                         ${showAge ? `<div style="margin-top:6px; font-size:12px; color:#4a6778;">⏱ ${ageText}</div>` : ''}
@@ -619,6 +628,7 @@
                         <div class="block-label">Адрес</div>
                         <div class="block-value">${escapeHtml(r.client_address || 'Не указан')}</div>
                     </div>
+                    ${r.deadline_date ? `<div class="block-field"><div class="block-label">В работе до</div><div class="block-value">${new Date(r.deadline_date).toLocaleDateString()}</div></div>` : ''}
                 </div>
                 ${r.status === 'new' ? '<div class="block-alert">⚠️ Перезвоните клиенту в течении 30 минут</div>' : ''}
                 <div class="block-actions">
@@ -661,9 +671,11 @@
                 document.getElementById('editClientAddress').value = data.client_address || '';
                 document.getElementById('editEquipmentType').value = data.equipment_type || '';
                 document.getElementById('editVisitTime').value = data.visit_time || '—';
+                document.getElementById('editDeadlineDate').value = data.deadline_date ? new Date(data.deadline_date).toLocaleDateString() : '—';
                 document.getElementById('editStatus').value = statusTextMap[data.status] || '';
                 document.getElementById('editPrice').value = data.price || '';
                 document.getElementById('editComment').value = data.comment || '';
+                document.getElementById('editPerformedWork').value = data.performed_work || '';
                 document.getElementById('prepaymentAmount').value = data.prepayment_amount || '';
 
                 existingContractPhotos = data.photos.filter(p => p.photo_type === 'contract').map(p => ({ id: p.id, image: p.image }));
@@ -713,9 +725,11 @@
                 document.getElementById('editClientAddress').value = data.client_address || '';
                 document.getElementById('editEquipmentType').value = data.equipment_type || '';
                 document.getElementById('editVisitTime').value = data.visit_time || '—';
+                document.getElementById('editDeadlineDate').value = data.deadline_date ? new Date(data.deadline_date).toLocaleDateString() : '—';
                 document.getElementById('editStatus').value = statusTextMap[data.status] || '';
                 document.getElementById('editPrice').value = data.price || '';
                 document.getElementById('editComment').value = data.comment || '';
+                document.getElementById('editPerformedWork').value = data.performed_work || '';
                 document.getElementById('prepaymentAmount').value = data.prepayment_amount || '';
 
                 existingContractPhotos = data.photos.filter(p => p.photo_type === 'contract').map(p => ({ id: p.id, image: p.image }));
@@ -772,8 +786,8 @@
         fetch(`/close-request/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } })
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
-            if (status === 200 && body.success) { loadWorkerRequests(); alert('Заявка закрыта'); }
-            else alert('Ошибка: ' + (body.error || 'Не удалось закрыть заявку'));
+            if (status === 200 && body.success) { loadWorkerRequests(); showAppAlert('Заявка закрыта'); }
+            else showAppAlert('Ошибка: ' + (body.error || 'Не удалось закрыть заявку'));
         })
         .catch(err => console.error('Ошибка закрытия:', err))
         .finally(() => { btn.disabled = false; btn.textContent = '✅ закрыть'; });
@@ -789,7 +803,7 @@
             if (status === 200 && body.success) {
                 loadWorkerRequests();
             } else {
-                alert('Ошибка: ' + (body.error || 'Не удалось принять заявку'));
+                showAppAlert('Ошибка: ' + (body.error || 'Не удалось принять заявку'));
             }
         })
         .catch(err => console.error('Ошибка принятия заявки:', err))
@@ -830,7 +844,7 @@
     window.cancelWorkerRequest = function(id, btn) {
         if (!confirm('Вы уверены, что хотите отменить заявку?')) return;
         const comment = (prompt('Комментарий (обязательно при отмене):') || '').trim();
-        if (!comment) { alert('Комментарий обязателен при отмене заявки'); return; }
+        if (!comment) { showAppAlert('Комментарий обязателен при отмене заявки'); return; }
         btn.disabled = true; btn.textContent = 'Отмена...';
         fetch(`/cancel-request/${id}/`, {
             method: 'POST',
@@ -839,8 +853,8 @@
         })
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
-            if (status === 200 && body.success) { loadWorkerRequests(); alert('Заявка отменена'); }
-            else alert('Ошибка: ' + (body.error || 'Не удалось отменить заявку'));
+            if (status === 200 && body.success) { loadWorkerRequests(); showAppAlert('Заявка отменена'); }
+            else showAppAlert('Ошибка: ' + (body.error || 'Не удалось отменить заявку'));
         })
         .catch(err => console.error('Ошибка отмены:', err))
         .finally(() => { btn.disabled = false; btn.textContent = 'Отменить'; });
@@ -871,12 +885,12 @@
         if (files.length) {
             const remaining = 5 - (existingContractPhotos.length + contractFiles.length);
             if (remaining <= 0) {
-                alert('Можно прикрепить не более 5 фотографий договора.');
+                showAppAlert('Можно прикрепить не более 5 фотографий договора.');
             } else {
                 const allowedFiles = files.slice(0, remaining);
                 contractFiles = contractFiles.concat(allowedFiles);
                 if (files.length > remaining) {
-                    alert(`Добавлено ${remaining} фото. Максимум 5 фотографий договора.`);
+                    showAppAlert(`Добавлено ${remaining} фото. Максимум 5 фотографий договора.`);
                 }
                 renderContractPreview();
             }
@@ -1010,6 +1024,7 @@
                 const formData = new FormData();
                 formData.append('price', priceRaw);
                 formData.append('comment', (commentEl.value || '').trim());
+                formData.append('performed_work', (document.getElementById('editPerformedWork').value || '').trim());
                 formData.append('overdue_reason', (overdueEl.value || '').trim());
                 formData.append('prepayment_amount', document.getElementById('prepaymentAmount').value);
                 formData.append('client_address', document.getElementById('editClientAddress').value);
@@ -1071,7 +1086,7 @@
     document.getElementById('cancelWorkerRequestBtn').addEventListener('click', function() {
         if (!currentEditId || !confirm('Вы уверены, что хотите отменить эту заявку?')) return;
         const comment = (document.getElementById('editComment').value || '').trim();
-        if (!comment) { alert('Комментарий обязателен при отмене заявки'); return; }
+        if (!comment) { showAppAlert('Комментарий обязателен при отмене заявки'); return; }
         const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
         saveWorkerEdit()
             .then(data => {
@@ -1088,14 +1103,14 @@
                     showBrowserNotification('🚫 Заявка отменена', `Заявка #${currentEditId} была отменена`);
                     closeModal('editModal');
                     loadWorkerRequests();
-                    alert('Изменения сохранены и заявка отменена');
+                    showAppAlert('Изменения сохранены и заявка отменена');
                 } else {
                     throw new Error(data.error || 'Ошибка отмены');
                 }
             })
             .catch(err => {
                 console.error('Ошибка сохранения или отмены:', err);
-                alert(err.message || 'Ошибка сохранения или отмены');
+                showAppAlert(err.message || 'Ошибка сохранения или отмены');
             })
             .finally(() => { btn.disabled = false; btn.textContent = 'Отменить заявку'; });
     });
@@ -1107,6 +1122,33 @@
     document.getElementById('filterSearch').addEventListener('input', function() { loadWorkerRequests(); });
     document.getElementById('openFilterPanel').addEventListener('click', openFilterPanel);
     document.getElementById('closeFilterPanel').addEventListener('click', closeFilterPanelWindow);
+    document.getElementById('showEquipmentModal').addEventListener('click', function() {
+        document.getElementById('equipmentModal').classList.add('active');
+    });
+    const saveEquipmentBtn = document.getElementById('saveEquipmentBtn');
+    if (saveEquipmentBtn) {
+        saveEquipmentBtn.addEventListener('click', function() {
+            const formData = new FormData();
+            document.querySelectorAll('.worker-equipment-checkbox:checked').forEach(cb => {
+                formData.append('worker_equipment_types', cb.value);
+            });
+            fetch('/update-worker-equipment-types/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+                body: formData
+            })
+            .then(response => response.json().then(data => ({ status: response.status, body: data })))
+            .then(({ status, body }) => {
+                if (status === 200 && body.success) {
+                    showAppAlert('Виды техники обновлены');
+                    document.getElementById('equipmentModal').classList.remove('active');
+                } else {
+                    showAppAlert('Ошибка: ' + (body.error || 'Не удалось обновить виды техники'));
+                }
+            })
+            .catch(() => showAppAlert('Ошибка сети при обновлении видов техники'));
+        });
+    }
     document.getElementById('showDocumentsModal').addEventListener('click', function() {
         loadDocuments();
         document.getElementById('documentsModal').classList.add('active');
@@ -1130,11 +1172,12 @@
     // initializePushNotifications(); вызывается в push-notifications.js
 
     // Привязка мессенджеров
-    document.addEventListener('DOMContentLoaded', function() {
-        const bindMessengersBtn = document.getElementById('bindMessengersBtn');
-        if (bindMessengersBtn) {
-            bindMessengersBtn.addEventListener('click', function() { document.getElementById('bindModal').classList.add('active'); });
-        }
+    const bindMessengersBtn = document.getElementById('bindMessengersBtn');
+    if (bindMessengersBtn) {
+        bindMessengersBtn.addEventListener('click', function() {
+            document.getElementById('bindModal').classList.add('active');
+        });
+    }
         const tgCodeBtn = document.getElementById('generateTgCodeBtn');
         if (tgCodeBtn) tgCodeBtn.addEventListener('click', function() {
             fetch('/generate-tg-code/', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken}, body: JSON.stringify({user_id: currentUserId}) })
@@ -1153,11 +1196,31 @@
                 e.preventDefault();
                 const formData = new FormData(this);
                 fetch('/bind-messengers/', { method: 'POST', headers: {'X-CSRFToken': csrftoken}, body: formData })
-                .then(r=>r.json()).then(data=>{ if (data.success) { alert('Мессенджеры привязаны!'); document.getElementById('bindModal').classList.remove('active'); } else alert('Ошибка: ' + data.error); });
+                .then(r=>r.json()).then(data=>{ if (data.success) { showAppAlert('Мессенджеры привязаны!'); document.getElementById('bindModal').classList.remove('active'); } else showAppAlert('Ошибка: ' + data.error); });
             });
         }
-    });
 </script>
+
+<div id="equipmentModal" class="modal">
+    <div class="modal-content">
+        <h2>🧰 Моя техника</h2>
+        <div class="field">
+            <label>Выберите виды техники, которые вы ремонтируете</label>
+            <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; padding: 12px; border:1px solid #d8e5ef; border-radius:14px; background:#f8fafc;">
+                {% for option in worker_equipment_choices %}
+                <label style="display:flex; align-items:flex-start; gap:8px; color:#1a4b5f; font-size:14px;">
+                    <input type="checkbox" class="worker-equipment-checkbox" value="{{ option }}" {% if option in selected_worker_equipment %}checked{% endif %} style="margin-top:2px; accent-color:#2f7e9e;">
+                    <span>{{ option }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('equipmentModal').classList.remove('active')">Отмена</button>
+            <button type="button" class="btn-primary" id="saveEquipmentBtn">Сохранить</button>
+        </div>
+    </div>
+</div>
 
 <div id="bindModal" class="modal">
     <div class="modal-content">
