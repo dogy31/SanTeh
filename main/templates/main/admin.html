@@ -41,7 +41,7 @@
     .status-dropdown__options label:last-child { margin-bottom: 0; }
     .status-dropdown__options input[type='checkbox'] { accent-color: #2f7e9e; width: 16px; height: 16px; }
     .status-dropdown__summary { flex: 1; }
-    .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -10px #bac9d4; overflow: auto; max-height: 72vh; }
+    .table-wrapper { background: white; border-radius: 28px; box-shadow: 0 20px 35px -10px #bac9d4; overflow: auto; max-height: 72vh; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle; }
     th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 5; }
@@ -128,12 +128,16 @@
     .modal-content h2 { font-size: 28px; margin-bottom: 20px; color: #0b2b40; }
     .field { margin-bottom: 16px; }
     .field label { display: block; font-weight: 500; color: #1d4f65; margin-bottom: 4px; font-size: 14px; }
-    .field input, .field select, .field textarea { width: 100%; padding: 10px 14px; border: 1px solid #cbdae7; border-radius: 20px; font-size: 15px; background: #f9fcff; }
+    .field input, .field select, .field textarea { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; padding: 10px 14px; border: 1px solid #cbdae7; border-radius: 20px; font-size: 15px; background: #f9fcff; }
+    #editModalAdmin input[type="time"], #editModalAdmin input[type="date"] { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
     .field-inline-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
     .field-inline-row input { width: 100%; }
     .option-row { display: flex; gap: 8px; align-items: center; }
     .option-row > * { min-width: 0; }
-    .option-row .btn-secondary { padding: 10px 14px; white-space: nowrap; }
+    .option-row input, .option-row select { flex: 1 1 100%; }
+    .option-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .option-tag { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #ccdce8; border-radius: 999px; background: #f8fafc; padding: 4px 10px; font-size: 12px; color: #1d4f65; cursor: pointer; }
+    .option-tag-remove { border: none; background: transparent; color: #c03c2b; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
     .field textarea { min-height: 80px; resize: vertical; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 25px; flex-wrap: wrap; }
     .photo-gallery { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
@@ -214,7 +218,6 @@
             border-radius: 24px;
         }
         .option-row { flex-wrap: wrap; }
-        .option-row .btn-secondary { flex: 1 1 calc(50% - 4px); }
         .option-row input, .option-row select { flex: 1 1 100%; }
         .modal-content h2 { font-size: 24px; }
         .field-inline-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -380,12 +383,10 @@
         <div class="field">
             <label>Адрес клиента</label>
             <div class="option-row">
-                <select id="createClientAddress">
-                    <option value="">Выберите адрес</option>
-                </select>
-                <button type="button" class="btn-secondary" id="addCreateAddressBtn">Добавить</button>
-                <button type="button" class="btn-secondary" id="deleteCreateAddressBtn">Удалить</button>
+                <input type="text" id="createClientAddress" list="createClientAddressList" placeholder="Введите или выберите адрес">
+                <datalist id="createClientAddressList"></datalist>
             </div>
+            <div class="option-tags" id="createClientAddressTags"></div>
             <div class="field-inline-row">
                 <input type="text" id="createHouseNumber" placeholder="Дом">
                 <input type="text" id="createEntrance" placeholder="Подъезд">
@@ -396,12 +397,10 @@
         <div class="field">
             <label>Вид техники</label>
             <div class="option-row">
-                <select id="createEquipmentType">
-                    <option value="">Выберите вид техники</option>
-                </select>
-                <button type="button" class="btn-secondary" id="addCreateEquipmentBtn">Добавить</button>
-                <button type="button" class="btn-secondary" id="deleteCreateEquipmentBtn">Удалить</button>
+                <input type="text" id="createEquipmentType" list="createEquipmentTypeList" placeholder="Введите или выберите вид техники">
+                <datalist id="createEquipmentTypeList"></datalist>
             </div>
+            <div class="option-tags" id="createEquipmentTypeTags"></div>
         </div>
         <div class="field"><label>Назначить рабочего</label>
             <select id="createWorker" name="worker_id">
@@ -451,12 +450,10 @@
         <div class="field">
             <label>Адрес клиента</label>
             <div class="option-row">
-                <select id="adminClientAddress">
-                    <option value="">Выберите адрес</option>
-                </select>
-                <button type="button" class="btn-secondary" id="addAdminAddressBtn">Добавить</button>
-                <button type="button" class="btn-secondary" id="deleteAdminAddressBtn">Удалить</button>
+                <input type="text" id="adminClientAddress" list="adminClientAddressList" placeholder="Введите или выберите адрес">
+                <datalist id="adminClientAddressList"></datalist>
             </div>
+            <div class="option-tags" id="adminClientAddressTags"></div>
             <div class="field-inline-row">
                 <input type="text" id="adminHouseNumber" placeholder="Дом">
                 <input type="text" id="adminEntrance" placeholder="Подъезд">
@@ -467,12 +464,10 @@
         <div class="field">
             <label>Вид техники</label>
             <div class="option-row">
-                <select id="adminEquipmentType">
-                    <option value="">Выберите вид техники</option>
-                </select>
-                <button type="button" class="btn-secondary" id="addAdminEquipmentBtn">Добавить</button>
-                <button type="button" class="btn-secondary" id="deleteAdminEquipmentBtn">Удалить</button>
+                <input type="text" id="adminEquipmentType" list="adminEquipmentTypeList" placeholder="Введите или выберите вид техники">
+                <datalist id="adminEquipmentTypeList"></datalist>
             </div>
+            <div class="option-tags" id="adminEquipmentTypeTags"></div>
         </div>
         <div class="field"><label>Назначить рабочего</label><select id="adminWorker"><option value="">—</option>{% for w in workers %}<option value="{{ w.id }}">{{ w.first_name }}</option>{% endfor %}</select></div>
         <div class="field"><label>Процент рабочего (%)</label><input type="number" id="adminWorkerPercent" min="0" max="100" step="1"></div>
@@ -492,9 +487,9 @@
         <div class="field"><label>Транспортные</label><div id="adminTransportList" class="parts-list"></div></div>
         <div class="field" id="adminOverdueReasonField"><label>Причина просрочки</label><textarea id="adminOverdueReason" readonly rows="3" style="background:#f0f5fa;"></textarea></div>
         <div class="modal-actions">
-            <button class="btn-secondary" onclick="closeModal('editModalAdmin')">Отмена</button>
-            <button class="btn-danger" id="cancelRequestBtn" style="background: #c03c2b; color: white; border: none; padding: 10px 20px; border-radius: 40px; cursor: pointer;">Отменить заявку</button>
-            <button class="btn-primary" id="saveAdminEditBtn">Сохранить</button>
+            <button type="button" class="btn-secondary" onclick="closeModal('editModalAdmin')">Отмена</button>
+            <button type="button" class="btn-danger" id="cancelRequestBtn" style="background: #c03c2b; color: white; border: none; padding: 10px 20px; border-radius: 40px; cursor: pointer;">Отменить заявку</button>
+            <button type="button" class="btn-primary" id="saveAdminEditBtn">Сохранить</button>
         </div>
     </div>
 </div>
@@ -538,28 +533,67 @@
         options.sort((a, b) => a.localeCompare(b, 'ru'));
         return true;
     }
-    function renderSelectOptions(selectId, options, placeholder) {
-        const select = document.getElementById(selectId);
-        if (!select) return;
-        const currentValue = normalizeOptionValue(select.value);
-        let html = `<option value="">${placeholder}</option>`;
-        options.forEach(opt => {
-            const selected = currentValue && opt.toLowerCase() === currentValue.toLowerCase() ? 'selected' : '';
-            html += `<option value="${escapeHtml(opt)}" ${selected}>${escapeHtml(opt)}</option>`;
-        });
-        select.innerHTML = html;
+    let addressItemsMap = {};
+    function renderDatalistOptions(listId, options) {
+        const list = document.getElementById(listId);
+        if (!list) return;
+        list.innerHTML = options.map(opt => `<option value="${escapeHtml(opt)}"></option>`).join('');
     }
-    function syncOptionSelects() {
-        renderSelectOptions('createEquipmentType', equipmentOptions, 'Выберите вид техники');
-        renderSelectOptions('adminEquipmentType', equipmentOptions, 'Выберите вид техники');
-        renderSelectOptions('createClientAddress', addressBaseOptions, 'Выберите адрес');
-        renderSelectOptions('adminClientAddress', addressBaseOptions, 'Выберите адрес');
+    function applyAddressDefaultsByInput(inputId) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const value = normalizeOptionValue(input.value);
+        if (!value) return;
+        const row = addressItemsMap[value.toLowerCase()];
+        if (!row) return;
+        const prefix = inputId.startsWith('create') ? 'create' : 'admin';
+        document.getElementById(prefix + 'HouseNumber').value = row.house_number || '';
+        document.getElementById(prefix + 'Entrance').value = row.entrance || '';
+        document.getElementById(prefix + 'Floor').value = row.floor || '';
+        document.getElementById(prefix + 'Apartment').value = row.apartment || '';
+    }
+    function renderOptionTags(containerId, options, type, targetId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+        options.forEach(value => {
+            const tag = document.createElement('span');
+            tag.className = 'option-tag';
+            tag.innerHTML = `<span>${escapeHtml(value)}</span><button type="button" class="option-tag-remove" title="Удалить">×</button>`;
+            tag.addEventListener('click', function(e) {
+                if (e.target && e.target.classList.contains('option-tag-remove')) return;
+                const input = document.getElementById(targetId);
+                if (input) {
+                    input.value = value;
+                    if (type === 'address') applyAddressDefaultsByInput(targetId);
+                }
+            });
+            const removeBtn = tag.querySelector('.option-tag-remove');
+            removeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (!confirm(`Удалить «${value}»?`)) return;
+                deleteOptionFromGlobal(type, value)
+                    .then(() => loadRequestOptions())
+                    .catch(err => showAppAlert('Ошибка: ' + (err.message || 'Не удалось удалить значение')));
+            });
+            container.appendChild(tag);
+        });
+    }
+    function syncOptionInputs() {
+        renderDatalistOptions('createEquipmentTypeList', equipmentOptions);
+        renderDatalistOptions('adminEquipmentTypeList', equipmentOptions);
+        renderDatalistOptions('createClientAddressList', addressBaseOptions);
+        renderDatalistOptions('adminClientAddressList', addressBaseOptions);
+        renderOptionTags('createEquipmentTypeTags', equipmentOptions, 'equipment', 'createEquipmentType');
+        renderOptionTags('adminEquipmentTypeTags', equipmentOptions, 'equipment', 'adminEquipmentType');
+        renderOptionTags('createClientAddressTags', addressBaseOptions, 'address', 'createClientAddress');
+        renderOptionTags('adminClientAddressTags', addressBaseOptions, 'address', 'adminClientAddress');
     }
     function addEquipmentOption(value, selectedTargetId) {
         const normalized = normalizeOptionValue(value);
         if (!normalized) return false;
         if (!ensureInOptions(equipmentOptions, normalized)) return false;
-        syncOptionSelects();
+        syncOptionInputs();
         const target = document.getElementById(selectedTargetId);
         if (target) target.value = normalized;
         return true;
@@ -568,24 +602,21 @@
         const normalized = normalizeOptionValue(value);
         if (!normalized) return false;
         if (!ensureInOptions(addressBaseOptions, normalized)) return false;
-        syncOptionSelects();
+        syncOptionInputs();
         const target = document.getElementById(selectedTargetId);
         if (target) target.value = normalized;
         return true;
     }
-    function askAndAddOption(message, addFn, targetId) {
-        const value = prompt(message);
-        if (value === null) return;
-        if (!addFn(value, targetId)) {
-            showAppAlert('Введите непустое значение');
-        }
-    }
-    function saveOptionToGlobal(type, value) {
+    let adminSearchDebounceTimer = null;
+    function saveOptionToGlobal(type, value, extraData) {
         const normalized = normalizeOptionValue(value);
         if (!normalized) return Promise.reject(new Error('Пустое значение'));
         const formData = new FormData();
         formData.append('type', type);
         formData.append('value', normalized);
+        if (extraData && typeof extraData === 'object') {
+            Object.keys(extraData).forEach(key => formData.append(key, extraData[key] || ''));
+        }
         return fetch('/api/request-options/add/', {
             method: 'POST',
             headers: { 'X-CSRFToken': csrftoken },
@@ -597,6 +628,43 @@
               }
               return normalized;
           });
+    }
+    function getAddressExtraFields(prefix) {
+        return {
+            house_number: (document.getElementById(prefix + 'HouseNumber')?.value || '').trim(),
+            entrance: (document.getElementById(prefix + 'Entrance')?.value || '').trim(),
+            floor: (document.getElementById(prefix + 'Floor')?.value || '').trim(),
+            apartment: (document.getElementById(prefix + 'Apartment')?.value || '').trim(),
+        };
+    }
+    function ensureOptionStored(type, inputId) {
+        const input = document.getElementById(inputId);
+        if (!input) return Promise.resolve('');
+        const normalized = normalizeOptionValue(input.value);
+        if (!normalized) return Promise.resolve('');
+        const exists = (type === 'equipment' ? equipmentOptions : addressBaseOptions)
+            .some(item => item.toLowerCase() === normalized.toLowerCase());
+        if (exists) {
+            if (type === 'address') applyAddressDefaultsByInput(inputId);
+            return Promise.resolve(normalized);
+        }
+        const extraData = type === 'address' ? getAddressExtraFields(inputId.startsWith('create') ? 'create' : 'admin') : {};
+        return saveOptionToGlobal(type, normalized, extraData)
+            .then(() => loadRequestOptions())
+            .then(() => {
+                input.value = normalized;
+                if (type === 'address') applyAddressDefaultsByInput(inputId);
+                return normalized;
+            });
+    }
+    function bindOptionInputPersistence(inputId, type) {
+        const input = document.getElementById(inputId);
+        if (!input || input.dataset.optionBound) return;
+        input.dataset.optionBound = '1';
+        input.addEventListener('change', function() {
+            ensureOptionStored(type, inputId)
+                .catch(err => showAppAlert('Ошибка: ' + (err.message || 'Не удалось сохранить значение')));
+        });
     }
     function deleteOptionFromGlobal(type, value) {
         const normalized = normalizeOptionValue(value);
@@ -616,48 +684,30 @@
               return normalized;
           });
     }
-    function askAndSaveOption(message, type, targetId) {
-        const value = prompt(message);
-        if (value === null) return;
-        const normalized = normalizeOptionValue(value);
-        if (!normalized) {
-            showAppAlert('Введите непустое значение');
-            return;
-        }
-        saveOptionToGlobal(type, normalized)
-            .then(() => loadRequestOptions())
-            .then(() => {
-                const target = document.getElementById(targetId);
-                if (target) target.value = normalized;
-            })
-            .catch(err => showAppAlert('Ошибка: ' + (err.message || 'Не удалось добавить значение')));
-    }
-    function deleteSelectedOption(type, selectId) {
-        const select = document.getElementById(selectId);
-        if (!select) return;
-        const value = normalizeOptionValue(select.value);
-        if (!value) {
-            showAppAlert('Сначала выберите значение для удаления');
-            return;
-        }
-        if (!confirm(`Удалить значение «${value}» из глобального списка?`)) return;
-        deleteOptionFromGlobal(type, value)
-            .then(() => loadRequestOptions())
-            .catch(err => showAppAlert('Ошибка: ' + (err.message || 'Не удалось удалить значение')));
-    }
     function loadRequestOptions() {
         return fetch('/api/request-options/')
             .then(response => response.json())
             .then(data => {
                 equipmentOptions = Array.isArray(data.equipment_types) ? data.equipment_types.filter(Boolean) : [];
                 addressBaseOptions = Array.isArray(data.address_bases) ? data.address_bases.filter(Boolean) : [];
+                addressItemsMap = {};
+                (Array.isArray(data.address_items) ? data.address_items : []).forEach(item => {
+                    const key = normalizeOptionValue(item.value).toLowerCase();
+                    if (!key) return;
+                    addressItemsMap[key] = {
+                        house_number: item.house_number || '',
+                        entrance: item.entrance || '',
+                        floor: item.floor || '',
+                        apartment: item.apartment || '',
+                    };
+                });
                 equipmentOptions.sort((a, b) => a.localeCompare(b, 'ru'));
                 addressBaseOptions.sort((a, b) => a.localeCompare(b, 'ru'));
-                syncOptionSelects();
+                syncOptionInputs();
             })
             .catch(err => {
                 console.error('Ошибка загрузки опций заявок:', err);
-                syncOptionSelects();
+                syncOptionInputs();
             });
     }
     function loadCancelAmountSettings() {
@@ -850,7 +900,7 @@
         requests.forEach(r => {
             const created = new Date(r.created_date);
             const deadlineDate = r.deadline_date ? new Date(r.deadline_date) : null;
-            const isOverdue = r.status !== 'done' && deadlineDate && today > deadlineDate;
+            const isOverdue = r.status !== 'done' && r.status !== 'cancelled' && deadlineDate && today > deadlineDate;
             const row = document.createElement('tr');
             if (isOverdue) row.classList.add('overdue');
             let statusClass = 'status new', statusText = 'Новая';
@@ -880,7 +930,6 @@
                 <td><button class="action-link" onclick="showDetails(${r.id})">Детали</button></td>
                 <td>
                     <button class="action-link" onclick="editRequest(${r.id})">Редактировать</button>
-                    ${r.status === 'new' ? `<button class="action-link" onclick="acceptRequest(${r.id}, this)">Принять</button>` : ''}
                     ${r.status !== 'done' && r.status !== 'cancelled' ? `<button class="action-link cancel-btn" onclick="cancelRequest(${r.id}, this)">Отменить</button>` : ''}
                     <button class="action-link cancel-btn" onclick="deleteRequest(${r.id}, this)">Удалить</button>
                 </td>
@@ -955,11 +1004,10 @@
                     </div>
                     ${r.deadline_date ? `<div class="block-field"><div class="block-label">В работе до</div><div class="block-value">${new Date(r.deadline_date).toLocaleDateString()}</div></div>` : ''}
                 </div>
-                ${daysSinceCreated >= 2 && r.status !== 'done' ? `<div class="block-old">⏰ Уже ${daysSinceCreated} дней в работе</div>` : ''}
+                ${daysSinceCreated >= 2 && r.status !== 'done' && r.status !== 'cancelled' ? `<div class="block-old">⏰ Уже ${daysSinceCreated} дней в работе</div>` : ''}
                 <div class="block-actions">
                     <button class="btn-outline" onclick="event.stopPropagation(); showDetails(${r.id})">Детали</button>
                     <button class="btn-outline" onclick="event.stopPropagation(); editRequest(${r.id})">Редактировать</button>
-                    ${r.status === 'new' ? `<button class="btn-outline" onclick="event.stopPropagation(); acceptRequest(${r.id}, this)">Принять</button>` : ''}
                     ${r.status !== 'done' && r.status !== 'cancelled' ? `<button class="btn-danger" onclick="event.stopPropagation(); cancelRequest(${r.id}, this)">Отменить</button>` : ''}
                     <button class="btn-danger" onclick="event.stopPropagation(); deleteRequest(${r.id}, this)">Удалить</button>
                 </div>
@@ -1073,12 +1121,23 @@
                 document.getElementById('adminDesc').value = data.description || '';
                 document.getElementById('adminClientPhone').value = data.client_phone || '';
                 document.getElementById('adminClientEmail').value = data.client_email || '';
-                addAddressOption(data.base_address || data.client_address || '', 'adminClientAddress');
+                const baseAddressValue = data.base_address || data.client_address || '';
+                addAddressOption(baseAddressValue, 'adminClientAddress');
                 addEquipmentOption(data.equipment_type || '', 'adminEquipmentType');
                 document.getElementById('adminHouseNumber').value = data.house_number || '';
                 document.getElementById('adminEntrance').value = data.entrance || '';
                 document.getElementById('adminFloor').value = data.floor || '';
                 document.getElementById('adminApartment').value = data.apartment || '';
+                const baseKey = normalizeOptionValue(baseAddressValue).toLowerCase();
+                if (baseKey) {
+                    addressItemsMap[baseKey] = {
+                        house_number: data.house_number || '',
+                        entrance: data.entrance || '',
+                        floor: data.floor || '',
+                        apartment: data.apartment || '',
+                    };
+                    syncOptionInputs();
+                }
                 document.getElementById('adminPrice').value = data.price || '';
                 document.getElementById('adminComment').value = data.comment || '';
                 document.getElementById('adminPerformedWork').value = data.performed_work || '';
@@ -1151,33 +1210,39 @@
     };
 
     function saveAdminEdit(id) {
-        const formData = new FormData();
-        formData.append('description', document.getElementById('adminDesc').value);
-        formData.append('client_phone', document.getElementById('adminClientPhone').value.replace(/\D/g, ''));
-        formData.append('client_email', document.getElementById('adminClientEmail').value);
-        formData.append('client_address', document.getElementById('adminClientAddress').value);
-        formData.append('house_number', document.getElementById('adminHouseNumber').value);
-        formData.append('entrance', document.getElementById('adminEntrance').value);
-        formData.append('floor', document.getElementById('adminFloor').value);
-        formData.append('apartment', document.getElementById('adminApartment').value);
-        formData.append('equipment_type', document.getElementById('adminEquipmentType').value);
-        formData.append('price', document.getElementById('adminPrice').value);
-        formData.append('comment', document.getElementById('adminComment').value);
-        formData.append('performed_work', document.getElementById('adminPerformedWork').value);
-        formData.append('prepayment_amount', document.getElementById('adminPrepayment').value);
-        formData.append('deadline_date', document.getElementById('adminDeadlineDate').value);
-        formData.append('visit_time', document.getElementById('adminVisitTime').value);
-        formData.append('status', document.getElementById('adminStatus').value);
-        formData.append('worker_id', document.getElementById('adminWorker').value);
-        formData.append('worker_percent', document.getElementById('adminWorkerPercent').value);
-        return fetch(`/edit-request/${id}/`, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': csrftoken },
-            body: formData
-        }).then(response => response.json());
+        return Promise.all([
+            ensureOptionStored('address', 'adminClientAddress'),
+            ensureOptionStored('equipment', 'adminEquipmentType')
+        ]).then(() => {
+            const formData = new FormData();
+            formData.append('description', document.getElementById('adminDesc').value);
+            formData.append('client_phone', document.getElementById('adminClientPhone').value.replace(/\D/g, ''));
+            formData.append('client_email', document.getElementById('adminClientEmail').value);
+            formData.append('client_address', document.getElementById('adminClientAddress').value);
+            formData.append('house_number', document.getElementById('adminHouseNumber').value);
+            formData.append('entrance', document.getElementById('adminEntrance').value);
+            formData.append('floor', document.getElementById('adminFloor').value);
+            formData.append('apartment', document.getElementById('adminApartment').value);
+            formData.append('equipment_type', document.getElementById('adminEquipmentType').value);
+            formData.append('price', document.getElementById('adminPrice').value);
+            formData.append('comment', document.getElementById('adminComment').value);
+            formData.append('performed_work', document.getElementById('adminPerformedWork').value);
+            formData.append('prepayment_amount', document.getElementById('adminPrepayment').value);
+            formData.append('deadline_date', document.getElementById('adminDeadlineDate').value);
+            formData.append('visit_time', document.getElementById('adminVisitTime').value);
+            formData.append('status', document.getElementById('adminStatus').value);
+            formData.append('worker_id', document.getElementById('adminWorker').value);
+            formData.append('worker_percent', document.getElementById('adminWorkerPercent').value);
+            return fetch(`/edit-request/${id}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+                body: formData
+            }).then(response => response.json());
+        });
     }
 
-    document.getElementById('saveAdminEditBtn').addEventListener('click', function() {
+    document.getElementById('saveAdminEditBtn').addEventListener('click', function(e) {
+        if (e) e.preventDefault();
         const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
         const id = document.getElementById('adminEditId').textContent;
         if (!id) {
@@ -1191,7 +1256,8 @@
         .finally(() => { btn.disabled = false; btn.textContent = 'Сохранить'; });
     });
 
-    document.getElementById('cancelRequestBtn').addEventListener('click', function() {
+    document.getElementById('cancelRequestBtn').addEventListener('click', function(e) {
+        if (e) e.preventDefault();
         const id = document.getElementById('adminEditId').textContent;
         if (!id || !confirm('Вы уверены, что хотите отменить эту заявку?')) return;
         const comment = (prompt('Комментарий (обязательно при отмене):') || '').trim();
@@ -1412,24 +1478,29 @@
             btn.disabled = false; btn.textContent = 'Создать';
             return;
         }
-        const formData = new FormData();
-        formData.append('description', desc);
-        formData.append('client_phone', phoneDigits);
-        formData.append('client_email', document.getElementById('createClientEmail').value);
-        formData.append('client_address', addr);
-        formData.append('house_number', document.getElementById('createHouseNumber').value);
-        formData.append('entrance', document.getElementById('createEntrance').value);
-        formData.append('floor', document.getElementById('createFloor').value);
-        formData.append('apartment', document.getElementById('createApartment').value);
-        formData.append('equipment_type', document.getElementById('createEquipmentType').value);
-        formData.append('visit_time', document.getElementById('createVisitTime').value);
-        formData.append('worker_id', workerId);
-        formData.append('worker_percent', document.getElementById('createWorkerPercent').value || '50');
-        formData.append('deadline_date', deadlineDate);
-        fetch('/create-request/', {
-            method: 'POST',
-            headers: { 'X-CSRFToken': csrftoken },
-            body: formData
+        Promise.all([
+            ensureOptionStored('address', 'createClientAddress'),
+            ensureOptionStored('equipment', 'createEquipmentType')
+        ]).then(() => {
+            const formData = new FormData();
+            formData.append('description', desc);
+            formData.append('client_phone', phoneDigits);
+            formData.append('client_email', document.getElementById('createClientEmail').value);
+            formData.append('client_address', addr);
+            formData.append('house_number', document.getElementById('createHouseNumber').value);
+            formData.append('entrance', document.getElementById('createEntrance').value);
+            formData.append('floor', document.getElementById('createFloor').value);
+            formData.append('apartment', document.getElementById('createApartment').value);
+            formData.append('equipment_type', document.getElementById('createEquipmentType').value);
+            formData.append('visit_time', document.getElementById('createVisitTime').value);
+            formData.append('worker_id', workerId);
+            formData.append('worker_percent', document.getElementById('createWorkerPercent').value || '50');
+            formData.append('deadline_date', deadlineDate);
+            return fetch('/create-request/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+                body: formData
+            });
         })
         .then(response => response.json())
         .then(data => {
@@ -1469,7 +1540,10 @@
         closeFilterPanelWindow();
     });
     document.getElementById('filterSearch').addEventListener('input', function() {
-        loadRequests();
+        if (adminSearchDebounceTimer) clearTimeout(adminSearchDebounceTimer);
+        adminSearchDebounceTimer = setTimeout(() => {
+            loadRequests();
+        }, 250);
     });
     // View toggle functionality
     document.getElementById('tableViewBtn').addEventListener('click', () => switchView('table'));
@@ -1489,30 +1563,10 @@
     };
     window.onclick = function(event) { if (event.target.classList.contains('modal')) event.target.classList.remove('active'); };
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
-    document.getElementById('addCreateEquipmentBtn').addEventListener('click', function() {
-        askAndSaveOption('Введите новый вид техники', 'equipment', 'createEquipmentType');
-    });
-    document.getElementById('addAdminEquipmentBtn').addEventListener('click', function() {
-        askAndSaveOption('Введите новый вид техники', 'equipment', 'adminEquipmentType');
-    });
-    document.getElementById('addCreateAddressBtn').addEventListener('click', function() {
-        askAndSaveOption('Введите базовый адрес (улица/населённый пункт)', 'address', 'createClientAddress');
-    });
-    document.getElementById('addAdminAddressBtn').addEventListener('click', function() {
-        askAndSaveOption('Введите базовый адрес (улица/населённый пункт)', 'address', 'adminClientAddress');
-    });
-    document.getElementById('deleteCreateEquipmentBtn').addEventListener('click', function() {
-        deleteSelectedOption('equipment', 'createEquipmentType');
-    });
-    document.getElementById('deleteAdminEquipmentBtn').addEventListener('click', function() {
-        deleteSelectedOption('equipment', 'adminEquipmentType');
-    });
-    document.getElementById('deleteCreateAddressBtn').addEventListener('click', function() {
-        deleteSelectedOption('address', 'createClientAddress');
-    });
-    document.getElementById('deleteAdminAddressBtn').addEventListener('click', function() {
-        deleteSelectedOption('address', 'adminClientAddress');
-    });
+    bindOptionInputPersistence('createClientAddress', 'address');
+    bindOptionInputPersistence('adminClientAddress', 'address');
+    bindOptionInputPersistence('createEquipmentType', 'equipment');
+    bindOptionInputPersistence('adminEquipmentType', 'equipment');
     document.getElementById('showDocumentsModal').addEventListener('click', function() {
         loadDocuments();
         document.getElementById('documentsModal').classList.add('active');
@@ -1530,33 +1584,42 @@
     }
     const addTechniqueSettingsBtn = document.getElementById('addTechniqueSettingsBtn');
     if (addTechniqueSettingsBtn) addTechniqueSettingsBtn.addEventListener('click', addTechniqueFromSettings);
-    document.getElementById('uploadDocumentBtn').addEventListener('click', function() {
-        const title = (document.getElementById('documentTitle').value || '').trim();
-        const fileInput = document.getElementById('documentFile');
-        const file = fileInput.files && fileInput.files[0];
-        if (!title) { showAppAlert('Введите название документа'); return; }
-        if (!file) { showAppAlert('Выберите файл документа'); return; }
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('file', file);
-        fetch('/upload-document/', {
-            method: 'POST',
-            headers: { 'X-CSRFToken': csrftoken },
-            body: formData
-        })
-        .then(response => response.json().then(data => ({status: response.status, body: data})))
-        .then(({status, body}) => {
-            if (status === 200 && body.success) {
-                document.getElementById('documentTitle').value = '';
-                fileInput.value = '';
-                loadDocuments();
-            } else {
-                showAppAlert('Ошибка: ' + (body.error || 'Не удалось загрузить документ'));
-            }
-        })
-        .catch(err => console.error('Ошибка загрузки документа:', err));
-    });
+    function bindUploadDocumentButton() {
+        const uploadDocumentBtn = document.getElementById('uploadDocumentBtn');
+        if (!uploadDocumentBtn || uploadDocumentBtn.dataset.bound) return;
+        uploadDocumentBtn.dataset.bound = '1';
+        uploadDocumentBtn.addEventListener('click', function() {
+            const title = (document.getElementById('documentTitle').value || '').trim();
+            const fileInput = document.getElementById('documentFile');
+            const file = fileInput.files && fileInput.files[0];
+            if (!title) { showAppAlert('Введите название документа'); return; }
+            if (!file) { showAppAlert('Выберите файл документа'); return; }
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('file', file);
+            fetch('/upload-document/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+                body: formData
+            })
+            .then(response => response.json().then(data => ({status: response.status, body: data})))
+            .then(({status, body}) => {
+                if (status === 200 && body.success) {
+                    document.getElementById('documentTitle').value = '';
+                    fileInput.value = '';
+                    loadDocuments();
+                } else {
+                    showAppAlert('Ошибка: ' + (body.error || 'Не удалось загрузить документ'));
+                }
+            })
+            .catch(err => {
+                console.error('Ошибка загрузки документа:', err);
+                showAppAlert('Ошибка загрузки документа');
+            });
+        });
+    }
     function initAdminInitialLoad() {
+        bindUploadDocumentButton();
         loadRequestOptions().finally(() => loadRequests());
     }
     if (document.readyState === 'loading') {

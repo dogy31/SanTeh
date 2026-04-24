@@ -101,6 +101,10 @@ class EquipmentTypeOption(models.Model):
 
 class AddressBaseOption(models.Model):
     value = models.CharField('Базовый адрес', max_length=200, unique=True)
+    house_number = models.CharField('Дом по умолчанию', max_length=32, blank=True, default='')
+    entrance = models.CharField('Подъезд по умолчанию', max_length=32, blank=True, default='')
+    floor = models.CharField('Этаж по умолчанию', max_length=32, blank=True, default='')
+    apartment = models.CharField('Квартира по умолчанию', max_length=32, blank=True, default='')
     created_at = models.DateTimeField('Дата создания', auto_now_add=True)
 
     class Meta:

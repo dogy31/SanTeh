@@ -25,7 +25,7 @@
     .status-dropdown__options label { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; color: #2c5770; cursor: pointer; }
     .status-dropdown__options label:last-child { margin-bottom: 0; }
     .status-dropdown__options input[type='checkbox'] { accent-color: #2f7e9e; width: 16px; height: 16px; }
-    .table-wrapper { background: white; border-radius: 28px; padding: 20px 0; box-shadow: 0 20px 35px -1 0px #bac9d4; overflow: auto; max-height: 72vh; }
+    .table-wrapper { background: white; border-radius: 28px; box-shadow: 0 20px 35px -1 0px #bac9d4; overflow: auto; max-height: 72vh; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle; }
     th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 5; }
@@ -81,7 +81,7 @@
     .modal-content h2 { font-size: 28px; margin-bottom: 20px; }
     .field { margin-bottom: 16px; }
     .field label { display: block; font-weight: 500; margin-bottom: 4px; }
-    .field input, .field select, .field textarea {padding: 10px 14px; border: 1px solid #cbdae7; border-radius: 20px; font-size: 15px; }
+    .field input, .field select, .field textarea { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; padding: 10px 14px; border: 1px solid #cbdae7; border-radius: 20px; font-size: 15px; }
     .field input[readonly] { background: #f0f5fa; color: #2b546b; cursor: default; border-color: #d0dee9; }
     .photo-upload-area { border: 2px dashed #acc7db; border-radius: 24px; padding: 20px; text-align: center; margin: 15px 0; background: #f4fafd; }
     .photo-previews { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
@@ -407,7 +407,7 @@
             <button type="button" class="add-part-btn" id="addTransportBtn">Добавить транспортные</button>
         </div>
         <div id="overdueReasonSection" style="display: none;"><div class="field"><label>Причина просрочки (обязательно для просроченных заявок)</label><textarea id="overdueReason" rows="3" placeholder="Укажите причину, почему заявка не выполнена в срок..."></textarea></div></div>
-        <div class="modal-actions"><button class="btn-secondary" onclick="closeModal('editModal')">Отмена</button><button class="btn-danger" id="cancelWorkerRequestBtn" style="background: #c03c2b; color: white; border: none; padding: 10px 20px; border-radius: 40px; cursor: pointer;">Отменить заявку</button><button class="btn-primary" id="saveEditBtn">Сохранить изменения</button></div>
+        <div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal('editModal')">Отмена</button><button type="button" class="btn-danger" id="cancelWorkerRequestBtn" style="background: #c03c2b; color: white; border: none; padding: 10px 20px; border-radius: 40px; cursor: pointer;">Отменить заявку</button><button type="button" class="btn-primary" id="saveEditBtn">Сохранить изменения</button></div>
     </div>
 </div>
 
@@ -439,6 +439,60 @@
     let existingContractPhotos = [];
     let parts = [];
     let transportItems = [];
+    let workerSearchDebounceTimer = null;
+    const CLIENT_IMAGE_MAX_SIDE = 1600;
+    const CLIENT_IMAGE_QUALITY = 0.8;
+
+    function fileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+    function imageFromDataUrl(dataUrl) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = dataUrl;
+        });
+    }
+    async function compressImageFile(file) {
+        try {
+            if (!file || !file.type || !file.type.startsWith('image/')) return file;
+            if (file.size <= 350 * 1024) return file;
+            const dataUrl = await fileToDataUrl(file);
+            const img = await imageFromDataUrl(dataUrl);
+            let w = img.width || 0;
+            let h = img.height || 0;
+            if (!w || !h) return file;
+            const maxSide = Math.max(w, h);
+            if (maxSide > CLIENT_IMAGE_MAX_SIDE) {
+                const ratio = CLIENT_IMAGE_MAX_SIDE / maxSide;
+                w = Math.max(1, Math.round(w * ratio));
+                h = Math.max(1, Math.round(h * ratio));
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return file;
+            ctx.drawImage(img, 0, 0, w, h);
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', CLIENT_IMAGE_QUALITY));
+            if (!blob) return file;
+            if (blob.size >= file.size) return file;
+            const baseName = (file.name || 'image').replace(/\.[^.]+$/, '');
+            return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+        } catch (e) {
+            return file;
+        }
+    }
+    async function compressImagesBatch(files) {
+        const prepared = await Promise.all((files || []).map(file => compressImageFile(file)));
+        return prepared.filter(Boolean);
+    }
 
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function phoneLinkHtml(phone) {
@@ -890,7 +944,7 @@
     }
     window.removeExistingContract = function(idx) { if (typeof idx === 'number' && idx >= 0) { existingContractPhotos.splice(idx, 1); } renderContractPreview(); };
     window.removeNewContract = function(idx) { if (typeof idx === 'number' && idx >= 0) { contractFiles.splice(idx, 1); } renderContractPreview(); };
-    document.getElementById('contractInput').addEventListener('change', function(e) {
+    document.getElementById('contractInput').addEventListener('change', async function(e) {
         const files = Array.from(e.target.files);
         if (files.length) {
             const remaining = 5 - (existingContractPhotos.length + contractFiles.length);
@@ -898,7 +952,8 @@
                 showAppAlert('Можно прикрепить не более 5 фотографий договора.');
             } else {
                 const allowedFiles = files.slice(0, remaining);
-                contractFiles = contractFiles.concat(allowedFiles);
+                const compressed = await compressImagesBatch(allowedFiles);
+                contractFiles = contractFiles.concat(compressed);
                 if (files.length > remaining) {
                     showAppAlert(`Добавлено ${remaining} фото. Максимум 5 фотографий договора.`);
                 }
@@ -940,8 +995,12 @@
             const fileInput = div.querySelector('.part-receipt-input');
             nameInput.addEventListener('input', (e) => { parts[idx].name = e.target.value; });
             priceInput.addEventListener('input', (e) => { parts[idx].price = e.target.value; });
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length) { parts[idx].file = e.target.files[0]; parts[idx].existingPhotoUrl = null; renderParts(); }
+            fileInput.addEventListener('change', async (e) => {
+                if (e.target.files.length) {
+                    parts[idx].file = await compressImageFile(e.target.files[0]);
+                    parts[idx].existingPhotoUrl = null;
+                    renderParts();
+                }
                 fileInput.value = '';
             });
         });
@@ -982,8 +1041,12 @@
                 reader.readAsDataURL(item.file);
             }
             div.querySelector('.transport-note-input').addEventListener('input', (e) => { transportItems[idx].note = e.target.value; });
-            div.querySelector('.transport-receipt-input').addEventListener('change', (e) => {
-                if (e.target.files.length) { transportItems[idx].file = e.target.files[0]; transportItems[idx].existingPhotoUrl = null; renderTransport(); }
+            div.querySelector('.transport-receipt-input').addEventListener('change', async (e) => {
+                if (e.target.files.length) {
+                    transportItems[idx].file = await compressImageFile(e.target.files[0]);
+                    transportItems[idx].existingPhotoUrl = null;
+                    renderTransport();
+                }
                 e.target.value = '';
             });
         });
@@ -1066,7 +1129,8 @@
             });
     }
 
-    document.getElementById('saveEditBtn').addEventListener('click', function() {
+    document.getElementById('saveEditBtn').addEventListener('click', function(e) {
+        if (e) e.preventDefault();
         const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
         if (!currentEditId) { btn.disabled = false; btn.textContent = 'Сохранить изменения'; return; }
         saveWorkerEdit()
@@ -1093,7 +1157,8 @@
             .finally(() => { btn.disabled = false; btn.textContent = 'Сохранить изменения'; });
     });
 
-    document.getElementById('cancelWorkerRequestBtn').addEventListener('click', function() {
+    document.getElementById('cancelWorkerRequestBtn').addEventListener('click', function(e) {
+        if (e) e.preventDefault();
         if (!currentEditId || !confirm('Вы уверены, что хотите отменить эту заявку?')) return;
         const comment = (document.getElementById('editComment').value || '').trim();
         if (!comment) { showAppAlert('Комментарий обязателен при отмене заявки'); return; }
@@ -1129,7 +1194,12 @@
     function closeFilterPanelWindow() { document.getElementById('filterModal').classList.remove('active'); }
 
     document.getElementById('applyFilters').addEventListener('click', function() { loadWorkerRequests(); closeFilterPanelWindow(); });
-    document.getElementById('filterSearch').addEventListener('input', function() { loadWorkerRequests(); });
+    document.getElementById('filterSearch').addEventListener('input', function() {
+        if (workerSearchDebounceTimer) clearTimeout(workerSearchDebounceTimer);
+        workerSearchDebounceTimer = setTimeout(() => {
+            loadWorkerRequests();
+        }, 250);
+    });
     document.getElementById('openFilterPanel').addEventListener('click', openFilterPanel);
     document.getElementById('closeFilterPanel').addEventListener('click', closeFilterPanelWindow);
     document.getElementById('showEquipmentModal').addEventListener('click', function() {

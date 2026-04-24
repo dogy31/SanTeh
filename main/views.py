@@ -139,6 +139,7 @@ except Exception:
 import json
 from datetime import datetime, timedelta
 import decimal
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def register(request):
     def register_context(**extra):
@@ -297,6 +298,30 @@ def _json_image_error(exc: Exception):
     return None
 
 
+def _process_images_in_parallel(files, upload_subdir: str):
+    """
+    Параллельная обработка пачки изображений для ускорения больших загрузок.
+    Возвращает список относительных путей в исходном порядке.
+    """
+    file_list = list(files or [])
+    if not file_list:
+        return []
+    if len(file_list) == 1:
+        return [process_uploaded_image(file_list[0], upload_subdir=upload_subdir)]
+
+    workers = min(4, len(file_list))
+    results = [None] * len(file_list)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        future_to_idx = {
+            pool.submit(process_uploaded_image, file_obj, upload_subdir=upload_subdir): idx
+            for idx, file_obj in enumerate(file_list)
+        }
+        for future in as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            results[idx] = future.result()
+    return results
+
+
 @login_required
 def create_request(request):
     if request.method == 'POST':
@@ -344,9 +369,13 @@ def create_request(request):
                     worker_percent=worker_percent,
                 )
                 save_request_options(equipment_type=equipment_type, base_address=base_address)
-                for contract_file in contract_files:
-                    rel = process_uploaded_image(contract_file, upload_subdir='requests')
-                    Photo.objects.create(request=req, image=rel, photo_type='contract')
+                if contract_files:
+                    contract_photo_rows = []
+                    rel_paths = _process_images_in_parallel(contract_files, upload_subdir='requests')
+                    for rel in rel_paths:
+                        contract_photo_rows.append(Photo(request=req, image=rel, photo_type='contract'))
+                    if contract_photo_rows:
+                        Photo.objects.bulk_create(contract_photo_rows)
         except (FileTooLargeError, NotAnImageError, ImageConversionError) as e:
             resp = _json_image_error(e)
             if resp:
@@ -505,9 +534,12 @@ def edit_request(request, pk):
             try:
                 with transaction.atomic():
                     req.photos.filter(photo_type='contract').delete()
-                    for contract_file in contract_files:
-                        rel = process_uploaded_image(contract_file, upload_subdir='requests')
-                        Photo.objects.create(request=req, image=rel, photo_type='contract')
+                    contract_photo_rows = []
+                    rel_paths = _process_images_in_parallel(contract_files, upload_subdir='requests')
+                    for rel in rel_paths:
+                        contract_photo_rows.append(Photo(request=req, image=rel, photo_type='contract'))
+                    if contract_photo_rows:
+                        Photo.objects.bulk_create(contract_photo_rows)
             except (FileTooLargeError, NotAnImageError, ImageConversionError) as e:
                 resp = _json_image_error(e)
                 if resp:
@@ -972,13 +1004,22 @@ def get_request_options(request):
         return JsonResponse({'error': 'permission denied'}, status=403)
     equipment_types = set(get_equipment_options())
     equipment_types.update(Request.objects.exclude(equipment_type='').values_list('equipment_type', flat=True).distinct())
-    address_bases = set(AddressBaseOption.objects.values_list('value', flat=True))
+    address_rows = list(AddressBaseOption.objects.all().order_by('value'))
+    address_bases = set(row.value for row in address_rows if row.value)
     address_bases.update([
         extract_base_address(item) for item in Request.objects.exclude(client_address='').values_list('client_address', flat=True).distinct()
     ])
+    address_items = [{
+        'value': row.value,
+        'house_number': row.house_number or '',
+        'entrance': row.entrance or '',
+        'floor': row.floor or '',
+        'apartment': row.apartment or '',
+    } for row in address_rows if row.value]
     return JsonResponse({
         'equipment_types': sorted([item for item in equipment_types if item], key=lambda x: x.lower()),
         'address_bases': sorted([item for item in address_bases if item], key=lambda x: x.lower()),
+        'address_items': address_items,
     })
 
 
@@ -995,7 +1036,13 @@ def add_request_option(request):
     if option_type == 'equipment':
         EquipmentTypeOption.objects.get_or_create(value=value)
     elif option_type == 'address':
-        AddressBaseOption.objects.get_or_create(value=value)
+        defaults = {
+            'house_number': (request.POST.get('house_number') or '').strip(),
+            'entrance': (request.POST.get('entrance') or '').strip(),
+            'floor': (request.POST.get('floor') or '').strip(),
+            'apartment': (request.POST.get('apartment') or '').strip(),
+        }
+        AddressBaseOption.objects.get_or_create(value=value, defaults=defaults)
     else:
         return JsonResponse({'error': 'Неверный тип справочника'}, status=400)
     return JsonResponse({'success': True})

@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 MAX_LONG_SIDE = 1920
-JPEG_QUALITY = 85
+JPEG_QUALITY = 82
+JPEG_OPTIMIZE = False
+JPEG_PROGRESSIVE = False
 
 ALLOWED_CONTENT_TYPES = frozenset({
     'image/jpeg',
@@ -145,7 +147,8 @@ def _resize_long_side(img: Image.Image, max_side: int) -> Image.Image:
     else:
         nh = max_side
         nw = max(1, int(round(w * max_side / h)))
-    return img.resize((nw, nh), Image.Resampling.LANCZOS)
+    # BILINEAR заметно быстрее LANCZOS на слабых серверах.
+    return img.resize((nw, nh), Image.Resampling.BILINEAR)
 
 
 def process_uploaded_image(file: UploadedFile, *, upload_subdir: str = 'requests') -> str:
@@ -167,7 +170,13 @@ def process_uploaded_image(file: UploadedFile, *, upload_subdir: str = 'requests
 
     buf = BytesIO()
     try:
-        img.save(buf, format='JPEG', quality=JPEG_QUALITY, optimize=True)
+        img.save(
+            buf,
+            format='JPEG',
+            quality=JPEG_QUALITY,
+            optimize=JPEG_OPTIMIZE,
+            progressive=JPEG_PROGRESSIVE,
+        )
     except Exception as e:
         logger.exception('Ошибка сохранения JPEG')
         raise ImageConversionError() from e
