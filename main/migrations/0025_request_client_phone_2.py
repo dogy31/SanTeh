@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('main', '0023_workerinstruction'),
+        ('main', '0024_merge_addressbaseoption_workerinstruction'),
     ]
 
     operations = [
