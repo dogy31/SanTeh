@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Profile, Request, Photo
+from .models import Profile, Request, Photo, WorkerInstruction
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
@@ -16,9 +16,10 @@ class PhotoInline(admin.TabularInline):
 
 @admin.register(Request)
 class RequestAdmin(admin.ModelAdmin):
-    list_display = ('id', 'client_name', 'client_phone', 'client_address', 'status', 'created_date', 'assigned_to')
+    exclude = ('client_email',)
+    list_display = ('id', 'client_name', 'client_phone', 'client_phone_2', 'client_address', 'status', 'created_date', 'assigned_to')
     list_filter = ('status', 'assigned_to')
-    search_fields = ('id', 'client_name', 'client_address', 'description', 'parts__name')
+    search_fields = ('id', 'client_name', 'client_phone', 'client_phone_2', 'client_address', 'description', 'parts__name')
     inlines = (PhotoInline,)
 
 
@@ -26,3 +27,8 @@ class RequestAdmin(admin.ModelAdmin):
 class PhotoAdmin(admin.ModelAdmin):
     list_display = ('id', 'request', 'photo_type', 'uploaded_at')
     list_filter = ('photo_type',)
+
+
+@admin.register(WorkerInstruction)
+class WorkerInstructionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'updated_at')

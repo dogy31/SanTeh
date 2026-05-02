@@ -8,10 +8,12 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.forms import ValidationError as FormValidationError
 from django.http import JsonResponse
+from django.core.files.storage import default_storage
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 from .forms import RequestForm
-from .models import Profile, Request, Photo, Part, EquipmentTypeOption, AddressBaseOption, Document, TransportExpense
+from .models import Profile, Request, Photo, Part, EquipmentTypeOption, AddressBaseOption, Document, TransportExpense, WorkerInstruction
+from .phone_utils import normalize_phone
 from .utils.image_processor import (
     FileTooLargeError,
     ImageConversionError,
@@ -37,21 +39,6 @@ DEFAULT_EQUIPMENT_TYPES = [
 ]
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-
-
-def normalize_phone(phone):
-    if not phone:
-        return ''
-    digits = ''.join(ch for ch in phone if ch.isdigit())
-    if not digits:
-        return ''
-    if digits.startswith('8'):
-        digits = '7' + digits[1:]
-    elif digits.startswith('9'):
-        digits = '7' + digits
-    if len(digits) > 11:
-        digits = digits[:11]
-    return digits
 
 
 def compose_full_address(base_address, house_number='', entrance='', floor='', apartment=''):
@@ -335,6 +322,7 @@ def create_request(request):
             worker_id = int(worker_id)
         worker_percent = cd['worker_percent']
         client_phone = normalize_phone(cd['client_phone'])
+        client_phone_2 = cd.get('client_phone_2') or ''
         visit_time = cd.get('visit_time')
         base_address = (cd.get('client_address') or '').strip()
         house_number = (cd.get('house_number') or '').strip()
@@ -356,7 +344,8 @@ def create_request(request):
                     description=cd['description'],
                     client_name=(cd.get('client_name') or '').strip(),
                     client_phone=client_phone,
-                    client_email=cd.get('client_email') or '',
+                    client_phone_2=client_phone_2,
+                    client_email='',
                     client_address=full_address,
                     house_number=house_number,
                     entrance=entrance,
@@ -401,7 +390,7 @@ def create_request(request):
 {req.description}
 ━━━━━━━━━━━━━
 КЛИЕНТ: {req.client_name}
-ТЕЛЕФОН: {req.client_phone}
+ТЕЛЕФОН: {req.client_phone}{f" / {req.client_phone_2}" if req.client_phone_2 else ''}
 АДРЕС: {req.client_address or '—'}
 ━━━━━━━━━━━━━
 ❗❗❗ВАЖНО: перезвоните клиенту в течении 30 минут и не опаздывайте к согласованому времени❗❗❗
@@ -423,8 +412,11 @@ def edit_request(request, pk):
             req.client_name = (request.POST.get('client_name', req.client_name) or '').strip()
         if 'client_phone' in request.POST:
             req.client_phone = normalize_phone(request.POST.get('client_phone', req.client_phone))
-        if 'client_email' in request.POST:
-            req.client_email = request.POST.get('client_email', req.client_email)
+        if 'client_phone_2' in request.POST:
+            phone2_norm = normalize_phone(request.POST.get('client_phone_2', ''))
+            if phone2_norm and len(phone2_norm) != 11:
+                return JsonResponse({'error': 'Доп. телефон: укажите полный номер или оставьте поле пустым'}, status=400)
+            req.client_phone_2 = phone2_norm
         has_base_address = 'client_address' in request.POST
         if has_base_address:
             req.client_address = (request.POST.get('client_address', req.client_address) or '').strip()
@@ -517,7 +509,7 @@ def edit_request(request, pk):
 {req.description}
 ━━━━━━━━━━━━━
 КЛИЕНТ: {req.client_name}
-ТЕЛЕФОН: {req.client_phone}
+ТЕЛЕФОН: {req.client_phone}{f" / {req.client_phone_2}" if req.client_phone_2 else ''}
 АДРЕС: {req.client_address or '—'}
 ━━━━━━━━━━━━━
 ❗❗❗ВАЖНО: перезвоните клиенту в течении 30 минут и не опаздывайте к согласованому времени❗❗❗
@@ -668,7 +660,7 @@ def edit_request(request, pk):
         'description': req.description,
         'client_name': req.client_name,
         'client_phone': req.client_phone,
-        'client_email': req.client_email,
+        'client_phone_2': req.client_phone_2,
         'client_address': req.client_address,
         'base_address': extract_base_address(req.client_address),
         'house_number': req.house_number,
@@ -776,7 +768,7 @@ def view_request(request, pk):
         'description': req.description,
         'client_name': req.client_name,
         'client_phone': req.client_phone,
-        'client_email': req.client_email,
+        'client_phone_2': req.client_phone_2,
         'client_address': req.client_address,
         'base_address': extract_base_address(req.client_address),
         'equipment_type': req.equipment_type,
@@ -844,6 +836,8 @@ def get_requests(request):
             | Q(client_name__icontains=search)
             | Q(description__icontains=search)
             | Q(parts__name__icontains=search)
+            | Q(client_phone__icontains=search)
+            | Q(client_phone_2__icontains=search)
         ).distinct()
     status_list = [s for s in status_list if s]
     if status_list:
@@ -867,6 +861,7 @@ def get_requests(request):
             'description': r.description,
             'client_name': r.client_name,
             'client_phone': r.client_phone,
+            'client_phone_2': r.client_phone_2,
             'client_address': r.client_address,
             'base_address': extract_base_address(r.client_address),
             'house_number': r.house_number,
@@ -918,6 +913,8 @@ def get_worker_requests(request):
             | Q(client_name__icontains=search)
             | Q(description__icontains=search)
             | Q(parts__name__icontains=search)
+            | Q(client_phone__icontains=search)
+            | Q(client_phone_2__icontains=search)
         ).distinct()
     status_list = [s for s in status_list if s]
     if status_list:
@@ -941,7 +938,7 @@ def get_worker_requests(request):
             'description': r.description,
             'client_name': r.client_name,
             'client_phone': r.client_phone,
-            'client_email': r.client_email,
+            'client_phone_2': r.client_phone_2,
             'client_address': r.client_address,
             'base_address': extract_base_address(r.client_address),
             'house_number': r.house_number,
@@ -1130,6 +1127,61 @@ def accept_request(request, pk):
     req.status = 'accepted'
     req.save(update_fields=['status'])
     return JsonResponse({'success': True, 'status': req.status})
+
+
+@login_required
+def api_worker_instruction(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    if request.user.profile.role not in ('admin', 'worker'):
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    inst = WorkerInstruction.objects.filter(pk=1).first()
+    html = inst.body_html if inst else ''
+    return JsonResponse({'html': html})
+
+
+@login_required
+def api_worker_instruction_update(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    try:
+        data = json.loads(request.body.decode('utf-8') or '{}')
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Неверный JSON'}, status=400)
+    html = data.get('html')
+    if html is None:
+        html = ''
+    if not isinstance(html, str):
+        return JsonResponse({'error': 'Поле html должно быть строкой'}, status=400)
+    if len(html) > 2_000_000:
+        return JsonResponse({'error': 'Слишком большой объём текста'}, status=400)
+    inst, _ = WorkerInstruction.objects.get_or_create(pk=1)
+    inst.body_html = html
+    inst.save()
+    return JsonResponse({'success': True})
+
+
+@login_required
+def upload_worker_instruction_image(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error': 'permission denied'}, status=403)
+    f = request.FILES.get('image') or request.FILES.get('file')
+    if not f:
+        return JsonResponse({'error': 'Выберите файл изображения'}, status=400)
+    try:
+        rel = process_uploaded_image(f, upload_subdir='worker_instruction')
+        url = default_storage.url(rel)
+    except FileTooLargeError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except NotAnImageError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except ImageConversionError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'success': True, 'url': url})
 
 
 @login_required

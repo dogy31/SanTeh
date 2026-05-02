@@ -1,5 +1,6 @@
 from django import forms
 
+from .phone_utils import normalize_phone
 from .utils.image_processor import (
     FileTooLargeError,
     NotAnImageError,
@@ -13,7 +14,7 @@ class RequestForm(forms.Form):
     description = forms.CharField()
     client_name = forms.CharField(max_length=100, required=False)
     client_phone = forms.CharField(max_length=32)
-    client_email = forms.EmailField(required=False)
+    client_phone_2 = forms.CharField(max_length=32, required=False)
     client_address = forms.CharField(max_length=200)
     house_number = forms.CharField(max_length=20, required=False)
     entrance = forms.CharField(max_length=20, required=False)
@@ -30,6 +31,15 @@ class RequestForm(forms.Form):
         if not addr:
             raise forms.ValidationError('Адрес обязателен для заполнения')
         return addr
+
+    def clean_client_phone_2(self):
+        raw = self.cleaned_data.get('client_phone_2')
+        normalized = normalize_phone(raw or '')
+        if not normalized:
+            return ''
+        if len(normalized) != 11:
+            raise forms.ValidationError('Второй телефон: введите 11 цифр в формате +7')
+        return normalized
 
     def clean_worker_percent(self):
         val = self.cleaned_data.get('worker_percent')

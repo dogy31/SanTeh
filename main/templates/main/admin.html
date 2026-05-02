@@ -9,7 +9,9 @@
     .badge { background: #2f7e9e20; color: #1b5e7a; padding: 5px 14px; border-radius: 40px; }
     .btn-primary { background: #2f7e9e; color: white; border: none; padding: 12px 28px; border-radius: 40px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px #2f7e9e60; transition: 0.15s; }
     .btn-primary:hover { background: #1f5f7a; }
-    .view-toggle { margin-left: auto; display: flex; gap: 8px; }
+    .view-toggle.view-toggle-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin: 10px; justify-content: flex-start; }
+    .view-mode-buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .view-toggle { margin-left: auto; }
     .view-btn { padding: 8px 16px; border-radius: 40px; font-weight: 500; font-size: 14px; cursor: pointer; text-align: center; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; }
     .view-btn.active { background: #2f7e9e; color: white; border: none; box-shadow: 0 2px 4px #2f7e9e70; }
     .view-btn:not(.active) { border: 1.5px solid #2f7e9e; background: white; color: #1d5f7a; }
@@ -17,11 +19,77 @@
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
     .btn-secondary { background: #f5f9fd; border: 1px solid transparent; color: #1a5f7a; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; box-shadow: none; }
     .btn-secondary:hover { background: #e7f0f5; }
-    #showWorkersModal, #showDocumentsModal, #showCancelAmountsModal, #bindMessengersBtn, #openFilterPanel { border: 2px solid #2f7e9e; }
+    #showWorkersModal, #showDocumentsModal, #showCancelAmountsModal, #showWorkerInstructionEditBtn, #bindMessengersBtn, #openFilterPanel { border: 2px solid #2f7e9e; }
+    .header-pay-dropdown { position: relative; }
+    .header-pay-dropdown > summary {
+        list-style: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 20px;
+        border-radius: 40px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #e8f6ee 0%, #dff5eb 50%, #d4efe6 100%);
+        color: #145a42;
+        border: 2px solid #52a089;
+        box-shadow: 0 4px 12px rgba(47, 126, 158, 0.12);
+    }
+    .header-pay-dropdown > summary::-webkit-details-marker { display: none; }
+    .header-pay-dropdown > summary::marker { display: none; }
+    .header-pay-dropdown:hover > summary { filter: brightness(0.97); border-color: #2f8f78; color: #0f3f2e; }
+    .header-pay-dropdown__panel {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        left: auto;
+        z-index: 200;
+        min-width: min(340px, 92vw);
+        max-width: 400px;
+        padding: 16px;
+        background: white;
+        border-radius: 20px;
+        border: 1px solid #c8dfe8;
+        box-shadow: 0 14px 40px rgba(11, 43, 64, 0.14);
+        display: grid;
+        gap: 12px;
+    }
+    .header-pay-card {
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid #d9e8f0;
+        background: linear-gradient(180deg, #fbfdfe 0%, #f4f9fc 100%);
+    }
+    .header-pay-card h3 { margin: 0 0 6px; font-size: 15px; color: #0b2b40; }
+    .header-pay-card p { margin: 0 0 12px; font-size: 13px; color: #4a6778; line-height: 1.45; }
+    .header-pay-card a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 14px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: 0.15s;
+        box-sizing: border-box;
+    }
+    .header-pay-card.timeweb a { background: #2f7e9e; color: white; border: none; box-shadow: 0 4px 10px rgba(47,126,158,0.35); }
+    .header-pay-card.timeweb a:hover { background: #256986; color: white; }
+    .header-pay-card.smsru a { background: #eef6fc; color: #1d5f7a; border: 2px solid #2f7e9e; }
+    .header-pay-card.smsru a:hover { background: #e1f0f9; color: #0f3f52; }
+    @media (max-width: 900px) {
+        .header-pay-dropdown__panel {
+            left: 0;
+            right: auto;
+            min-width: 100%;
+            max-width: none;
+        }
+    }
     .btn-danger { background: #c03c2b; color: white; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-block; }
     .btn-danger:hover { background: #a02f24; }
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
-    .view-toggle-row { display: flex; justify-content: flex-start; gap: 10px; align-items: center; margin: 10px; }
     .filter-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; margin-top: 12px; }
     .filter-bar { background: white; padding: 18px 24px; border-radius: 60px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); width: 100%; }
     .filter-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -41,12 +109,128 @@
     .status-dropdown__options label:last-child { margin-bottom: 0; }
     .status-dropdown__options input[type='checkbox'] { accent-color: #2f7e9e; width: 16px; height: 16px; }
     .status-dropdown__summary { flex: 1; }
-    .table-wrapper { background: white; border-radius: 28px; box-shadow: 0 20px 35px -10px #bac9d4; overflow: auto; max-height: 72vh; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    /* Поиск/фильтры/режим вида должны быть над карточкой таблицы, чтобы sticky-шапка не перекрывала их при прокрутке страницы */
+    .search-and-view,
+    .mobile-filter-toggle#openFilterPanel,
+    .filter-modal,
+    .view-toggle.view-toggle-row {
+        position: relative;
+        z-index: 24;
+    }
+    .table-zoom-shell {
+        background: white;
+        border-radius: 28px;
+        box-shadow: 0 20px 35px -10px #bac9d4;
+        overflow: visible;
+        max-height: 72vh;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        position: relative;
+        z-index: 3;
+        isolation: isolate;
+    }
+    .table-zoom-toolbar {
+        flex: 0 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 10px 14px 11px;
+        border-bottom: 1px solid #d9e8f2;
+        background: linear-gradient(180deg, #fbfdfe 0%, #eef5fa 100%);
+        border-radius: 28px 28px 0 0;
+    }
+    .table-zoom-toolbar .table-zoom-label { font-size: 13px; color: #4a6778; font-weight: 600; white-space: nowrap; }
+    .table-zoom-toolbar .table-zoom-val { font-size: 13px; color: #0b2b40; font-weight: 700; min-width: 3rem; text-align: center; }
+    .table-zoom-toolbar input[type='range'].table-zoom-range { width: min(140px, 32vw); vertical-align: middle; accent-color: #2f7e9e; cursor: pointer; }
+    .table-nav-sep { color: #b8cddc; margin: 0 2px; user-select: none; }
+    .table-nav-mini { font-size: 12px; color: #5a7588; flex: 1 1 100%; margin: -2px 0 2px 0; }
+    .table-mini-btn {
+        border: 1px solid #b8cddc;
+        background: white;
+        color: #1d5f7a;
+        border-radius: 12px;
+        padding: 6px 11px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.12s;
+        white-space: nowrap;
+    }
+    .table-mini-btn:hover { background: #e7f2f9; border-color: #2f7e9e; color: #0f3f52; }
+    .table-scroll-area {
+        flex: 1 1 auto;
+        overflow: auto;
+        min-height: 180px;
+        max-height: calc(72vh - 120px);
+        overscroll-behavior: contain;
+        scroll-behavior: smooth;
+        margin: 0;
+        padding: 0;
+        background: white;
+        border-radius: 0 0 28px 28px;
+    }
+    .table-zoom-inner {
+        --table-font-mul: 1;
+        margin: 0;
+        padding: 0 0 8px 0;
+        box-sizing: border-box;
+        min-width: min-content;
+        display: block;
+    }
+    .table-zoom-inner #requestsTable { font-size: calc(14px * var(--table-font-mul, 1)); }
+    .table-scroll-area #requestsTable th:first-child,
+    .table-scroll-area #requestsTable td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 18;
+        background: #f8fafc;
+        box-shadow: 3px 0 10px rgba(15, 43, 64, 0.06);
+    }
+    .table-scroll-area #requestsTable thead th:first-child { z-index: 45; background: #f0f5f9; }
+    .table-scroll-area tbody tr:nth-child(even) td:first-child { background: #f3f7fa; }
+    .table-scroll-area tbody tr:hover td:first-child { background: #e8f2f9; }
+    .table-scroll-area tbody tr.overdue td:first-child { background: #fdeeea !important; }
+    table { width: 100%; border-collapse: collapse; font-size: inherit; margin: 0; border-spacing: 0; }
+    /* Липкая шапка привязана к .table-scroll-area (overflow:auto), не к внешней оболочке с overflow:hidden */
+    .table-scroll-area #requestsTable thead th { position: sticky; top: 0; }
     th, td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle; }
-    th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 5; }
-    thead th { position: sticky; top: 0; z-index: 30; box-shadow: inset 0 -1px 0 #d7e3ec; }
+    th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; z-index: 5; }
+    thead th { z-index: 30; box-shadow: inset 0 -1px 0 #d7e3ec; }
     tr.overdue { background-color: #ffefed; }
+    /* Акцент колонок: задача / телефон / время — одна палитра (бирюза #2f7e9e) */
+    thead th.col-accent-task { background: #e3f0f7; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
+    thead th.col-accent-phone { background: #dff2f5; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
+    thead th.col-accent-time { background: #dbedf4; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
+    td.col-accent-task { background: rgba(227, 240, 247, 0.92); color: #143c4f; box-shadow: inset 3px 0 0 rgba(47, 126, 158, 0.5); }
+    td.col-accent-phone { background: rgba(223, 242, 245, 0.92); color: #143c4f; box-shadow: inset 3px 0 0 rgba(47, 126, 158, 0.38); }
+    td.col-accent-time { background: rgba(219, 237, 244, 0.92); color: #173f52; font-weight: 600; letter-spacing: 0.02em; box-shadow: inset 3px 0 0 rgba(30, 120, 150, 0.42); }
+    td.col-accent-phone a { color: #216f8f; font-weight: 500; }
+    tbody tr:nth-child(even) td.col-accent-task { background: rgba(215, 234, 244, 0.95); }
+    tbody tr:nth-child(even) td.col-accent-phone { background: rgba(210, 236, 242, 0.95); }
+    tbody tr:nth-child(even) td.col-accent-time { background: rgba(206, 232, 242, 0.95); }
+    tbody tr:hover td.col-accent-task { background: rgba(205, 230, 243, 0.98); }
+    tbody tr:hover td.col-accent-phone { background: rgba(200, 232, 240, 0.98); }
+    tbody tr:hover td.col-accent-time { background: rgba(196, 228, 238, 0.98); }
+    tr.overdue td.col-accent-task,
+    tr.overdue td.col-accent-phone,
+    tr.overdue td.col-accent-time { background: #fdeeea; box-shadow: inset 3px 0 0 rgba(192, 60, 43, 0.45); color: #4a2630; }
+    tr.overdue td.col-accent-phone a { color: #b03628; }
+    .zoomable-img { cursor: zoom-in; user-select: none; -webkit-user-drag: none; }
+    /* Просмотр фото с зумом (ПК и телефон) */
+    #imageZoomModal.modal { align-items: stretch; justify-content: center; background: rgba(10, 18, 24, 0.92); overflow: hidden; }
+    #imageZoomModal .image-zoom-sheet { margin: auto; background: transparent; padding: 0; width: 100vw; max-width: 100%; height: 100vh; max-height: 100vh; overflow: hidden; display: flex; flex-direction: column; border-radius: 0; box-shadow: none; }
+    #imageZoomModal .image-zoom-toolbar { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px 6px; }
+    #imageZoomModal .image-zoom-toolbar span { flex: 1 1 100%; text-align: center; color: #cfe7ef; font-size: 13px; }
+    #imageZoomModal .image-zoom-toolbar button { border: none; border-radius: 999px; padding: 10px 16px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    #imageZoomModal .zoom-btn-reset { background: #2f7e9e; color: white; }
+    #imageZoomModal .zoom-btn-ctl { background: #3a5868; color: white; width: 44px; padding: 10px 0; }
+    #imageZoomModal .zoom-btn-close { background: #5a382e; color: white; padding: 10px 20px; }
+    #imageZoomViewport { flex: 1 1 auto; overflow: hidden; touch-action: none; cursor: grab; position: relative; min-height: 0; }
+    #imageZoomViewport.grabbing { cursor: grabbing; }
+    #imageZoomPan { will-change: transform; transform-origin: center center; }
+    #imageZoomImg { display: block; max-width: 100%; max-height: 78vh; width: auto; height: auto; margin: 0 auto; pointer-events: none; }
     .status { display: inline-block; padding: 5px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; white-space: nowrap; }
     .status.new { background: #e1edfb; color: #1b5f8c; }
     .status.accepted { background: #e8f7ec; color: #1f7a38; }
@@ -59,9 +243,19 @@
     .cancel-btn { color: #c03c2b; border-color: #c03c2b40; }
     .cancel-btn:hover { background: #ffeaea; }
     .money-delivered { width: 20px; height: 20px; accent-color: #2f7e9e; cursor: pointer; }
-    .blocks-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
-    .request-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; transition: 0.2s; }
-    .request-block:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.1); transform: translateY(-2px); }
+    .blocks-container { display: grid; gap: 20px; }
+    .blocks-container:not(.blocks-fixed-cols) { grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); }
+    .blocks-container.blocks-fixed-cols.blocks-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    .blocks-container.blocks-fixed-cols.blocks-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .blocks-container.blocks-fixed-cols.blocks-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .blocks-container.blocks-fixed-cols.blocks-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .blocks-columns-wrap { display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .blocks-columns-wrap.blocks-columns-visible { display: flex; }
+    .blocks-columns-label { font-size: 13px; color: #4a6778; font-weight: 500; white-space: nowrap; }
+    .blocks-columns-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+    .blocks-cols-btn { min-width: 36px; padding: 6px 10px; border: 1.5px solid #2f7e9e; border-radius: 10px; background: white; color: #1d5f7a; font-weight: 600; cursor: pointer; font-size: 13px; box-sizing: border-box; transition: 0.12s; }
+    .blocks-cols-btn:hover { background: #e7f0f5; }
+    .blocks-cols-btn.active { background: #2f7e9e; color: white; border-color: #2f7e9e; }
     .block-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
     .block-id { font-size: 18px; font-weight: 700; color: #1b6f8f; }
     .block-status { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; }
@@ -73,11 +267,11 @@
     .block-content { margin-bottom: 16px; }
     .block-field { margin-bottom: 8px; }
     .block-label { font-weight: 600; color: #2c5770; font-size: 13px; margin-bottom: 2px; }
-    .block-value { color: #1a4b5f; font-size: 14px; }
+    .block-value { color: #1a4b5f; font-size: 14px; overflow-wrap: anywhere; }
     .block-alert { background: #fff2d6; color: #a16500; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; }
     .block-old { background: #ffeaea; color: #c03c2b; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; }
     .block-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .request-block { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; cursor: pointer; transition: transform 0.2s; }
+    .request-block { min-width: 0; box-sizing: border-box; background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; cursor: pointer; transition: transform 0.2s; }
     .request-block:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
     .request-block.new { border-left: 4px solid #2f7e9e; }
     .request-block.accepted { border-left: 4px solid #1f7a38; }
@@ -102,7 +296,7 @@
     .block-details { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; }
     .block-details p { margin: 5px 0; }
     @media (max-width: 768px) {
-        .blocks-container { grid-template-columns: 1fr; }
+        .blocks-container:not(.blocks-fixed-cols) { grid-template-columns: 1fr; }
         .request-block { padding: 15px; }
     }
     .modal {
@@ -135,6 +329,66 @@
     .option-row { display: flex; gap: 8px; align-items: center; }
     .option-row > * { min-width: 0; }
     .option-row input, .option-row select { flex: 1 1 100%; }
+    .option-input-wrap { position: relative; z-index: 2; }
+    .option-input-wrap > .option-row { margin-bottom: 0; }
+    .option-suggest-panel {
+        display: none;
+        margin-top: 8px;
+        padding: 10px 10px 8px;
+        border-radius: 16px;
+        border: 1px solid #cbdae7;
+        background: linear-gradient(180deg, #fbfdff 0%, #f4f9fc 100%);
+        box-shadow: 0 10px 28px rgba(15, 52, 68, 0.1);
+        max-width: 100%;
+    }
+    .option-suggest-panel.is-open { display: block; }
+    .option-suggest-hint { font-size: 12px; color: #6a8294; margin-bottom: 8px; }
+    .option-suggest-ribbon {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+    .option-suggest-chip {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        max-width: min(280px, 85vw);
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid #b8d0e0;
+        background: white;
+        font-size: 13px;
+        color: #1d4f65;
+        cursor: pointer;
+        text-align: left;
+        white-space: nowrap;
+        transition: 0.12s;
+    }
+    .option-suggest-chip:hover { border-color: #2f7e9e; background: #eef6fa; }
+    .option-suggest-chip-label { overflow: hidden; text-overflow: ellipsis; }
+    .option-suggest-chip-remove {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: none;
+        background: #ffeaea;
+        color: #c03c2b;
+        font-size: 15px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+    }
+    .option-suggest-chip-remove:hover { background: #ffd5d5; }
     .option-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .option-tag { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #ccdce8; border-radius: 999px; background: #f8fafc; padding: 4px 10px; font-size: 12px; color: #1d4f65; cursor: pointer; }
     .option-tag-remove { border: none; background: transparent; color: #c03c2b; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
@@ -273,7 +527,13 @@
             grid-template-columns: 1fr !important;
         }
     }
+    #workerInstructionEditModal .modal-content { width: min(100%, 960px); max-height: min(94vh, 920px); }
+    #workerInstructionQuillWrap { border: 1px solid #cbdae7; border-radius: 16px; overflow: hidden; background: white; margin-top: 8px; }
+    #workerInstructionQuillWrap .ql-toolbar { border: none; border-bottom: 1px solid #cbdae7; background: #f4f9fc; }
+    #workerInstructionQuillWrap .ql-container { border: none; font-size: 15px; min-height: 360px; }
 </style>
+<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -284,7 +544,23 @@
             <button class="btn-primary btn-large" id="showCreateModal">Новая заявка</button>
             <button class="btn-secondary" id="showWorkersModal">Мастера</button>
             <button class="btn-secondary" id="showDocumentsModal">Документы</button>
+            <button class="btn-secondary" type="button" id="showWorkerInstructionEditBtn">Инструкция для мастеров</button>
             <button class="btn-secondary" id="showCancelAmountsModal">Техника</button>
+            <details class="header-pay-dropdown" id="payServicesDropdown">
+                <summary>💳 Оплата сервисов ▾</summary>
+                <div class="header-pay-dropdown__panel" onclick="event.stopPropagation();">
+                    <div class="header-pay-card timeweb">
+                        <h3>Timeweb Cloud</h3>
+                        <p>Пополнение баланса и оплата Timeweb Cloud / хостинга в панели управления после входа в аккаунт.</p>
+                        <a href="https://hosting.timeweb.ru/account/" target="_blank" rel="noopener noreferrer">Открыть Timeweb → оплата</a>
+                    </div>
+                    <div class="header-pay-card smsru">
+                        <h3>SMS.ru</h3>
+                        <p>Пополнение счёта для SMS: авторизуйтесь на sms.ru и перейдите в раздел баланса / пополнения в личном кабинете.</p>
+                        <a href="https://sms.ru/" target="_blank" rel="noopener noreferrer">Открыть SMS.ru → счёт и оплата</a>
+                    </div>
+                </div>
+            </details>
             <button class="btn-secondary" id="bindMessengersBtn">Мессенджеры</button>
             <a href="{% url 'logout' %}" class="btn-danger" style="text-decoration: none;">Выйти</a>
         </div>
@@ -328,24 +604,54 @@
     </div>
 
     <div class="view-toggle view-toggle-row">
-        <button class="btn-outline view-btn active" id="tableViewBtn" data-view="table">
-            <i class="fas fa-table"></i> Таблица
-        </button>
-        <button class="btn-outline view-btn" id="blocksViewBtn" data-view="blocks">
-            <i class="fas fa-th"></i> Блоки
-        </button>
+        <div class="view-mode-buttons">
+            <button type="button" class="btn-outline view-btn active" id="tableViewBtn" data-view="table">
+                <i class="fas fa-table"></i> Таблица
+            </button>
+            <button type="button" class="btn-outline view-btn" id="blocksViewBtn" data-view="blocks">
+                <i class="fas fa-th"></i> Блоки
+            </button>
+        </div>
+        <div id="blocksColumnsControl" class="blocks-columns-wrap" aria-hidden="true">
+            <span class="blocks-columns-label">В ряд:</span>
+            <div class="blocks-columns-buttons" role="group" aria-label="Блоков в одной строке">
+                <button type="button" class="blocks-cols-btn" data-cols="1">1</button>
+                <button type="button" class="blocks-cols-btn" data-cols="2">2</button>
+                <button type="button" class="blocks-cols-btn" data-cols="3">3</button>
+                <button type="button" class="blocks-cols-btn" data-cols="4">4</button>
+            </div>
+        </div>
     </div>
 
     <!-- Таблица заявок -->
-    <div class="table-wrapper" id="tableView">
+    <div class="table-zoom-shell" id="tableView">
+        <div class="table-zoom-toolbar" aria-label="Масштаб и прокрутка таблицы">
+            <span class="table-zoom-label">Масштаб</span>
+            <button type="button" class="table-mini-btn" id="adminTableZoomOut" aria-label="Уменьшить">−</button>
+            <input type="range" class="table-zoom-range" id="adminTableZoomRange" min="70" max="140" step="5" value="100" aria-valuemin="70" aria-valuemax="140" aria-label="Размер текста таблицы">
+            <button type="button" class="table-mini-btn" id="adminTableZoomIn" aria-label="Увеличить">+</button>
+            <span class="table-zoom-val" id="adminTableZoomVal">100%</span>
+            <span class="table-nav-sep" aria-hidden="true">|</span>
+            <span class="table-zoom-label">Листать</span>
+            <button type="button" class="table-mini-btn" id="adminTableGoTop">Вверх</button>
+            <button type="button" class="table-mini-btn" id="adminTablePageUp">Страница ↑</button>
+            <button type="button" class="table-mini-btn" id="adminTablePageDown">Страница ↓</button>
+            <button type="button" class="table-mini-btn" id="adminTableScrollLeft" aria-label="Влево">←</button>
+            <button type="button" class="table-mini-btn" id="adminTableScrollRight" aria-label="Вправо">→</button>
+            <button type="button" class="table-mini-btn" id="adminTableScrollHome">К началу строки</button>
+            <span class="table-nav-mini">Подсказка: колесо мыши — вертикаль, Shift + колесо — горизонталь</span>
+        </div>
+        <div class="table-scroll-area" id="adminTableScrollArea">
+            <div class="table-zoom-inner" id="adminTableZoomInner">
         <table id="requestsTable">
             <thead>
                 <tr>
                     <th style="width:60px">ID</th>
-                    <th>Задача</th>
-                    <th style="width:120px">Телефон</th>
-                    <th style="width:90px">Время</th>
-                    <th>Адрес</th>
+                    <th class="col-accent-task">Задача</th>
+                    <th class="col-accent-phone" style="width:120px">Телефон</th>
+                    <th class="col-accent-time" style="width:90px">Время</th>
+                    <th>Улица</th>
+                    <th style="width:72px">Дом</th>
                     <th style="width:120px">Вид техники</th>
                     <th style="width:100px">Статус</th>
                     <th style="width:90px">Цена (₽)</th>
@@ -365,11 +671,13 @@
             </thead>
             <tbody id="requestsBody"></tbody>
         </table>
+            </div>
+        </div>
     </div>
 
     <!-- Вид блоков -->
     <div class="blocks-view" id="blocksView" style="display: none;">
-        <div class="blocks-container" id="blocksContainer"></div>
+        <div class="blocks-container blocks-fixed-cols blocks-cols-2" id="blocksContainer"></div>
     </div>
 </div>
 
@@ -379,14 +687,18 @@
         <h2>➕ Новая заявка</h2>
         <div class="field"><label>Описание задачи</label><textarea id="createDesc" placeholder="Что нужно сделать?" required></textarea></div>
         <div class="field"><label>Телефон клиента</label><input type="tel" id="createClientPhone" class="phone-input" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="+7 (___) ___-__-__" required></div>
-        <div class="field"><label>Email клиента</label><input type="email" id="createClientEmail" placeholder="client@example.ru"></div>
+        <div class="field"><label>Доп. телефон</label><input type="tel" id="createClientPhone2" class="phone-input" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="+7 (необязательно)"></div>
         <div class="field">
             <label>Адрес клиента</label>
-            <div class="option-row">
-                <input type="text" id="createClientAddress" list="createClientAddressList" placeholder="Введите или выберите адрес">
-                <datalist id="createClientAddressList"></datalist>
+            <div class="option-input-wrap">
+                <div class="option-row">
+                    <input type="text" id="createClientAddress" autocomplete="off" placeholder="Начните вводить адрес — сохранённые базы появятся лентой">
+                </div>
+                <div class="option-suggest-panel" id="createClientAddressSuggest" hidden aria-hidden="true">
+                    <div class="option-suggest-hint">Сохранённые адреса (прокрутка влево-вправо):</div>
+                    <div class="option-suggest-ribbon" id="createClientAddressSuggestRibbon"></div>
+                </div>
             </div>
-            <div class="option-tags" id="createClientAddressTags"></div>
             <div class="field-inline-row">
                 <input type="text" id="createHouseNumber" placeholder="Дом">
                 <input type="text" id="createEntrance" placeholder="Подъезд">
@@ -396,11 +708,15 @@
         </div>
         <div class="field">
             <label>Вид техники</label>
-            <div class="option-row">
-                <input type="text" id="createEquipmentType" list="createEquipmentTypeList" placeholder="Введите или выберите вид техники">
-                <datalist id="createEquipmentTypeList"></datalist>
+            <div class="option-input-wrap">
+                <div class="option-row">
+                    <input type="text" id="createEquipmentType" autocomplete="off" placeholder="Начните вводить вид техники — подсказки появятся лентой">
+                </div>
+                <div class="option-suggest-panel" id="createEquipmentTypeSuggest" hidden aria-hidden="true">
+                    <div class="option-suggest-hint">Сохранённые виды техники:</div>
+                    <div class="option-suggest-ribbon" id="createEquipmentTypeSuggestRibbon"></div>
+                </div>
             </div>
-            <div class="option-tags" id="createEquipmentTypeTags"></div>
         </div>
         <div class="field"><label>Назначить рабочего</label>
             <select id="createWorker" name="worker_id">
@@ -446,7 +762,7 @@
         <h2>✏️ Редактирование заявки #<span id="adminEditId"></span></h2>
         <div class="field"><label>Описание задачи</label><textarea id="adminDesc"></textarea></div>
         <div class="field"><label>Телефон клиента</label><input type="tel" id="adminClientPhone" class="phone-input"></div>
-        <div class="field"><label>Email клиента</label><input type="email" id="adminClientEmail"></div>
+        <div class="field"><label>Доп. телефон</label><input type="tel" id="adminClientPhone2" class="phone-input"></div>
         <div class="field">
             <label>Адрес клиента</label>
             <div class="option-row">
@@ -494,17 +810,25 @@
     </div>
 </div>
 
-<!-- Просмотр одного фото в крупном размере -->
-<div class="modal" id="photoViewer">
-    <div class="modal-content" style="max-width:900px; padding:20px;">
-        <div style="text-align:right;"><button class="btn-secondary" onclick="closeModal('photoViewer')">Закрыть</button></div>
-        <img id="photoViewerImg" src="" style="width:100%; height:auto; border-radius:12px; margin-top:10px;">
+<!-- Просмотр фото с зумом -->
+<div class="modal" id="imageZoomModal" aria-hidden="true">
+    <div class="modal-content image-zoom-sheet">
+        <div class="image-zoom-toolbar">
+            <span id="imageZoomHint">Перетаскивание · колёсико зум · два пальца на телефоне</span>
+            <button type="button" class="zoom-btn-ctl" id="imageZoomOut" aria-label="Уменьшить">−</button>
+            <button type="button" class="zoom-btn-reset" id="imageZoomReset" aria-label="Сброс">Сброс</button>
+            <button type="button" class="zoom-btn-ctl" id="imageZoomIn" aria-label="Увеличить">+</button>
+            <button type="button" class="zoom-btn-close" onclick="window.closeImageZoom && window.closeImageZoom(event)">Закрыть</button>
+        </div>
+        <div id="imageZoomViewport"><div id="imageZoomPan"><img id="imageZoomImg" src="" alt=""></div></div>
     </div>
 </div>
 <script>
     const csrftoken = '{{ csrf_token }}';
     const currentUserId = parseInt("{{ request.user.id }}") || 0;
     let viewMode = 'table'; // 'table' or 'blocks'
+    const ADMIN_BLOCKS_COLS_LS = 'santech_admin_blocks_cols_v1';
+    let blocksColumnsCount = 2;
     let equipmentOptions = [];
     let addressBaseOptions = [];
     const statusTextMap = {
@@ -523,6 +847,13 @@
         const href = digits.length === 11 ? `+${digits}` : digits;
         const title = formatPhoneValue(digits);
         return `<a href="tel:${href}" style="color:#2f7e9e; text-decoration:underline;">${escapeHtml(title || raw)}</a>`;
+    }
+    function clientPhonesLinkHtml(r) {
+        const p1 = phoneLinkHtml(r.client_phone);
+        const d2 = (r.client_phone_2 || '').toString().replace(/\D/g, '');
+        const p2 = d2.length ? phoneLinkHtml(r.client_phone_2) : '';
+        if (!p2 || p2 === '—') return p1;
+        return p1 + '<span class="phone-sep" aria-hidden="true"> · </span>' + p2;
     }
     function normalizeOptionValue(value) { return (value || '').trim(); }
     function ensureInOptions(options, value) {
@@ -552,6 +883,127 @@
         document.getElementById(prefix + 'Floor').value = row.floor || '';
         document.getElementById(prefix + 'Apartment').value = row.apartment || '';
     }
+    let createSuggestHideTimer = null;
+    function cancelHideCreateSuggestPanels() {
+        clearTimeout(createSuggestHideTimer);
+    }
+    function scheduleHideCreateSuggestPanels() {
+        clearTimeout(createSuggestHideTimer);
+        createSuggestHideTimer = setTimeout(function () {
+            hideCreateSuggestPanels();
+        }, 220);
+    }
+    function hideCreateSuggestPanels() {
+        ['createClientAddressSuggest', 'createEquipmentTypeSuggest'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.hidden = true;
+            el.classList.remove('is-open');
+            el.setAttribute('aria-hidden', 'true');
+        });
+    }
+    function filterSavedOptionsByTyping(options, rawInput) {
+        const q = normalizeOptionValue(rawInput).toLowerCase();
+        if (!q) return [];
+        const out = [];
+        for (let i = 0; i < options.length; i++) {
+            const o = options[i];
+            if (normalizeOptionValue(o).toLowerCase().includes(q)) out.push(o);
+            if (out.length >= 80) break;
+        }
+        return out;
+    }
+    function fillCreateSuggestRibbon(ribbonId, values, type, targetInputId) {
+        const ribbon = document.getElementById(ribbonId);
+        const input = document.getElementById(targetInputId);
+        if (!ribbon || !input) return;
+        ribbon.innerHTML = '';
+        values.forEach(function (value) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'option-suggest-chip';
+            btn.innerHTML = `<span class="option-suggest-chip-label">${escapeHtml(value)}</span><span class="option-suggest-chip-remove" title="Удалить">×</span>`;
+            btn.addEventListener('mousedown', function (ev) {
+                if (ev.target && ev.target.closest && ev.target.closest('.option-suggest-chip-remove')) return;
+                ev.preventDefault();
+                cancelHideCreateSuggestPanels();
+                input.value = value;
+                if (type === 'address') applyAddressDefaultsByInput(targetInputId);
+                hideCreateSuggestPanels();
+                input.focus();
+            });
+            btn.querySelector('.option-suggest-chip-remove').addEventListener('mousedown', function (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                cancelHideCreateSuggestPanels();
+                if (!confirm(`Удалить «${value}»?`)) return;
+                deleteOptionFromGlobal(type, value)
+                    .then(function () { return loadRequestOptions(); })
+                    .catch(function (err) { showAppAlert('Ошибка: ' + (err.message || 'Не удалось удалить значение')); });
+            });
+            ribbon.appendChild(btn);
+        });
+    }
+    function showCreateSuggestIfTyping(inputId, panelId, ribbonId, type) {
+        const input = document.getElementById(inputId);
+        const panel = document.getElementById(panelId);
+        if (!input || !panel) return;
+        if (!normalizeOptionValue(input.value)) {
+            panel.hidden = true;
+            panel.classList.remove('is-open');
+            panel.setAttribute('aria-hidden', 'true');
+            return;
+        }
+        const opts = type === 'address' ? addressBaseOptions : equipmentOptions;
+        const filtered = filterSavedOptionsByTyping(opts, input.value);
+        if (!filtered.length) {
+            panel.hidden = true;
+            panel.classList.remove('is-open');
+            panel.setAttribute('aria-hidden', 'true');
+            return;
+        }
+        fillCreateSuggestRibbon(ribbonId, filtered, type, inputId);
+        panel.hidden = false;
+        panel.classList.add('is-open');
+        panel.setAttribute('aria-hidden', 'false');
+    }
+    function refreshOpenCreateSuggestPanels() {
+        const a = document.activeElement;
+        if (a && a.id === 'createClientAddress') {
+            showCreateSuggestIfTyping('createClientAddress', 'createClientAddressSuggest', 'createClientAddressSuggestRibbon', 'address');
+        } else if (a && a.id === 'createEquipmentType') {
+            showCreateSuggestIfTyping('createEquipmentType', 'createEquipmentTypeSuggest', 'createEquipmentTypeSuggestRibbon', 'equipment');
+        }
+    }
+    function bindCreateSuggestRibbon(inputId, panelId, ribbonId, type) {
+        const input = document.getElementById(inputId);
+        const panel = document.getElementById(panelId);
+        if (!input || !panel || input.dataset.createSuggestBound) return;
+        input.dataset.createSuggestBound = '1';
+        panel.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+        input.addEventListener('input', function () {
+            cancelHideCreateSuggestPanels();
+            showCreateSuggestIfTyping(inputId, panelId, ribbonId, type);
+        });
+        input.addEventListener('focus', function () {
+            cancelHideCreateSuggestPanels();
+            showCreateSuggestIfTyping(inputId, panelId, ribbonId, type);
+        });
+        input.addEventListener('blur', function () {
+            scheduleHideCreateSuggestPanels();
+        });
+        input.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Escape') {
+                cancelHideCreateSuggestPanels();
+                hideCreateSuggestPanels();
+            }
+        });
+    }
+    function bindAllCreateSuggestRibbons() {
+        bindCreateSuggestRibbon('createClientAddress', 'createClientAddressSuggest', 'createClientAddressSuggestRibbon', 'address');
+        bindCreateSuggestRibbon('createEquipmentType', 'createEquipmentTypeSuggest', 'createEquipmentTypeSuggestRibbon', 'equipment');
+    }
+
     function renderOptionTags(containerId, options, type, targetId) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -580,14 +1032,11 @@
         });
     }
     function syncOptionInputs() {
-        renderDatalistOptions('createEquipmentTypeList', equipmentOptions);
         renderDatalistOptions('adminEquipmentTypeList', equipmentOptions);
-        renderDatalistOptions('createClientAddressList', addressBaseOptions);
         renderDatalistOptions('adminClientAddressList', addressBaseOptions);
-        renderOptionTags('createEquipmentTypeTags', equipmentOptions, 'equipment', 'createEquipmentType');
         renderOptionTags('adminEquipmentTypeTags', equipmentOptions, 'equipment', 'adminEquipmentType');
-        renderOptionTags('createClientAddressTags', addressBaseOptions, 'address', 'createClientAddress');
         renderOptionTags('adminClientAddressTags', addressBaseOptions, 'address', 'adminClientAddress');
+        refreshOpenCreateSuggestPanels();
     }
     function addEquipmentOption(value, selectedTargetId) {
         const normalized = normalizeOptionValue(value);
@@ -910,10 +1359,11 @@
             else if (r.status === 'cancelled') { statusClass = 'status cancelled'; statusText = 'Отменена'; }
             row.innerHTML = `
                 <td>#${r.id}</td>
-                <td>${escapeHtml(r.description)}</td>
-                <td>${phoneLinkHtml(r.client_phone)}</td>
-                <td>${r.visit_time || '—'}</td>
-                <td>${escapeHtml(r.client_address || '')}</td>
+                <td class="col-accent-task">${escapeHtml(r.description)}</td>
+                <td class="col-accent-phone">${clientPhonesLinkHtml(r)}</td>
+                <td class="col-accent-time">${r.visit_time || '—'}</td>
+                <td>${escapeHtml(r.base_address || '')}</td>
+                <td>${escapeHtml(r.house_number || '')}</td>
                 <td>${escapeHtml(r.equipment_type || '')}</td>
                 <td><span class="${statusClass}">${statusText}</span></td>
                 <td class="price">${r.price ? r.price + ' ₽' : '—'}</td>
@@ -976,7 +1426,7 @@
                     </div>
                     <div class="block-field">
                         <div class="block-label">Номер</div>
-                        <div class="block-value">${phoneLinkHtml(r.client_phone)}</div>
+                        <div class="block-value">${clientPhonesLinkHtml(r)}</div>
                     </div>
                     <div class="block-field">
                         <div class="block-label">Адрес</div>
@@ -1064,7 +1514,7 @@
                     contractPhotos.forEach(p => {
                         const div = document.createElement('div');
                         div.className = 'photo-thumb';
-                        div.innerHTML = `<img src="${p.image}" alt="contract" onclick="openPhotoViewer('${p.image}')">`;
+                        div.innerHTML = `<img class="zoomable-img" src="${p.image}" alt="contract">`;
                         contractDiv.appendChild(div);
                     });
                 } else contractDiv.innerHTML = '<p>Нет договора</p>';
@@ -1077,7 +1527,7 @@
                         partDiv.className = 'part-item';
                         partDiv.innerHTML = `
                             <strong>${escapeHtml(part.name)}</strong> — ${part.price ? part.price + ' ₽' : 'цена не указана'}<br>
-                            ${part.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;" onclick="openPhotoViewer('${part.receipt_photo_url}')"><img src="${part.receipt_photo_url}" alt="receipt"></div>` : '<span style="color:#c03c2b;">Чек не прикреплён</span>'}
+                            ${part.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;"><img class="zoomable-img" src="${part.receipt_photo_url}" alt="receipt"></div>` : '<span style="color:#c03c2b;">Чек не прикреплён</span>'}
                         `;
                         partsDiv.appendChild(partDiv);
                     });
@@ -1091,7 +1541,7 @@
                         itemDiv.className = 'part-item';
                         itemDiv.innerHTML = `
                             <strong>${escapeHtml(item.note || 'Без описания')}</strong><br>
-                            ${item.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;" onclick="openPhotoViewer('${item.receipt_photo_url}')"><img src="${item.receipt_photo_url}" alt="transport"></div>` : '<span style="color:#4a6778;">Фото не прикреплено</span>'}
+                            ${item.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;"><img class="zoomable-img" src="${item.receipt_photo_url}" alt="transport"></div>` : '<span style="color:#4a6778;">Фото не прикреплено</span>'}
                         `;
                         transportDiv.appendChild(itemDiv);
                     });
@@ -1120,7 +1570,7 @@
                 document.getElementById('adminEditId').textContent = data.id;
                 document.getElementById('adminDesc').value = data.description || '';
                 document.getElementById('adminClientPhone').value = data.client_phone || '';
-                document.getElementById('adminClientEmail').value = data.client_email || '';
+                document.getElementById('adminClientPhone2').value = data.client_phone_2 || '';
                 const baseAddressValue = data.base_address || data.client_address || '';
                 addAddressOption(baseAddressValue, 'adminClientAddress');
                 addEquipmentOption(data.equipment_type || '', 'adminEquipmentType');
@@ -1171,7 +1621,7 @@
                     contractPhotos.forEach(p => {
                         const div = document.createElement('div');
                         div.className = 'photo-thumb';
-                        div.innerHTML = `<img src="${p.image}" alt="contract" onclick="openPhotoViewer('${p.image}')">`;
+                        div.innerHTML = `<img class="zoomable-img" src="${p.image}" alt="contract">`;
                         contractGallery.appendChild(div);
                     });
                 } else contractGallery.innerHTML = '<p>Нет договора</p>';
@@ -1184,7 +1634,7 @@
                         partDiv.className = 'part-item';
                         partDiv.innerHTML = `
                             <strong>${escapeHtml(part.name)}</strong> — ${part.price ? part.price + ' ₽' : 'цена не указана'}<br>
-                            ${part.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;" onclick="openPhotoViewer('${part.receipt_photo_url}')"><img src="${part.receipt_photo_url}" alt="receipt"></div>` : '<span style="color:#c03c2b;">Чек не прикреплён</span>'}
+                            ${part.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;"><img class="zoomable-img" src="${part.receipt_photo_url}" alt="receipt"></div>` : '<span style="color:#c03c2b;">Чек не прикреплён</span>'}
                         `;
                         partsDiv.appendChild(partDiv);
                     });
@@ -1198,7 +1648,7 @@
                         itemDiv.className = 'part-item';
                         itemDiv.innerHTML = `
                             <strong>${escapeHtml(item.note || 'Без описания')}</strong><br>
-                            ${item.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;" onclick="openPhotoViewer('${item.receipt_photo_url}')"><img src="${item.receipt_photo_url}" alt="transport"></div>` : '<span style="color:#4a6778;">Фото не прикреплено</span>'}
+                            ${item.receipt_photo_url ? `<div class="photo-thumb" style="width:80px; height:80px;"><img class="zoomable-img" src="${item.receipt_photo_url}" alt="transport"></div>` : '<span style="color:#4a6778;">Фото не прикреплено</span>'}
                         `;
                         transportDiv.appendChild(itemDiv);
                     });
@@ -1217,7 +1667,7 @@
             const formData = new FormData();
             formData.append('description', document.getElementById('adminDesc').value);
             formData.append('client_phone', document.getElementById('adminClientPhone').value.replace(/\D/g, ''));
-            formData.append('client_email', document.getElementById('adminClientEmail').value);
+            formData.append('client_phone_2', document.getElementById('adminClientPhone2').value.replace(/\D/g, ''));
             formData.append('client_address', document.getElementById('adminClientAddress').value);
             formData.append('house_number', document.getElementById('adminHouseNumber').value);
             formData.append('entrance', document.getElementById('adminEntrance').value);
@@ -1246,6 +1696,14 @@
         const btn = this; btn.disabled = true; btn.textContent = 'Сохранение...';
         const id = document.getElementById('adminEditId').textContent;
         if (!id) {
+            btn.disabled = false;
+            btn.textContent = 'Сохранить';
+            return;
+        }
+        const adminPhone2El = document.getElementById('adminClientPhone2');
+        const adminPhone2Dig = adminPhone2El.value.replace(/\D/g, '');
+        if (adminPhone2Dig.length && adminPhone2Dig.length !== 11) {
+            showUserWarning('Доп. телефон: введите полный номер или оставьте поле пустым', adminPhone2El);
             btn.disabled = false;
             btn.textContent = 'Сохранить';
             return;
@@ -1383,7 +1841,7 @@
     function resetCreateForm() {
         document.getElementById('createDesc').value = '';
         document.getElementById('createClientPhone').value = '';
-        document.getElementById('createClientEmail').value = '';
+        document.getElementById('createClientPhone2').value = '';
         document.getElementById('createClientAddress').value = '';
         document.getElementById('createHouseNumber').value = '';
         document.getElementById('createEntrance').value = '';
@@ -1392,6 +1850,8 @@
         document.getElementById('createEquipmentType').value = '';
         document.getElementById('createVisitTime').value = '';
         document.getElementById('createWorkerPercent').value = '50';
+        cancelHideCreateSuggestPanels();
+        hideCreateSuggestPanels();
     }
 
     function renderDocumentsList(documents) {
@@ -1472,6 +1932,13 @@
             btn.disabled = false; btn.textContent = 'Создать';
             return;
         }
+        const phone2Input = document.getElementById('createClientPhone2');
+        const phone2Digits = phone2Input.value.replace(/\D/g, '');
+        if (phone2Digits.length && phone2Digits.length !== 11) {
+            showUserWarning('Доп. телефон: введите полный номер или оставьте поле пустым', phone2Input);
+            btn.disabled = false; btn.textContent = 'Создать';
+            return;
+        }
         const deadlineDate = deadlineEl.value;
         if (!deadlineDate) {
             showUserWarning('Заполните поле «В работе до»', deadlineEl);
@@ -1485,7 +1952,7 @@
             const formData = new FormData();
             formData.append('description', desc);
             formData.append('client_phone', phoneDigits);
-            formData.append('client_email', document.getElementById('createClientEmail').value);
+            formData.append('client_phone_2', phone2Digits);
             formData.append('client_address', addr);
             formData.append('house_number', document.getElementById('createHouseNumber').value);
             formData.append('entrance', document.getElementById('createEntrance').value);
@@ -1545,6 +2012,46 @@
             loadRequests();
         }, 250);
     });
+    function clampAdminBlocksCols(n) {
+        let x = typeof n === 'string' ? parseInt(n, 10) : Number(n);
+        if (!Number.isFinite(x)) x = 2;
+        return Math.min(4, Math.max(1, Math.round(x)));
+    }
+    function syncAdminBlocksColumnsControl() {
+        const ctl = document.getElementById('blocksColumnsControl');
+        if (!ctl) return;
+        const show = viewMode === 'blocks';
+        ctl.classList.toggle('blocks-columns-visible', show);
+        ctl.setAttribute('aria-hidden', show ? 'false' : 'true');
+    }
+    function applyAdminBlocksGridColumns() {
+        const grid = document.getElementById('blocksContainer');
+        if (!grid) return;
+        const c = clampAdminBlocksCols(blocksColumnsCount);
+        blocksColumnsCount = c;
+        for (let i = 1; i <= 4; i++) grid.classList.remove('blocks-cols-' + i);
+        grid.classList.add('blocks-fixed-cols', 'blocks-cols-' + c);
+        document.querySelectorAll('#blocksColumnsControl .blocks-cols-btn').forEach(btn => {
+            const n = clampAdminBlocksCols(btn.getAttribute('data-cols'));
+            btn.classList.toggle('active', n === c);
+        });
+        try { localStorage.setItem(ADMIN_BLOCKS_COLS_LS, String(c)); } catch (e) {}
+    }
+    function initAdminBlocksColumnsFromStorage() {
+        try {
+            const raw = localStorage.getItem(ADMIN_BLOCKS_COLS_LS);
+            if (raw != null) blocksColumnsCount = clampAdminBlocksCols(raw);
+        } catch (e) {}
+        applyAdminBlocksGridColumns();
+        syncAdminBlocksColumnsControl();
+    }
+    document.querySelectorAll('#blocksColumnsControl .blocks-cols-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            blocksColumnsCount = clampAdminBlocksCols(this.getAttribute('data-cols'));
+            applyAdminBlocksGridColumns();
+        });
+    });
+
     // View toggle functionality
     document.getElementById('tableViewBtn').addEventListener('click', () => switchView('table'));
     document.getElementById('blocksViewBtn').addEventListener('click', () => switchView('blocks'));
@@ -1553,16 +2060,283 @@
         viewMode = mode;
         document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(mode === 'table' ? 'tableViewBtn' : 'blocksViewBtn').classList.add('active');
-        document.getElementById('tableView').style.display = mode === 'table' ? 'block' : 'none';
+        document.getElementById('tableView').style.display = mode === 'table' ? 'flex' : 'none';
         document.getElementById('blocksView').style.display = mode === 'blocks' ? 'block' : 'none';
+        syncAdminBlocksColumnsControl();
         loadRequests(); // Reload data when switching views
     }
-    window.openPhotoViewer = function(url) {
-        document.getElementById('photoViewerImg').src = url;
-        document.getElementById('photoViewer').classList.add('active');
+    initAdminBlocksColumnsFromStorage();
+
+    (function initAdminTableZoomNav() {
+        const LS_KEY = 'santech_admin_table_zoom_v1';
+        const inner = document.getElementById('adminTableZoomInner');
+        const sc = document.getElementById('adminTableScrollArea');
+        const range = document.getElementById('adminTableZoomRange');
+        const pctEl = document.getElementById('adminTableZoomVal');
+        const btnOut = document.getElementById('adminTableZoomOut');
+        const btnIn = document.getElementById('adminTableZoomIn');
+        if (!inner || !sc || !range) return;
+        function applyPct(pct) {
+            pct = Math.min(140, Math.max(70, Math.round(Number(pct) || 100)));
+            range.value = String(pct);
+            inner.style.setProperty('--table-font-mul', (pct / 100).toFixed(4));
+            if (pctEl) pctEl.textContent = pct + '%';
+            try { localStorage.setItem(LS_KEY, String(pct)); } catch (e) {}
+        }
+        try {
+            const sv = parseInt(localStorage.getItem(LS_KEY), 10);
+            if (Number.isFinite(sv)) applyPct(sv);
+            else applyPct(100);
+        } catch (e) {
+            applyPct(100);
+        }
+        range.addEventListener('input', function () { applyPct(this.value); });
+        if (btnOut) btnOut.addEventListener('click', function () { applyPct(Number(range.value) - 5); });
+        if (btnIn) btnIn.addEventListener('click', function () { applyPct(Number(range.value) + 5); });
+        function pageDelta() {
+            return Math.max(140, Math.floor(sc.clientHeight * 0.88));
+        }
+        function horizDelta() {
+            return Math.max(180, Math.floor(sc.clientWidth * 0.65));
+        }
+        function bindNav(id, fn) {
+            const el = document.getElementById(id);
+            if (el && !el.dataset.navBound) {
+                el.dataset.navBound = '1';
+                el.addEventListener('click', fn);
+            }
+        }
+        bindNav('adminTableGoTop', function () {
+            try { sc.scrollTo({ top: 0, left: sc.scrollLeft, behavior: 'smooth' }); } catch (e) { sc.scrollTop = 0; }
+        });
+        bindNav('adminTablePageUp', function () {
+            sc.scrollTop = Math.max(0, sc.scrollTop - pageDelta());
+        });
+        bindNav('adminTablePageDown', function () {
+            const maxTop = Math.max(0, sc.scrollHeight - sc.clientHeight);
+            sc.scrollTop = Math.min(maxTop, sc.scrollTop + pageDelta());
+        });
+        bindNav('adminTableScrollLeft', function () {
+            sc.scrollLeft = Math.max(0, sc.scrollLeft - horizDelta());
+        });
+        bindNav('adminTableScrollRight', function () {
+            const mx = Math.max(0, sc.scrollWidth - sc.clientWidth);
+            sc.scrollLeft = Math.min(mx, sc.scrollLeft + horizDelta());
+        });
+        bindNav('adminTableScrollHome', function () {
+            try { sc.scrollTo({ left: 0, top: sc.scrollTop, behavior: 'smooth' }); } catch (e) { sc.scrollLeft = 0; }
+        });
+        sc.addEventListener('wheel', function (ev) {
+            if (!ev.shiftKey || Math.abs(ev.deltaY) <= Math.abs(ev.deltaX)) return;
+            ev.preventDefault();
+            sc.scrollLeft += ev.deltaY;
+        }, { passive: false });
+    })();
+
+    (function initImageZoomViewer() {
+        const modal = document.getElementById('imageZoomModal');
+        const viewport = document.getElementById('imageZoomViewport');
+        const panEl = document.getElementById('imageZoomPan');
+        const img = document.getElementById('imageZoomImg');
+        const btnIn = document.getElementById('imageZoomIn');
+        const btnOut = document.getElementById('imageZoomOut');
+        const btnReset = document.getElementById('imageZoomReset');
+        if (!modal || !viewport || !panEl || !img || !btnIn || !btnOut || !btnReset) return;
+
+        let zoomMul = 1;
+        let fitScale = 1;
+        let panX = 0;
+        let panY = 0;
+        let drag = false;
+        let grabPx = 0;
+        let grabPy = 0;
+        let startPanX = 0;
+        let startPanY = 0;
+
+        let pinchStartDist = null;
+        let pinchStartZoom = 1;
+        let lastTouchPan = null;
+
+        function totalScale() { return fitScale * zoomMul; }
+        function applyTransform() {
+            panEl.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + totalScale() + ')';
+        }
+        function clampZoom() {
+            zoomMul = Math.min(Math.max(zoomMul, 0.5), 5);
+        }
+        function computeFitScale() {
+            const vw = viewport.clientWidth || 320;
+            const vh = Math.max(120, viewport.clientHeight - 8);
+            const nw = img.naturalWidth || 1;
+            const nh = img.naturalHeight || 1;
+            const s = Math.min(vw / nw, vh / nh, 1);
+            return isFinite(s) && s > 0 ? s : 1;
+        }
+        function resetView() {
+            fitScale = computeFitScale();
+            zoomMul = 1;
+            panX = panY = 0;
+            pinchStartDist = null;
+            clampZoom();
+            applyTransform();
+        }
+
+        img.addEventListener('load', function() {
+            if (modal.classList.contains('active')) resetView();
+        });
+
+        window.closeImageZoom = function(ev) {
+            if (ev) {
+                if (ev.stopPropagation) ev.stopPropagation();
+                if (ev.preventDefault) ev.preventDefault();
+            }
+            // Иначе «пробивающий» клик/touch попадает на модалку «Детали» / «Редактирование» под зумом и закрывает её.
+            window.__suppressModalBackdropCloseUntil = Date.now() + 500;
+            modal.classList.remove('active');
+            img.removeAttribute('src');
+            pinchStartDist = null;
+            lastTouchPan = null;
+            drag = false;
+            viewport.classList.remove('grabbing');
+        };
+
+        window.openPhotoViewer = function(url) {
+            if (!url) return;
+            zoomMul = 1;
+            panX = panY = 0;
+            pinchStartDist = null;
+            lastTouchPan = null;
+            img.src = url;
+            modal.classList.add('active');
+            requestAnimationFrame(function() {
+                if (img.complete && img.naturalWidth) resetView();
+            });
+        };
+
+        btnIn.addEventListener('click', function() {
+            clampZoom(); zoomMul *= 1.2; clampZoom(); applyTransform();
+        });
+        btnOut.addEventListener('click', function() {
+            clampZoom(); zoomMul /= 1.2; clampZoom(); applyTransform();
+        });
+        btnReset.addEventListener('click', resetView);
+
+        viewport.addEventListener('wheel', function(ev) {
+            if (!modal.classList.contains('active')) return;
+            ev.preventDefault();
+            clampZoom(); zoomMul *= ev.deltaY > 0 ? 0.92 : 1.08; clampZoom(); applyTransform();
+        }, { passive: false });
+
+        function touchDist(touches) {
+            const a = touches[0];
+            const b = touches[1];
+            const dx = a.clientX - b.clientX;
+            const dy = a.clientY - b.clientY;
+            return Math.sqrt(dx * dx + dy * dy) || 1;
+        }
+
+        viewport.addEventListener('touchstart', function(ev) {
+            if (!modal.classList.contains('active')) return;
+            if (ev.touches.length === 2) {
+                pinchStartDist = touchDist(ev.touches);
+                pinchStartZoom = zoomMul;
+                drag = false;
+                viewport.classList.remove('grabbing');
+                ev.preventDefault();
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchmove', function(ev) {
+            if (!modal.classList.contains('active')) return;
+            if (ev.touches.length === 2 && pinchStartDist != null) {
+                const d = touchDist(ev.touches);
+                zoomMul = pinchStartZoom * (d / pinchStartDist);
+                clampZoom();
+                applyTransform();
+                lastTouchPan = null;
+                ev.preventDefault();
+                return;
+            }
+            if (ev.touches.length === 1 && pinchStartDist == null && totalScale() > fitScale + 1e-3) {
+                const t = ev.touches[0];
+                if (lastTouchPan) {
+                    panX += t.clientX - lastTouchPan.x;
+                    panY += t.clientY - lastTouchPan.y;
+                    applyTransform();
+                }
+                lastTouchPan = { x: t.clientX, y: t.clientY };
+                ev.preventDefault();
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchend', function(ev) {
+            if (!modal.classList.contains('active')) return;
+            if (ev.touches.length < 2) pinchStartDist = null;
+            if (ev.touches.length === 0) lastTouchPan = null;
+        });
+
+        viewport.addEventListener('pointerdown', function(e) {
+            if (!modal.classList.contains('active')) return;
+            if (e.pointerType === 'touch') return;
+            drag = true;
+            startPanX = panX;
+            startPanY = panY;
+            grabPx = e.clientX;
+            grabPy = e.clientY;
+            viewport.classList.add('grabbing');
+            try { viewport.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+        viewport.addEventListener('pointermove', function(e) {
+            if (!drag || !modal.classList.contains('active')) return;
+            panX = startPanX + (e.clientX - grabPx);
+            panY = startPanY + (e.clientY - grabPy);
+            applyTransform();
+        });
+        viewport.addEventListener('pointerup', function(e) {
+            drag = false;
+            viewport.classList.remove('grabbing');
+        });
+        viewport.addEventListener('pointercancel', function() {
+            drag = false;
+            viewport.classList.remove('grabbing');
+        });
+
+        window.addEventListener('resize', function() {
+            if (modal.classList.contains('active') && img.complete && img.naturalWidth) resetView();
+        });
+
+        document.addEventListener('keydown', function(ev) {
+            if (ev.key === 'Escape' && modal.classList.contains('active')) window.closeImageZoom();
+        });
+
+        document.addEventListener('click', function(ev) {
+            const t = ev.target;
+            const removeBtn = ev.target.closest('.preview-item .remove, .preview-item span.remove');
+            if (removeBtn) return;
+            const zm = ev.target.closest('img.zoomable-img');
+            if (!zm || !zm.src) return;
+            if (zm.closest('#imageZoomModal')) return;
+            window.openPhotoViewer(zm.src);
+        });
+    })();
+    window.onclick = function(event) {
+        if (window.__suppressModalBackdropCloseUntil && Date.now() < window.__suppressModalBackdropCloseUntil) return;
+        const t = event.target;
+        if (!t.classList || !t.classList.contains('modal')) return;
+        if (t.id === 'imageZoomModal') window.__suppressModalBackdropCloseUntil = Date.now() + 500;
+        t.classList.remove('active');
     };
-    window.onclick = function(event) { if (event.target.classList.contains('modal')) event.target.classList.remove('active'); };
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
+    (function initPayDropdownCloseOnOutsideClick() {
+        const payDd = document.getElementById('payServicesDropdown');
+        if (!payDd || payDd.dataset.outsideBound) return;
+        payDd.dataset.outsideBound = '1';
+        document.addEventListener('click', function(e) {
+            if (!payDd.open) return;
+            if (!payDd.contains(e.target)) payDd.open = false;
+        });
+    })();
+
     bindOptionInputPersistence('createClientAddress', 'address');
     bindOptionInputPersistence('adminClientAddress', 'address');
     bindOptionInputPersistence('createEquipmentType', 'equipment');
@@ -1571,6 +2345,119 @@
         loadDocuments();
         document.getElementById('documentsModal').classList.add('active');
     });
+
+    let adminWorkerInstrQuill = null;
+    function bindAdminWorkerInstructionQuill() {
+        if (adminWorkerInstrQuill || typeof Quill === 'undefined') return adminWorkerInstrQuill;
+        const editorEl = document.getElementById('workerInstructionQuillEditor');
+        if (!editorEl) return null;
+        adminWorkerInstrQuill = new Quill('#workerInstructionQuillEditor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ header: [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['blockquote', 'code-block'],
+                    ['link', 'image'],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Текст для мастеров. Изображение — значок «image» на панели или вставьте картинку в нужном месте.'
+        });
+        const toolbar = adminWorkerInstrQuill.getModule('toolbar');
+        toolbar.addHandler('image', function () {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.click();
+            input.onchange = function () {
+                var file = input.files && input.files[0];
+                if (!file) return;
+                var fd = new FormData();
+                fd.append('image', file);
+                fetch('/upload-worker-instruction-image/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken },
+                    body: fd
+                })
+                    .then(function (r) { return r.json().then(function (body) { return { status: r.status, body: body }; }); })
+                    .then(function (x) {
+                        if (x.status === 200 && x.body.success && x.body.url) {
+                            var range = adminWorkerInstrQuill.getSelection(true) || { index: adminWorkerInstrQuill.getLength() };
+                            adminWorkerInstrQuill.insertEmbed(range.index, 'image', x.body.url, 'user');
+                            adminWorkerInstrQuill.setSelection(range.index + 1);
+                        } else {
+                            showAppAlert(x.body.error || 'Не удалось загрузить изображение');
+                        }
+                    })
+                    .catch(function () { showAppAlert('Ошибка загрузки изображения'); });
+            };
+        });
+        return adminWorkerInstrQuill;
+    }
+    function openWorkerInstructionEditModal() {
+        if (typeof Quill === 'undefined') {
+            showAppAlert('Редактор текста не загрузился (Quill). Обновите страницу.');
+            return;
+        }
+        bindAdminWorkerInstructionQuill();
+        if (!adminWorkerInstrQuill) return;
+        document.getElementById('workerInstructionEditModal').classList.add('active');
+        fetch('/api/worker-instruction/')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var html = (data.html || '').trim();
+                adminWorkerInstrQuill.setContents([]);
+                adminWorkerInstrQuill.clipboard.dangerouslyPasteHTML(html.length ? html : '<p><br></p>');
+            })
+            .catch(function () {
+                showAppAlert('Не удалось загрузить сохранённый текст');
+                adminWorkerInstrQuill.setContents([]);
+                adminWorkerInstrQuill.clipboard.dangerouslyPasteHTML('<p><br></p>');
+            });
+    }
+    window.openWorkerInstructionEditModal = openWorkerInstructionEditModal;
+    (function bindWorkerInstructionEditBtn() {
+        var btn = document.getElementById('showWorkerInstructionEditBtn');
+        if (!btn || btn.dataset.instrBound) return;
+        btn.dataset.instrBound = '1';
+        btn.addEventListener('click', openWorkerInstructionEditModal);
+    })();
+    (function bindSaveWorkerInstruction() {
+        var saveBtn = document.getElementById('saveWorkerInstructionBtn');
+        if (!saveBtn || saveBtn.dataset.instrBound) return;
+        saveBtn.dataset.instrBound = '1';
+        saveBtn.addEventListener('click', function () {
+            if (!adminWorkerInstrQuill) {
+                bindAdminWorkerInstructionQuill();
+            }
+            if (!adminWorkerInstrQuill) return;
+            var html = adminWorkerInstrQuill.root.innerHTML;
+            saveBtn.disabled = true;
+            var prev = saveBtn.textContent;
+            saveBtn.textContent = 'Сохранение…';
+            fetch('/api/worker-instruction/update/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify({ html: html })
+            })
+                .then(function (r) { return r.json().then(function (body) { return { status: r.status, body: body }; }); })
+                .then(function (x) {
+                    if (x.status === 200 && x.body.success) {
+                        showAppAlert('Инструкция сохранена');
+                        closeModal('workerInstructionEditModal');
+                    } else {
+                        showAppAlert(x.body.error || 'Не удалось сохранить');
+                    }
+                })
+                .catch(function () { showAppAlert('Ошибка сети при сохранении'); })
+                .finally(function () {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = prev;
+                });
+        });
+    })();
     document.getElementById('showCancelAmountsModal').addEventListener('click', function() {
         loadCancelAmountSettings().then(() => {
             document.getElementById('cancelAmountsModal').classList.add('active');
@@ -1619,6 +2506,7 @@
         });
     }
     function initAdminInitialLoad() {
+        bindAllCreateSuggestRibbons();
         bindUploadDocumentButton();
         loadRequestOptions().finally(() => loadRequests());
     }
@@ -1775,6 +2663,21 @@
         <div id="workersList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin: 20px 0;"></div>
         <div class="modal-actions">
             <button class="btn-secondary" onclick="closeModal('workersModal')">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<!-- Редактор инструкции для мастеров (только админ; мастера читают через worker-dashboard) -->
+<div class="modal" id="workerInstructionEditModal">
+    <div class="modal-content">
+        <h2>📋 Инструкция для мастеров</h2>
+        <p style="color:#4a6778;font-size:14px;margin:-8px 0 12px;">Текст и картинки видят исполнители в заявке (кнопка «Инструкция» у блока договора и чеков). Редактирование доступно только администратору.</p>
+        <div id="workerInstructionQuillWrap">
+            <div id="workerInstructionQuillEditor"></div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="closeModal('workerInstructionEditModal')">Закрыть без сохранения</button>
+            <button type="button" class="btn-primary" id="saveWorkerInstructionBtn">Сохранить инструкцию</button>
         </div>
     </div>
 </div>

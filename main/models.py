@@ -63,6 +63,7 @@ class Request(models.Model):
     description = models.TextField('Описание задачи')
     client_name = models.CharField('Имя клиента', max_length=100, blank=True, default='')
     client_phone = models.CharField('Телефон клиента', max_length=20)
+    client_phone_2 = models.CharField('Доп. телефон клиента', max_length=20, blank=True, default='')
     client_email = models.EmailField('Email клиента', blank=True)
     client_address = models.CharField('Адрес клиента', max_length=200, blank=True)
     house_number = models.CharField('Номер дома', max_length=20, blank=True, default='')
@@ -181,6 +182,17 @@ class PushSubscription(models.Model):
 
     def __str__(self):
         return f"PushSubscription {self.user.username} - {self.endpoint[:40]}"
+
+
+class WorkerInstruction(models.Model):
+    """Одна логическая запись с pk=1: HTML для мастеров (получить через get_or_create(pk=1))."""
+
+    body_html = models.TextField('Содержимое (HTML)', blank=True, default='')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Инструкция для мастеров'
+        verbose_name_plural = 'Инструкция для мастеров'
 
 
 class Document(models.Model):

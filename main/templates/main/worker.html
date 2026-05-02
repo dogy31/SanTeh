@@ -25,13 +25,120 @@
     .status-dropdown__options label { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; color: #2c5770; cursor: pointer; }
     .status-dropdown__options label:last-child { margin-bottom: 0; }
     .status-dropdown__options input[type='checkbox'] { accent-color: #2f7e9e; width: 16px; height: 16px; }
-    .table-wrapper { background: white; border-radius: 28px; box-shadow: 0 20px 35px -1 0px #bac9d4; overflow: auto; max-height: 72vh; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .search-and-view,
+    .mobile-filter-toggle#openFilterPanel,
+    .filter-modal,
+    .view-toggle.view-toggle-row {
+        position: relative;
+        z-index: 24;
+    }
+    .table-zoom-shell {
+        background: white;
+        border-radius: 28px;
+        box-shadow: 0 20px 35px -1 0px #bac9d4;
+        overflow: visible;
+        max-height: 72vh;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        position: relative;
+        z-index: 3;
+        isolation: isolate;
+    }
+    .table-zoom-toolbar {
+        flex: 0 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        padding: 10px 14px 11px;
+        border-bottom: 1px solid #d9e8f2;
+        background: linear-gradient(180deg, #fbfdfe 0%, #eef5fa 100%);
+        border-radius: 28px 28px 0 0;
+    }
+    .table-zoom-toolbar .table-zoom-label { font-size: 13px; color: #4a6778; font-weight: 600; white-space: nowrap; }
+    .table-zoom-toolbar .table-zoom-val { font-size: 13px; color: #0b2b40; font-weight: 700; min-width: 3rem; text-align: center; }
+    .table-zoom-toolbar input[type='range'].table-zoom-range { width: min(140px, 32vw); vertical-align: middle; accent-color: #2f7e9e; cursor: pointer; }
+    .table-nav-sep { color: #b8cddc; margin: 0 2px; user-select: none; }
+    .table-nav-mini { font-size: 12px; color: #5a7588; flex: 1 1 100%; margin: -2px 0 2px 0; }
+    .table-mini-btn {
+        border: 1px solid #b8cddc;
+        background: white;
+        color: #1d5f7a;
+        border-radius: 12px;
+        padding: 6px 11px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.12s;
+        white-space: nowrap;
+    }
+    .table-mini-btn:hover { background: #e7f2f9; border-color: #2f7e9e; color: #0f3f52; }
+    .table-scroll-area {
+        flex: 1 1 auto;
+        overflow: auto;
+        min-height: 180px;
+        max-height: calc(72vh - 120px);
+        overscroll-behavior: contain;
+        scroll-behavior: smooth;
+        margin: 0;
+        padding: 0;
+        background: white;
+        border-radius: 0 0 28px 28px;
+    }
+    .table-zoom-inner {
+        --table-font-mul: 1;
+        margin: 0;
+        padding: 0 0 8px 0;
+        box-sizing: border-box;
+        min-width: min-content;
+        display: block;
+    }
+    .table-zoom-inner #requestsTable { font-size: calc(14px * var(--table-font-mul, 1)); }
+    .table-scroll-area #requestsTable th:first-child,
+    .table-scroll-area #requestsTable td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 18;
+        background: #f8fafc;
+        box-shadow: 3px 0 10px rgba(15, 43, 64, 0.06);
+    }
+    .table-scroll-area #requestsTable thead th:first-child { z-index: 45; background: #f0f5f9; }
+    .table-scroll-area tbody tr:nth-child(even) td:first-child { background: #f3f7fa; }
+    .table-scroll-area tbody tr:hover td:first-child { background: #e8f2f9; }
+    table { width: 100%; border-collapse: collapse; border-spacing: 0; font-size: inherit; margin: 0; }
+    .table-scroll-area #requestsTable thead th { position: sticky; top: 0; }
     th, td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle; }
-    th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 5; }
-    thead th { position: sticky; top: 0; z-index: 30; box-shadow: inset 0 -1px 0 #d7e3ec; }
+    th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; z-index: 5; }
+    thead th { z-index: 30; box-shadow: inset 0 -1px 0 #d7e3ec; }
+    thead th.col-accent-task { background: #e3f0f7; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
+    thead th.col-accent-phone { background: #dff2f5; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
+    thead th.col-accent-time { background: #dbedf4; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
+    td.col-accent-task { background: rgba(227, 240, 247, 0.92); color: #143c4f; box-shadow: inset 3px 0 0 rgba(47, 126, 158, 0.5); }
+    td.col-accent-phone { background: rgba(223, 242, 245, 0.92); color: #143c4f; box-shadow: inset 3px 0 0 rgba(47, 126, 158, 0.38); }
+    td.col-accent-time { background: rgba(219, 237, 244, 0.92); color: #173f52; font-weight: 600; letter-spacing: 0.02em; box-shadow: inset 3px 0 0 rgba(30, 120, 150, 0.42); }
+    td.col-accent-phone a { color: #216f8f; font-weight: 500; }
+    tbody tr:nth-child(even) td.col-accent-task { background: rgba(215, 234, 244, 0.95); }
+    tbody tr:nth-child(even) td.col-accent-phone { background: rgba(210, 236, 242, 0.95); }
+    tbody tr:nth-child(even) td.col-accent-time { background: rgba(206, 232, 242, 0.95); }
+    tbody tr:hover td.col-accent-task { background: rgba(205, 230, 243, 0.98); }
+    tbody tr:hover td.col-accent-phone { background: rgba(200, 232, 240, 0.98); }
+    tbody tr:hover td.col-accent-time { background: rgba(196, 228, 238, 0.98); }
     tbody tr:nth-child(even) { background-color: #f9fafb; }
     tbody tr:hover { background-color: #f1f5f9; }
+    .zoomable-img { cursor: zoom-in; user-select: none; -webkit-user-drag: none; }
+    #imageZoomModal.modal { align-items: stretch; justify-content: center; background: rgba(10, 18, 24, 0.92); overflow: hidden; }
+    #imageZoomModal .image-zoom-sheet { margin: auto; background: transparent; padding: 0; width: 100vw; max-width: 100%; height: 100vh; max-height: 100vh; overflow: hidden; display: flex; flex-direction: column; border-radius: 0; box-shadow: none; }
+    #imageZoomModal .image-zoom-toolbar { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px 6px; }
+    #imageZoomModal .image-zoom-toolbar span { flex: 1 1 100%; text-align: center; color: #cfe7ef; font-size: 13px; }
+    #imageZoomModal .image-zoom-toolbar button { border: none; border-radius: 999px; padding: 10px 16px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    #imageZoomModal .zoom-btn-reset { background: #2f7e9e; color: white; }
+    #imageZoomModal .zoom-btn-ctl { background: #3a5868; color: white; width: 44px; padding: 10px 0; }
+    #imageZoomModal .zoom-btn-close { background: #5a382e; color: white; padding: 10px 20px; }
+    #imageZoomViewport { flex: 1 1 auto; overflow: hidden; touch-action: none; cursor: grab; position: relative; min-height: 0; }
+    #imageZoomViewport.grabbing { cursor: grabbing; }
+    #imageZoomPan { will-change: transform; transform-origin: center center; }
+    #imageZoomImg { display: block; max-width: 100%; max-height: 78vh; width: auto; height: auto; margin: 0 auto; pointer-events: none; }
     .status-badge { display: inline-block; padding: 5px 12px; border-radius: 40px; font-size: 12px; font-weight: 500; white-space: nowrap; }
     .status-badge.new { background: #e1edfb; color: #1b5f8c; }
     .status-badge.accepted { background: #e8f7ec; color: #1f7a38; }
@@ -51,16 +158,29 @@
     .btn-primary { background: #2f7e9e; color: white; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
     #showEquipmentModal, #showDocumentsModal, #bindMessengersBtn, #openFilterPanel { border: 2px solid #2f7e9e; background: white; color: #2f7e9e; }
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
-    .view-toggle-row { display: flex; justify-content: flex-start; gap: 10px; align-items: center; margin: 10px; }
+    .view-toggle.view-toggle-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin: 10px; justify-content: flex-start; }
+    .view-mode-buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .filter-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; margin: 12px; }
-    .view-toggle { margin-left: auto; display: flex; gap: 8px; }
+    .view-toggle { margin-left: auto; }
     .view-btn { padding: 8px 16px; border-radius: 40px; font-weight: 500; font-size: 14px; cursor: pointer; text-align: center; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; }
     .view-btn.active { background: #2f7e9e; color: white; border: none; box-shadow: 0 2px 4px #2f7e9e70; }
     .view-btn:not(.active) { border: 1.5px solid #2f7e9e; background: white; color: #1d5f7a; }
     .view-btn:not(.active):hover { background: #e7f0f5; }
     .search-and-view { background: white; padding: 15px 24px; border-radius: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); margin-bottom: 20px; }
-    .requests-blocks { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
-    .request-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; transition: 0.2s; }
+    .requests-blocks { display: grid; gap: 20px; }
+    .requests-blocks:not(.blocks-fixed-cols) { grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); }
+    .requests-blocks.blocks-fixed-cols.blocks-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    .requests-blocks.blocks-fixed-cols.blocks-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .requests-blocks.blocks-fixed-cols.blocks-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .requests-blocks.blocks-fixed-cols.blocks-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .blocks-columns-wrap { display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .blocks-columns-wrap.blocks-columns-visible { display: flex; }
+    .blocks-columns-label { font-size: 13px; color: #4a6778; font-weight: 500; white-space: nowrap; }
+    .blocks-columns-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+    .blocks-cols-btn { min-width: 36px; padding: 6px 10px; border: 1.5px solid #2f7e9e; border-radius: 10px; background: white; color: #1d5f7a; font-weight: 600; cursor: pointer; font-size: 13px; box-sizing: border-box; transition: 0.12s; }
+    .blocks-cols-btn:hover { background: #e7f0f5; }
+    .blocks-cols-btn.active { background: #2f7e9e; color: white; border-color: #2f7e9e; }
+    .request-block { min-width: 0; box-sizing: border-box; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; transition: 0.2s; }
     .request-block:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.1); transform: translateY(-2px); }
     .block-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
     .block-id { font-size: 18px; font-weight: 700; color: #1b6f8f; }
@@ -73,7 +193,7 @@
     .block-content { margin-bottom: 16px; }
     .block-field { margin-bottom: 8px; }
     .block-label { font-weight: 600; color: #2c5770; font-size: 13px; margin-bottom: 2px; }
-    .block-value { color: #1a4b5f; font-size: 14px; }
+    .block-value { color: #1a4b5f; font-size: 14px; overflow-wrap: anywhere; }
     .block-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); align-items: center; justify-content: center; z-index: 1000; }
     .modal.active { display: flex; }
@@ -251,7 +371,7 @@
     #overdueReasonSection { margin-top: 20px; border-top: 1px solid #cbdae7; padding-top: 20px; }
     .blocks-view { margin-top: 20px; }
     .blocks-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
-    .request-block { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; cursor: pointer; transition: transform 0.2s; }
+    .request-block { min-width: 0; box-sizing: border-box; background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; cursor: pointer; transition: transform 0.2s; }
     .request-block:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
     .request-block.new { border-left: 4px solid #2f7e9e; }
     .request-block.accepted { border-left: 4px solid #1f7a38; }
@@ -279,9 +399,19 @@
     .document-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #d9e5ef; border-radius: 14px; background: #f8fafc; }
     .document-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     @media (max-width: 768px) {
-        .blocks-container { grid-template-columns: 1fr; }
+        .blocks-container:not(.blocks-fixed-cols), .requests-blocks:not(.blocks-fixed-cols) { grid-template-columns: 1fr; }
         .request-block { padding: 15px; }
     }
+    .worker-instruction-near-photo .worker-instruction-link { background: none; border: none; color: #1d5f7a; text-decoration: underline; cursor: pointer; font-weight: 600; font-size: 14px; padding: 4px 0; }
+    .worker-instruction-near-photo .worker-instruction-link:hover { color: #143c52; }
+    .worker-instruction-view-modal { width: min(100%, 760px); max-height: min(92vh, 900px); }
+    .worker-instruction-prose { font-size: 15px; line-height: 1.55; color: #1a4b5f; max-height: min(72vh, 640px); overflow-y: auto; padding: 4px 2px 12px; word-break: break-word; }
+    .worker-instruction-prose img { max-width: 100%; height: auto; border-radius: 12px; margin: 12px auto; display: block; }
+    .worker-instruction-prose h1 { font-size: 1.5rem; margin: 0.75em 0 0.35em; color: #0b2b40; }
+    .worker-instruction-prose h2 { font-size: 1.25rem; margin: 0.65em 0 0.3em; color: #143c52; }
+    .worker-instruction-prose ul, .worker-instruction-prose ol { margin: 8px 0 8px 1.35em; }
+    .worker-instruction-prose p { margin: 0 0 0.65em; }
+    .worker-instruction-prose a { color: #1d5f7a; }
 </style>
 {% endblock %}
 
@@ -339,21 +469,50 @@
     </div>
 
     <div class="view-toggle view-toggle-row">
-        <button class="btn-outline view-btn active" id="tableViewBtn" data-view="table">
-            <i class="fas fa-table"></i> Таблица
-        </button>
-        <button class="btn-outline view-btn" id="blocksViewBtn" data-view="blocks">
-            <i class="fas fa-th"></i> Блоки
-        </button>
+        <div class="view-mode-buttons">
+            <button type="button" class="btn-outline view-btn active" id="tableViewBtn" data-view="table">
+                <i class="fas fa-table"></i> Таблица
+            </button>
+            <button type="button" class="btn-outline view-btn" id="blocksViewBtn" data-view="blocks">
+                <i class="fas fa-th"></i> Блоки
+            </button>
+        </div>
+        <div id="blocksColumnsControl" class="blocks-columns-wrap" aria-hidden="true">
+            <span class="blocks-columns-label">В ряд:</span>
+            <div class="blocks-columns-buttons" role="group" aria-label="Блоков в одной строке">
+                <button type="button" class="blocks-cols-btn" data-cols="1">1</button>
+                <button type="button" class="blocks-cols-btn" data-cols="2">2</button>
+                <button type="button" class="blocks-cols-btn" data-cols="3">3</button>
+                <button type="button" class="blocks-cols-btn" data-cols="4">4</button>
+            </div>
+        </div>
     </div>
-    <div class="table-wrapper">
+    <div class="table-zoom-shell" id="requestsTableOuter">
+        <div class="table-zoom-toolbar" aria-label="Масштаб и прокрутка таблицы">
+            <span class="table-zoom-label">Масштаб</span>
+            <button type="button" class="table-mini-btn" id="workerTableZoomOut" aria-label="Уменьшить">−</button>
+            <input type="range" class="table-zoom-range" id="workerTableZoomRange" min="70" max="140" step="5" value="100" aria-label="Размер текста таблицы">
+            <button type="button" class="table-mini-btn" id="workerTableZoomIn" aria-label="Увеличить">+</button>
+            <span class="table-zoom-val" id="workerTableZoomVal">100%</span>
+            <span class="table-nav-sep" aria-hidden="true">|</span>
+            <span class="table-zoom-label">Листать</span>
+            <button type="button" class="table-mini-btn" id="workerTableGoTop">Вверх</button>
+            <button type="button" class="table-mini-btn" id="workerTablePageUp">Страница ↑</button>
+            <button type="button" class="table-mini-btn" id="workerTablePageDown">Страница ↓</button>
+            <button type="button" class="table-mini-btn" id="workerTableScrollLeft" aria-label="Влево">←</button>
+            <button type="button" class="table-mini-btn" id="workerTableScrollRight" aria-label="Вправо">→</button>
+            <button type="button" class="table-mini-btn" id="workerTableScrollHome">К началу строки</button>
+            <span class="table-nav-mini">Shift + колесо мыши — прокрутка вправо‑влево</span>
+        </div>
+        <div class="table-scroll-area" id="workerTableScrollArea">
+            <div class="table-zoom-inner" id="workerTableZoomInner">
         <table id="requestsTable">
             <thead>
                 <tr>
                     <th style="width:60px">ID</th>
-                    <th>Задача</th>
-                    <th style="width:120px">Телефон</th>
-                    <th style="width:90px">Время</th>
+                    <th class="col-accent-task">Задача</th>
+                    <th class="col-accent-phone" style="width:120px">Телефон</th>
+                    <th class="col-accent-time" style="width:90px">Время</th>
                     <th>Адрес</th>
                     <th style="width:120px">Вид техники</th>
                     <th style="width:100px">Статус</th>
@@ -368,9 +527,11 @@
             </thead>
             <tbody id="requestsBody"></tbody>
         </table>
+            </div>
+        </div>
     </div>
     <div class="blocks-wrapper" id="blocksWrapper" style="display: none;">
-        <div id="requestsBlocks" class="requests-blocks"></div>
+        <div id="requestsBlocks" class="requests-blocks blocks-fixed-cols blocks-cols-2"></div>
     </div>
 
     <!-- Вид блоков -->
@@ -385,7 +546,7 @@
         <h2>✏️ Редактирование заявки #<span id="editId"></span></h2>
         <div class="field"><label>Описание (только чтение)</label><input type="text" id="editDesc" readonly></div>
         <div class="field"><label>Телефон клиента</label><input type="tel" id="editClientPhone" readonly></div>
-        <div class="field"><label>Email клиента</label><input type="email" id="editClientEmail" readonly></div>
+        <div class="field"><label>Доп. телефон</label><input type="tel" id="editClientPhone2" readonly></div>
         <div class="field"><label>Адрес клиента</label><input type="text" id="editClientAddress" readonly></div>
         <div class="field"><label>Вид техники</label><input type="text" id="editEquipmentType" readonly></div>
         <div class="field"><label>Время</label><input type="text" id="editVisitTime" readonly></div>
@@ -400,6 +561,10 @@
         <div class="field"><label>Комментарий</label><textarea id="editComment" rows="3"></textarea></div>
         <div class="field"><label>Проделаные работы</label><textarea id="editPerformedWork" rows="3"></textarea></div>
         <div class="field"><label>Договор (1–5 фото)</label><div class="photo-upload-area"><input type="file" id="contractInput" accept="image/*" multiple><div class="photo-previews" id="contractPreviews"></div></div></div>
+        <div class="field worker-instruction-near-photo" style="display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px;">
+            <span style="font-size:13px; color:#4a6778;">Справочно:</span>
+            <button type="button" class="worker-instruction-link" id="openWorkerInstructionViewBtn">Инструкция</button>
+        </div>
         <div class="parts-section"><label>Фото чека (для каждой детали обязательно для закрытия)</label><div id="partsContainer"></div><button type="button" class="add-part-btn" id="addPartBtn">Добавить деталь</button></div>
         <div class="parts-section">
             <label>Транспортные <span title="При выезде в дальние районы" style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#2f7e9e; color:white; font-size:12px; cursor:help;">i</span></label>
@@ -408,6 +573,30 @@
         </div>
         <div id="overdueReasonSection" style="display: none;"><div class="field"><label>Причина просрочки (обязательно для просроченных заявок)</label><textarea id="overdueReason" rows="3" placeholder="Укажите причину, почему заявка не выполнена в срок..."></textarea></div></div>
         <div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal('editModal')">Отмена</button><button type="button" class="btn-danger" id="cancelWorkerRequestBtn" style="background: #c03c2b; color: white; border: none; padding: 10px 20px; border-radius: 40px; cursor: pointer;">Отменить заявку</button><button type="button" class="btn-primary" id="saveEditBtn">Сохранить изменения</button></div>
+    </div>
+</div>
+
+<!-- Просмотр фото с зумом -->
+<div class="modal" id="workerInstructionViewModal">
+    <div class="modal-content worker-instruction-view-modal">
+        <h2>📋 Инструкция</h2>
+        <div id="workerInstructionViewBody" class="worker-instruction-prose"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="closeModal('workerInstructionViewModal')">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="imageZoomModal" aria-hidden="true">
+    <div class="modal-content image-zoom-sheet">
+        <div class="image-zoom-toolbar">
+            <span id="imageZoomHint">Перетаскивание · колёсико зум · два пальца на телефоне</span>
+            <button type="button" class="zoom-btn-ctl" id="imageZoomOut" aria-label="Уменьшить">−</button>
+            <button type="button" class="zoom-btn-reset" id="imageZoomReset" aria-label="Сброс">Сброс</button>
+            <button type="button" class="zoom-btn-ctl" id="imageZoomIn" aria-label="Увеличить">+</button>
+            <button type="button" class="zoom-btn-close" onclick="window.closeImageZoom && window.closeImageZoom(event)">Закрыть</button>
+        </div>
+        <div id="imageZoomViewport"><div id="imageZoomPan"><img id="imageZoomImg" src="" alt=""></div></div>
     </div>
 </div>
 
@@ -427,6 +616,8 @@
     const currentUserId = parseInt("{{ request.user.id }}") || 0;
     let currentEditId = null;
     let viewMode = 'table'; // 'table' or 'blocks'
+    const WORKER_BLOCKS_COLS_LS = 'santech_worker_blocks_cols_v1';
+    let workerBlocksColumnsCount = 2;
     const statusTextMap = {
         'new': 'Новая',
         'accepted': 'Принял',
@@ -495,12 +686,41 @@
     }
 
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    (function bindWorkerInstructionView() {
+        const btn = document.getElementById('openWorkerInstructionViewBtn');
+        const modal = document.getElementById('workerInstructionViewModal');
+        const body = document.getElementById('workerInstructionViewBody');
+        if (!btn || !modal || !body) return;
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            body.innerHTML = '<p style="color:#4a6778;margin:0;">Загрузка…</p>';
+            modal.classList.add('active');
+            fetch('/api/worker-instruction/')
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var html = (data && data.html ? String(data.html) : '').trim();
+                    body.innerHTML = html ? html : '<p style="color:#4a6778;margin:0;">Текст ещё не добавлен администратором.</p>';
+                })
+                .catch(function () {
+                    body.innerHTML = '<p style="color:#c03c2b;margin:0;">Не удалось загрузить инструкцию. Проверьте связь или попробуйте позже.</p>';
+                    showAppAlert('Не удалось загрузить инструкцию');
+                });
+        });
+    })();
     function phoneLinkHtml(phone) {
         const raw = (phone || '').toString();
         const digits = raw.replace(/\D/g, '');
         if (!digits) return '—';
         const href = digits.length === 11 ? `+${digits}` : digits;
         return `<a href="tel:${href}" style="color:#2f7e9e; text-decoration:underline;">${escapeHtml(formatPhoneValue(digits) || raw)}</a>`;
+    }
+    function clientPhonesLinkHtml(r) {
+        const p1 = phoneLinkHtml(r.client_phone);
+        const d2 = (r.client_phone_2 || '').toString().replace(/\D/g, '');
+        const p2 = d2.length ? phoneLinkHtml(r.client_phone_2) : '';
+        if (!p2 || p2 === '—') return p1;
+        return p1 + '<span class="phone-sep" aria-hidden="true"> · </span>' + p2;
     }
     function formatPhoneValue(value) {
         const digits = (value || '').toString().replace(/\D/g, '');
@@ -542,6 +762,46 @@
 
     initStatusDropdown('filterStatusToggle', 'filterStatusOptions');
 
+    function clampWorkerBlocksCols(n) {
+        let x = typeof n === 'string' ? parseInt(n, 10) : Number(n);
+        if (!Number.isFinite(x)) x = 2;
+        return Math.min(4, Math.max(1, Math.round(x)));
+    }
+    function syncWorkerBlocksColumnsControl() {
+        const ctl = document.getElementById('blocksColumnsControl');
+        if (!ctl) return;
+        const show = viewMode === 'blocks';
+        ctl.classList.toggle('blocks-columns-visible', show);
+        ctl.setAttribute('aria-hidden', show ? 'false' : 'true');
+    }
+    function applyWorkerBlocksGridColumns() {
+        const grid = document.getElementById('requestsBlocks');
+        if (!grid) return;
+        const c = clampWorkerBlocksCols(workerBlocksColumnsCount);
+        workerBlocksColumnsCount = c;
+        for (let i = 1; i <= 4; i++) grid.classList.remove('blocks-cols-' + i);
+        grid.classList.add('blocks-fixed-cols', 'blocks-cols-' + c);
+        document.querySelectorAll('#blocksColumnsControl .blocks-cols-btn').forEach(btn => {
+            const n = clampWorkerBlocksCols(btn.getAttribute('data-cols'));
+            btn.classList.toggle('active', n === c);
+        });
+        try { localStorage.setItem(WORKER_BLOCKS_COLS_LS, String(c)); } catch (e) {}
+    }
+    function initWorkerBlocksColumnsFromStorage() {
+        try {
+            const raw = localStorage.getItem(WORKER_BLOCKS_COLS_LS);
+            if (raw != null) workerBlocksColumnsCount = clampWorkerBlocksCols(raw);
+        } catch (e) {}
+        applyWorkerBlocksGridColumns();
+        syncWorkerBlocksColumnsControl();
+    }
+    document.querySelectorAll('#blocksColumnsControl .blocks-cols-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            workerBlocksColumnsCount = clampWorkerBlocksCols(this.getAttribute('data-cols'));
+            applyWorkerBlocksGridColumns();
+        });
+    });
+
     // View toggle functionality
     document.getElementById('tableViewBtn').addEventListener('click', () => switchView('table'));
     document.getElementById('blocksViewBtn').addEventListener('click', () => switchView('blocks'));
@@ -550,10 +810,78 @@
         viewMode = mode;
         document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(mode === 'table' ? 'tableViewBtn' : 'blocksViewBtn').classList.add('active');
-        document.getElementById('requestsTable').parentElement.style.display = mode === 'table' ? 'block' : 'none';
+        document.getElementById('requestsTableOuter').style.display = mode === 'table' ? 'flex' : 'none';
         document.getElementById('blocksWrapper').style.display = mode === 'blocks' ? 'block' : 'none';
+        syncWorkerBlocksColumnsControl();
         loadWorkerRequests(); // Reload data when switching views
     }
+    initWorkerBlocksColumnsFromStorage();
+
+    (function initWorkerTableZoomNav() {
+        const LS_KEY = 'santech_worker_table_zoom_v1';
+        const inner = document.getElementById('workerTableZoomInner');
+        const sc = document.getElementById('workerTableScrollArea');
+        const range = document.getElementById('workerTableZoomRange');
+        const pctEl = document.getElementById('workerTableZoomVal');
+        const btnOut = document.getElementById('workerTableZoomOut');
+        const btnIn = document.getElementById('workerTableZoomIn');
+        if (!inner || !sc || !range) return;
+        function applyPct(pct) {
+            pct = Math.min(140, Math.max(70, Math.round(Number(pct) || 100)));
+            range.value = String(pct);
+            inner.style.setProperty('--table-font-mul', (pct / 100).toFixed(4));
+            if (pctEl) pctEl.textContent = pct + '%';
+            try { localStorage.setItem(LS_KEY, String(pct)); } catch (e) {}
+        }
+        try {
+            const sv = parseInt(localStorage.getItem(LS_KEY), 10);
+            if (Number.isFinite(sv)) applyPct(sv);
+            else applyPct(100);
+        } catch (e) {
+            applyPct(100);
+        }
+        range.addEventListener('input', function () { applyPct(this.value); });
+        if (btnOut) btnOut.addEventListener('click', function () { applyPct(Number(range.value) - 5); });
+        if (btnIn) btnIn.addEventListener('click', function () { applyPct(Number(range.value) + 5); });
+        function pageDelta() {
+            return Math.max(140, Math.floor(sc.clientHeight * 0.88));
+        }
+        function horizDelta() {
+            return Math.max(180, Math.floor(sc.clientWidth * 0.65));
+        }
+        function bindNav(id, fn) {
+            const el = document.getElementById(id);
+            if (el && !el.dataset.navBound) {
+                el.dataset.navBound = '1';
+                el.addEventListener('click', fn);
+            }
+        }
+        bindNav('workerTableGoTop', function () {
+            try { sc.scrollTo({ top: 0, left: sc.scrollLeft, behavior: 'smooth' }); } catch (e) { sc.scrollTop = 0; }
+        });
+        bindNav('workerTablePageUp', function () {
+            sc.scrollTop = Math.max(0, sc.scrollTop - pageDelta());
+        });
+        bindNav('workerTablePageDown', function () {
+            const maxTop = Math.max(0, sc.scrollHeight - sc.clientHeight);
+            sc.scrollTop = Math.min(maxTop, sc.scrollTop + pageDelta());
+        });
+        bindNav('workerTableScrollLeft', function () {
+            sc.scrollLeft = Math.max(0, sc.scrollLeft - horizDelta());
+        });
+        bindNav('workerTableScrollRight', function () {
+            const mx = Math.max(0, sc.scrollWidth - sc.clientWidth);
+            sc.scrollLeft = Math.min(mx, sc.scrollLeft + horizDelta());
+        });
+        bindNav('workerTableScrollHome', function () {
+            try { sc.scrollTo({ left: 0, top: sc.scrollTop, behavior: 'smooth' }); } catch (e) { sc.scrollLeft = 0; }
+        });
+        sc.addEventListener('wheel', function (ev) {
+            if (!ev.shiftKey || Math.abs(ev.deltaY) <= Math.abs(ev.deltaX)) return;
+            ev.preventDefault();
+            sc.scrollLeft += ev.deltaY;
+        }, { passive: false });
+    })();
 
     function resetEditModalState() {
         document.querySelectorAll('#editModal input, #editModal textarea, #editModal select').forEach(el => el.disabled = false);
@@ -608,9 +936,9 @@
             const deadlineDate = r.deadline_date ? new Date(r.deadline_date) : null;
             row.innerHTML = `
                 <td>#${r.id}</td>
-                <td>${escapeHtml(r.description)}</td>
-                <td>${phoneLinkHtml(r.client_phone)}</td>
-                <td>${r.visit_time || '—'}</td>
+                <td class="col-accent-task">${escapeHtml(r.description)}</td>
+                <td class="col-accent-phone">${clientPhonesLinkHtml(r)}</td>
+                <td class="col-accent-time">${r.visit_time || '—'}</td>
                 <td>${escapeHtml(r.client_address || '')}</td>
                 <td>${escapeHtml(r.equipment_type || '')}</td>
                 <td><span class="${statusClass}">${statusText}</span></td>
@@ -686,7 +1014,7 @@
                     </div>
                     <div class="block-field">
                         <div class="block-label">Номер</div>
-                        <div class="block-value">${phoneLinkHtml(r.client_phone)}</div>
+                        <div class="block-value">${clientPhonesLinkHtml(r)}</div>
                     </div>
                     <div class="block-field">
                         <div class="block-label">Адрес</div>
@@ -731,7 +1059,7 @@
                 document.getElementById('editId').textContent = data.id;
                 document.getElementById('editDesc').value = data.description || '';
                 document.getElementById('editClientPhone').value = data.client_phone || '';
-                document.getElementById('editClientEmail').value = data.client_email || '';
+                document.getElementById('editClientPhone2').value = data.client_phone_2 || '';
                 document.getElementById('editClientAddress').value = data.client_address || '';
                 document.getElementById('editEquipmentType').value = data.equipment_type || '';
                 document.getElementById('editVisitTime').value = data.visit_time || '—';
@@ -785,7 +1113,7 @@
                 document.getElementById('editId').textContent = data.id;
                 document.getElementById('editDesc').value = data.description || '';
                 document.getElementById('editClientPhone').value = data.client_phone || '';
-                document.getElementById('editClientEmail').value = data.client_email || '';
+                document.getElementById('editClientPhone2').value = data.client_phone_2 || '';
                 document.getElementById('editClientAddress').value = data.client_address || '';
                 document.getElementById('editEquipmentType').value = data.equipment_type || '';
                 document.getElementById('editVisitTime').value = data.visit_time || '—';
@@ -929,14 +1257,14 @@
         container.innerHTML = '';
         existingContractPhotos.forEach((photo, idx) => {
             const div = document.createElement('div'); div.className = 'preview-item';
-            div.innerHTML = `<img src="${photo.image}" alt="contract"><span class="remove" onclick="removeExistingContract(${idx})">✖</span>`;
+            div.innerHTML = `<img class="zoomable-img" src="${photo.image}" alt="contract"><span class="remove" onclick="removeExistingContract(${idx})">✖</span>`;
             container.appendChild(div);
         });
         contractFiles.forEach((file, idx) => {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const div = document.createElement('div'); div.className = 'preview-item';
-                div.innerHTML = `<img src="${e.target.result}" alt="contract"><span class="remove" onclick="removeNewContract(${idx})">✖</span>`;
+                div.innerHTML = `<img class="zoomable-img" src="${e.target.result}" alt="contract"><span class="remove" onclick="removeNewContract(${idx})">✖</span>`;
                 container.appendChild(div);
             };
             reader.readAsDataURL(file);
@@ -978,14 +1306,14 @@
             const previewDiv = div.querySelector('.part-receipt-preview');
             if (part.existingPhotoUrl) {
                 const imgDiv = document.createElement('div'); imgDiv.className = 'preview-item';
-                imgDiv.innerHTML = `<img src="${part.existingPhotoUrl}" alt="receipt"><span class="remove" onclick="removeExistingPartPhoto(${idx})">✖</span>`;
+                imgDiv.innerHTML = `<img class="zoomable-img" src="${part.existingPhotoUrl}" alt="receipt"><span class="remove" onclick="removeExistingPartPhoto(${idx})">✖</span>`;
                 previewDiv.appendChild(imgDiv);
             }
             if (part.file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const imgDiv = document.createElement('div'); imgDiv.className = 'preview-item';
-                    imgDiv.innerHTML = `<img src="${e.target.result}" alt="receipt"><span class="remove" onclick="removeNewPartPhoto(${idx})">✖</span>`;
+                    imgDiv.innerHTML = `<img class="zoomable-img" src="${e.target.result}" alt="receipt"><span class="remove" onclick="removeNewPartPhoto(${idx})">✖</span>`;
                     previewDiv.appendChild(imgDiv);
                 };
                 reader.readAsDataURL(part.file);
@@ -1028,14 +1356,14 @@
             const previewDiv = div.querySelector('.transport-receipt-preview');
             if (item.existingPhotoUrl) {
                 const imgDiv = document.createElement('div'); imgDiv.className = 'preview-item';
-                imgDiv.innerHTML = `<img src="${item.existingPhotoUrl}" alt="transport"><span class="remove" onclick="removeExistingTransportPhoto(${idx})">✖</span>`;
+                imgDiv.innerHTML = `<img class="zoomable-img" src="${item.existingPhotoUrl}" alt="transport"><span class="remove" onclick="removeExistingTransportPhoto(${idx})">✖</span>`;
                 previewDiv.appendChild(imgDiv);
             }
             if (item.file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const imgDiv = document.createElement('div'); imgDiv.className = 'preview-item';
-                    imgDiv.innerHTML = `<img src="${e.target.result}" alt="transport"><span class="remove" onclick="removeNewTransportPhoto(${idx})">✖</span>`;
+                    imgDiv.innerHTML = `<img class="zoomable-img" src="${e.target.result}" alt="transport"><span class="remove" onclick="removeNewTransportPhoto(${idx})">✖</span>`;
                     previewDiv.appendChild(imgDiv);
                 };
                 reader.readAsDataURL(item.file);
@@ -1242,7 +1570,196 @@
         document.getElementById('filterStatusToggle').textContent = 'Все';
         loadWorkerRequests();
     });
-    window.onclick = function(event) { if (event.target.classList.contains('modal')) event.target.classList.remove('active'); };
+    (function initImageZoomViewer() {
+        const modal = document.getElementById('imageZoomModal');
+        const viewport = document.getElementById('imageZoomViewport');
+        const panEl = document.getElementById('imageZoomPan');
+        const img = document.getElementById('imageZoomImg');
+        const btnIn = document.getElementById('imageZoomIn');
+        const btnOut = document.getElementById('imageZoomOut');
+        const btnReset = document.getElementById('imageZoomReset');
+        if (!modal || !viewport || !panEl || !img || !btnIn || !btnOut || !btnReset) return;
+
+        let zoomMul = 1;
+        let fitScale = 1;
+        let panX = 0;
+        let panY = 0;
+        let drag = false;
+        let grabPx = 0;
+        let grabPy = 0;
+        let startPanX = 0;
+        let startPanY = 0;
+        let pinchStartDist = null;
+        let pinchStartZoom = 1;
+        let lastTouchPan = null;
+
+        function totalScale() { return fitScale * zoomMul; }
+        function applyTransform() {
+            panEl.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + totalScale() + ')';
+        }
+        function clampZoom() {
+            zoomMul = Math.min(Math.max(zoomMul, 0.5), 5);
+        }
+        function computeFitScale() {
+            const vw = viewport.clientWidth || 320;
+            const vh = Math.max(120, viewport.clientHeight - 8);
+            const nw = img.naturalWidth || 1;
+            const nh = img.naturalHeight || 1;
+            const s = Math.min(vw / nw, vh / nh, 1);
+            return isFinite(s) && s > 0 ? s : 1;
+        }
+        function resetView() {
+            fitScale = computeFitScale();
+            zoomMul = 1;
+            panX = panY = 0;
+            pinchStartDist = null;
+            clampZoom();
+            applyTransform();
+        }
+
+        img.addEventListener('load', function() {
+            if (modal.classList.contains('active')) resetView();
+        });
+
+        window.closeImageZoom = function(ev) {
+            if (ev) {
+                if (ev.stopPropagation) ev.stopPropagation();
+                if (ev.preventDefault) ev.preventDefault();
+            }
+            window.__suppressModalBackdropCloseUntil = Date.now() + 500;
+            modal.classList.remove('active');
+            img.removeAttribute('src');
+            pinchStartDist = null;
+            lastTouchPan = null;
+            drag = false;
+            viewport.classList.remove('grabbing');
+        };
+
+        window.openPhotoViewer = function(url) {
+            if (!url) return;
+            zoomMul = 1;
+            panX = panY = 0;
+            pinchStartDist = null;
+            lastTouchPan = null;
+            img.src = url;
+            modal.classList.add('active');
+            requestAnimationFrame(function() {
+                if (img.complete && img.naturalWidth) resetView();
+            });
+        };
+
+        btnIn.addEventListener('click', function() {
+            clampZoom(); zoomMul *= 1.2; clampZoom(); applyTransform();
+        });
+        btnOut.addEventListener('click', function() {
+            clampZoom(); zoomMul /= 1.2; clampZoom(); applyTransform();
+        });
+        btnReset.addEventListener('click', resetView);
+
+        viewport.addEventListener('wheel', function(ev) {
+            if (!modal.classList.contains('active')) return;
+            ev.preventDefault();
+            clampZoom(); zoomMul *= ev.deltaY > 0 ? 0.92 : 1.08; clampZoom(); applyTransform();
+        }, { passive: false });
+
+        function touchDist(touches) {
+            const a = touches[0];
+            const b = touches[1];
+            const dx = a.clientX - b.clientX;
+            const dy = a.clientY - b.clientY;
+            return Math.sqrt(dx * dx + dy * dy) || 1;
+        }
+
+        viewport.addEventListener('touchstart', function(ev) {
+            if (!modal.classList.contains('active')) return;
+            if (ev.touches.length === 2) {
+                pinchStartDist = touchDist(ev.touches);
+                pinchStartZoom = zoomMul;
+                drag = false;
+                viewport.classList.remove('grabbing');
+                ev.preventDefault();
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchmove', function(ev) {
+            if (!modal.classList.contains('active')) return;
+            if (ev.touches.length === 2 && pinchStartDist != null) {
+                const d = touchDist(ev.touches);
+                zoomMul = pinchStartZoom * (d / pinchStartDist);
+                clampZoom();
+                applyTransform();
+                lastTouchPan = null;
+                ev.preventDefault();
+                return;
+            }
+            if (ev.touches.length === 1 && pinchStartDist == null && totalScale() > fitScale + 1e-3) {
+                const t = ev.touches[0];
+                if (lastTouchPan) {
+                    panX += t.clientX - lastTouchPan.x;
+                    panY += t.clientY - lastTouchPan.y;
+                    applyTransform();
+                }
+                lastTouchPan = { x: t.clientX, y: t.clientY };
+                ev.preventDefault();
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchend', function(ev) {
+            if (!modal.classList.contains('active')) return;
+            if (ev.touches.length < 2) pinchStartDist = null;
+            if (ev.touches.length === 0) lastTouchPan = null;
+        });
+
+        viewport.addEventListener('pointerdown', function(e) {
+            if (!modal.classList.contains('active')) return;
+            if (e.pointerType === 'touch') return;
+            drag = true;
+            startPanX = panX;
+            startPanY = panY;
+            grabPx = e.clientX;
+            grabPy = e.clientY;
+            viewport.classList.add('grabbing');
+            try { viewport.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+        viewport.addEventListener('pointermove', function(e) {
+            if (!drag || !modal.classList.contains('active')) return;
+            panX = startPanX + (e.clientX - grabPx);
+            panY = startPanY + (e.clientY - grabPy);
+            applyTransform();
+        });
+        viewport.addEventListener('pointerup', function() {
+            drag = false;
+            viewport.classList.remove('grabbing');
+        });
+        viewport.addEventListener('pointercancel', function() {
+            drag = false;
+            viewport.classList.remove('grabbing');
+        });
+
+        window.addEventListener('resize', function() {
+            if (modal.classList.contains('active') && img.complete && img.naturalWidth) resetView();
+        });
+
+        document.addEventListener('keydown', function(ev) {
+            if (ev.key === 'Escape' && modal.classList.contains('active')) window.closeImageZoom();
+        });
+
+        document.addEventListener('click', function(ev) {
+            const removeBtn = ev.target.closest('.preview-item .remove, .preview-item span.remove');
+            if (removeBtn) return;
+            const zm = ev.target.closest('img.zoomable-img');
+            if (!zm || !zm.src) return;
+            if (zm.closest('#imageZoomModal')) return;
+            window.openPhotoViewer(zm.src);
+        });
+    })();
+    window.onclick = function(event) {
+        if (window.__suppressModalBackdropCloseUntil && Date.now() < window.__suppressModalBackdropCloseUntil) return;
+        const t = event.target;
+        if (!t.classList || !t.classList.contains('modal')) return;
+        if (t.id === 'imageZoomModal') window.__suppressModalBackdropCloseUntil = Date.now() + 500;
+        t.classList.remove('active');
+    };
     function initWorkerInitialLoad() {
         loadWorkerRequests();
     }
