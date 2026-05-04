@@ -106,24 +106,13 @@
     .table-scroll-area #requestsTable thead th:first-child { z-index: 45; background: #f0f5f9; }
     .table-scroll-area tbody tr:nth-child(even) td:first-child { background: #f3f7fa; }
     .table-scroll-area tbody tr:hover td:first-child { background: #e8f2f9; }
+    .table-scroll-area tbody tr.overdue td:first-child { background: #fdeeea !important; }
     table { width: 100%; border-collapse: collapse; border-spacing: 0; font-size: inherit; margin: 0; }
     .table-scroll-area #requestsTable thead th { position: sticky; top: 0; }
     th, td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle; }
     th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; z-index: 5; }
     thead th { z-index: 30; box-shadow: inset 0 -1px 0 #d7e3ec; }
-    thead th.col-accent-task { background: #e3f0f7; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
-    thead th.col-accent-phone { background: #dff2f5; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
-    thead th.col-accent-time { background: #dbedf4; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
-    td.col-accent-task { background: rgba(227, 240, 247, 0.92); color: #143c4f; box-shadow: inset 3px 0 0 rgba(47, 126, 158, 0.5); }
-    td.col-accent-phone { background: rgba(223, 242, 245, 0.92); color: #143c4f; box-shadow: inset 3px 0 0 rgba(47, 126, 158, 0.38); }
-    td.col-accent-time { background: rgba(219, 237, 244, 0.92); color: #173f52; font-weight: 600; letter-spacing: 0.02em; box-shadow: inset 3px 0 0 rgba(30, 120, 150, 0.42); }
-    td.col-accent-phone a { color: #216f8f; font-weight: 500; }
-    tbody tr:nth-child(even) td.col-accent-task { background: rgba(215, 234, 244, 0.95); }
-    tbody tr:nth-child(even) td.col-accent-phone { background: rgba(210, 236, 242, 0.95); }
-    tbody tr:nth-child(even) td.col-accent-time { background: rgba(206, 232, 242, 0.95); }
-    tbody tr:hover td.col-accent-task { background: rgba(205, 230, 243, 0.98); }
-    tbody tr:hover td.col-accent-phone { background: rgba(200, 232, 240, 0.98); }
-    tbody tr:hover td.col-accent-time { background: rgba(196, 228, 238, 0.98); }
+    tr.overdue { background-color: #ffefed; }
     tbody tr:nth-child(even) { background-color: #f9fafb; }
     tbody tr:hover { background-color: #f1f5f9; }
     .zoomable-img { cursor: zoom-in; user-select: none; -webkit-user-drag: none; }
@@ -510,9 +499,9 @@
             <thead>
                 <tr>
                     <th style="width:60px">ID</th>
-                    <th class="col-accent-task">Задача</th>
-                    <th class="col-accent-phone" style="width:120px">Телефон</th>
-                    <th class="col-accent-time" style="width:90px">Время</th>
+                    <th>Задача</th>
+                    <th style="width:120px">Телефон</th>
+                    <th style="width:90px">Время</th>
                     <th>Адрес</th>
                     <th style="width:120px">Вид техники</th>
                     <th style="width:100px">Статус</th>
@@ -927,18 +916,21 @@
         requests.forEach(r => {
             if (r.status !== 'done') activeCount++;
             if (r.status === 'new') newCount++;
+            const now = new Date();
+            const deadlineDate = r.deadline_date ? new Date(r.deadline_date) : null;
+            const isOverdue = r.status !== 'done' && r.status !== 'cancelled' && deadlineDate && now > deadlineDate;
             let statusClass = 'status-badge new', statusText = 'Новая';
             if (r.status === 'accepted') { statusClass = 'status-badge accepted'; statusText = 'Принял'; }
             if (r.status === 'in-progress') { statusClass = 'status-badge in-progress'; statusText = 'В работе'; }
             else if (r.status === 'done') { statusClass = 'status-badge done'; statusText = 'Выполнена'; }
             else if (r.status === 'cancelled') { statusClass = 'status-badge cancelled'; statusText = 'Отменена'; }
             const row = document.createElement('tr');
-            const deadlineDate = r.deadline_date ? new Date(r.deadline_date) : null;
+            if (isOverdue) row.classList.add('overdue');
             row.innerHTML = `
                 <td>#${r.id}</td>
-                <td class="col-accent-task">${escapeHtml(r.description)}</td>
-                <td class="col-accent-phone">${clientPhonesLinkHtml(r)}</td>
-                <td class="col-accent-time">${r.visit_time || '—'}</td>
+                <td>${escapeHtml(r.description)}</td>
+                <td>${clientPhonesLinkHtml(r)}</td>
+                <td>${r.visit_time || '—'}</td>
                 <td>${escapeHtml(r.client_address || '')}</td>
                 <td>${escapeHtml(r.equipment_type || '')}</td>
                 <td><span class="${statusClass}">${statusText}</span></td>
@@ -1627,6 +1619,7 @@
                 if (ev.preventDefault) ev.preventDefault();
             }
             window.__suppressModalBackdropCloseUntil = Date.now() + 500;
+            window.__suppressModalClickThroughUntil = Date.now() + 500;
             modal.classList.remove('active');
             img.removeAttribute('src');
             pinchStartDist = null;
@@ -1760,6 +1753,12 @@
         if (t.id === 'imageZoomModal') window.__suppressModalBackdropCloseUntil = Date.now() + 500;
         t.classList.remove('active');
     };
+    document.addEventListener('click', function(event) {
+        if (!(window.__suppressModalClickThroughUntil && Date.now() < window.__suppressModalClickThroughUntil)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    }, true);
     function initWorkerInitialLoad() {
         loadWorkerRequests();
     }

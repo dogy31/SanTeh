@@ -199,24 +199,6 @@
     th { background: #f8fafc; color: #1a4b5f; font-weight: 600; white-space: nowrap; z-index: 5; }
     thead th { z-index: 30; box-shadow: inset 0 -1px 0 #d7e3ec; }
     tr.overdue { background-color: #ffefed; }
-    /* Акцент колонок: задача / телефон / время — одна палитра (бирюза #2f7e9e) */
-    thead th.col-accent-task { background: #e3f0f7; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
-    thead th.col-accent-phone { background: #dff2f5; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
-    thead th.col-accent-time { background: #dbedf4; color: #0f3344; box-shadow: inset 0 -1px 0 #c5dde8; }
-    td.col-accent-task { background: rgba(227, 240, 247, 0.92); color: #143c4f; box-shadow: inset 3px 0 0 rgba(47, 126, 158, 0.5); }
-    td.col-accent-phone { background: rgba(223, 242, 245, 0.92); color: #143c4f; box-shadow: inset 3px 0 0 rgba(47, 126, 158, 0.38); }
-    td.col-accent-time { background: rgba(219, 237, 244, 0.92); color: #173f52; font-weight: 600; letter-spacing: 0.02em; box-shadow: inset 3px 0 0 rgba(30, 120, 150, 0.42); }
-    td.col-accent-phone a { color: #216f8f; font-weight: 500; }
-    tbody tr:nth-child(even) td.col-accent-task { background: rgba(215, 234, 244, 0.95); }
-    tbody tr:nth-child(even) td.col-accent-phone { background: rgba(210, 236, 242, 0.95); }
-    tbody tr:nth-child(even) td.col-accent-time { background: rgba(206, 232, 242, 0.95); }
-    tbody tr:hover td.col-accent-task { background: rgba(205, 230, 243, 0.98); }
-    tbody tr:hover td.col-accent-phone { background: rgba(200, 232, 240, 0.98); }
-    tbody tr:hover td.col-accent-time { background: rgba(196, 228, 238, 0.98); }
-    tr.overdue td.col-accent-task,
-    tr.overdue td.col-accent-phone,
-    tr.overdue td.col-accent-time { background: #fdeeea; box-shadow: inset 3px 0 0 rgba(192, 60, 43, 0.45); color: #4a2630; }
-    tr.overdue td.col-accent-phone a { color: #b03628; }
     .zoomable-img { cursor: zoom-in; user-select: none; -webkit-user-drag: none; }
     /* Просмотр фото с зумом (ПК и телефон) */
     #imageZoomModal.modal { align-items: stretch; justify-content: center; background: rgba(10, 18, 24, 0.92); overflow: hidden; }
@@ -552,7 +534,7 @@
                     <div class="header-pay-card timeweb">
                         <h3>Timeweb Cloud</h3>
                         <p>Пополнение баланса и оплата Timeweb Cloud / хостинга в панели управления после входа в аккаунт.</p>
-                        <a href="https://hosting.timeweb.ru/account/" target="_blank" rel="noopener noreferrer">Открыть Timeweb → оплата</a>
+                        <a href="https://timeweb.cloud/my/finances/payment" target="_blank" rel="noopener noreferrer">Открыть Timeweb → оплата</a>
                     </div>
                     <div class="header-pay-card smsru">
                         <h3>SMS.ru</h3>
@@ -647,9 +629,9 @@
             <thead>
                 <tr>
                     <th style="width:60px">ID</th>
-                    <th class="col-accent-task">Задача</th>
-                    <th class="col-accent-phone" style="width:120px">Телефон</th>
-                    <th class="col-accent-time" style="width:90px">Время</th>
+                    <th>Задача</th>
+                    <th style="width:120px">Телефон</th>
+                    <th style="width:90px">Время</th>
                     <th>Улица</th>
                     <th style="width:72px">Дом</th>
                     <th style="width:120px">Вид техники</th>
@@ -1359,9 +1341,9 @@
             else if (r.status === 'cancelled') { statusClass = 'status cancelled'; statusText = 'Отменена'; }
             row.innerHTML = `
                 <td>#${r.id}</td>
-                <td class="col-accent-task">${escapeHtml(r.description)}</td>
-                <td class="col-accent-phone">${clientPhonesLinkHtml(r)}</td>
-                <td class="col-accent-time">${r.visit_time || '—'}</td>
+                <td>${escapeHtml(r.description)}</td>
+                <td>${clientPhonesLinkHtml(r)}</td>
+                <td>${r.visit_time || '—'}</td>
                 <td>${escapeHtml(r.base_address || '')}</td>
                 <td>${escapeHtml(r.house_number || '')}</td>
                 <td>${escapeHtml(r.equipment_type || '')}</td>
@@ -2192,6 +2174,7 @@
             }
             // Иначе «пробивающий» клик/touch попадает на модалку «Детали» / «Редактирование» под зумом и закрывает её.
             window.__suppressModalBackdropCloseUntil = Date.now() + 500;
+            window.__suppressModalClickThroughUntil = Date.now() + 500;
             modal.classList.remove('active');
             img.removeAttribute('src');
             pinchStartDist = null;
@@ -2326,6 +2309,12 @@
         if (t.id === 'imageZoomModal') window.__suppressModalBackdropCloseUntil = Date.now() + 500;
         t.classList.remove('active');
     };
+    document.addEventListener('click', function(event) {
+        if (!(window.__suppressModalClickThroughUntil && Date.now() < window.__suppressModalClickThroughUntil)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    }, true);
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
     (function initPayDropdownCloseOnOutsideClick() {
         const payDd = document.getElementById('payServicesDropdown');
